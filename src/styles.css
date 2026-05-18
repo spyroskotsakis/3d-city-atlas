@@ -202,16 +202,46 @@ body.is-flight canvas.webgl {
   white-space: nowrap;
 }
 
+.landmark-panel {
+  display: grid;
+  gap: 7px;
+}
+
+.landmark-panel__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(255, 244, 221, 0.82);
+}
+
+.landmark-panel__title span {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff3d9;
+  font-size: 12px;
+  font-weight: 820;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landmark-panel__title strong {
+  color: rgba(255, 231, 175, 0.62);
+  font-size: 10px;
+  font-weight: 780;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .landmarks {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
 }
 
-.landmarks li {
+.landmark-chip {
   max-width: 100%;
   padding: 4px 7px;
   overflow: hidden;
@@ -219,8 +249,20 @@ body.is-flight canvas.webgl {
   border-radius: 4px;
   background: rgba(37, 48, 44, 0.52);
   color: rgba(255, 243, 220, 0.82);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.landmark-chip:hover,
+.landmark-chip:focus-visible {
+  outline: none;
+  border-color: var(--line-strong);
+  background: rgba(255, 218, 142, 0.15);
+  color: #fff3d9;
 }
 
 .city-nav {
@@ -270,7 +312,7 @@ body.is-flight canvas.webgl {
 .city-nav__rail {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(7, minmax(82px, 1fr));
+  grid-template-columns: repeat(9, minmax(76px, 1fr));
   gap: 7px;
 }
 
@@ -310,8 +352,16 @@ body.is-flight canvas.webgl {
   background: #efe3c8;
 }
 
+.city-card[data-tone="lagoon"]::before {
+  background: #74c5b5;
+}
+
 .city-card[data-tone="stone"]::before {
   background: #d8cfb7;
+}
+
+.city-card[data-tone="desert"]::before {
+  background: #d8a334;
 }
 
 .city-card[data-tone="iron"]::before {
@@ -471,8 +521,18 @@ body.is-flight canvas.webgl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .landmarks {
+  .landmark-panel {
+    gap: 6px;
+  }
+
+  .landmark-panel__title {
     display: none;
+  }
+
+  .landmarks {
+    max-height: 62px;
+    overflow-y: auto;
+    padding-right: 3px;
   }
 
   .city-nav {

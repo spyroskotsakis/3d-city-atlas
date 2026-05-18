@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { createAthensScene, athensTerrainHeightAt } from './athensScene.js';
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
+import { createEgyptScene, egyptTerrainHeightAt } from './egyptScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
 import { createMunichScene, munichTerrainHeightAt } from './munichScene.js';
 import { createNewYorkScene, newYorkTerrainHeightAt } from './newYorkScene.js';
 import { createParisScene, parisTerrainHeightAt } from './parisScene.js';
 import { createRomeScene, terrainHeightAt as romeTerrainHeightAt } from './romeScene.js';
+import { createVeniceScene, veniceTerrainHeightAt } from './veniceScene.js';
 import { VoxelBatcher } from './voxelBatcher.js';
 
 const CITY_SPECS = [
@@ -24,6 +26,20 @@ const CITY_SPECS = [
     }
   },
   {
+    id: 'venice',
+    name: 'Venice',
+    origin: new THREE.Vector3(8, 0, -478),
+    bounds: 186,
+    create: createVeniceScene,
+    heightAt: veniceTerrainHeightAt,
+    view: {
+      label: 'Venice',
+      title: 'Venice Grand Canal view',
+      position: new THREE.Vector3(118, 124, 132),
+      targetKey: 'sanMarco'
+    }
+  },
+  {
     id: 'athens',
     name: 'Athens',
     origin: new THREE.Vector3(-116, 0, 548),
@@ -35,6 +51,20 @@ const CITY_SPECS = [
       title: 'Athens Acropolis view',
       position: new THREE.Vector3(108, 132, 142),
       targetKey: 'parthenon'
+    }
+  },
+  {
+    id: 'egypt',
+    name: 'Egypt',
+    origin: new THREE.Vector3(-120, 0, 1044),
+    bounds: 230,
+    create: createEgyptScene,
+    heightAt: egyptTerrainHeightAt,
+    view: {
+      label: 'Egypt',
+      title: 'Ancient Egypt Giza Plateau view',
+      position: new THREE.Vector3(142, 138, 156),
+      targetKey: 'greatPyramid'
     }
   },
   {
@@ -111,6 +141,18 @@ const CITY_SPECS = [
 
 const CONNECTOR_SPECS = [
   {
+    id: 'rome-venice-road',
+    label: 'R-V Road',
+    title: 'Rome to Venice connector road',
+    start: new THREE.Vector3(18, 0, -204),
+    end: new THREE.Vector3(18, 0, -292),
+    terrain: 'veniceTerrain',
+    width: 18,
+    curve: 3.0,
+    cameraLift: 58,
+    cameraBack: 56
+  },
+  {
     id: 'rome-athens-road',
     label: 'R-A Road',
     title: 'Rome to Athens connector road',
@@ -121,6 +163,18 @@ const CONNECTOR_SPECS = [
     curve: -7.2,
     cameraLift: 68,
     cameraBack: 72
+  },
+  {
+    id: 'athens-egypt-road',
+    label: 'A-E Road',
+    title: 'Athens to Egypt connector road',
+    start: new THREE.Vector3(-124, 0, 758),
+    end: new THREE.Vector3(-120, 0, 814),
+    terrain: 'egyptDesert',
+    width: 18,
+    curve: 2.8,
+    cameraLift: 60,
+    cameraBack: 58
   },
   {
     id: 'rome-paris-road',
@@ -212,7 +266,7 @@ const CONNECTOR_SPECS = [
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-athens-paris-london-munich-berlin-new-york-world';
+  group.name = 'procedural-rome-venice-athens-egypt-paris-london-munich-berlin-new-york-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
@@ -257,6 +311,9 @@ export function createWorldScene(materials) {
       acc.taxis += module.city.metrics.taxis ?? 0;
       acc.buses += module.city.metrics.buses ?? 0;
       acc.cabs += module.city.metrics.cabs ?? 0;
+      acc.gondolas += module.city.metrics.gondolas ?? 0;
+      acc.boats += module.city.metrics.boats ?? 0;
+      acc.pigeons += module.city.metrics.pigeons ?? 0;
       acc.reservations += module.city.metrics.reservations ?? 0;
       acc.labels += module.city.labels.length;
       return acc;
@@ -269,6 +326,9 @@ export function createWorldScene(materials) {
       taxis: 0,
       buses: 0,
       cabs: 0,
+      gondolas: 0,
+      boats: 0,
+      pigeons: 0,
       reservations: 0,
       labels: 0,
       cities: modules.length,

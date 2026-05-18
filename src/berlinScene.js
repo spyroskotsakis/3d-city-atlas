@@ -200,7 +200,10 @@ export function createBerlinScene(materials) {
     labels,
     focusTargets: {
       brandenburg: new THREE.Vector3(0, 22, 0),
+      reichstag: new THREE.Vector3(-34, 30, -48),
+      museumIsland: new THREE.Vector3(60, 18, -20),
       fernsehturm: new THREE.Vector3(138, 74, -20),
+      potsdamer: new THREE.Vector3(-48, 34, 62),
       spree: new THREE.Vector3(68, 8, spreeCenterZ(68)),
       clubs: new THREE.Vector3(112, 14, 108),
       aerial: new THREE.Vector3(28, 10, 18)

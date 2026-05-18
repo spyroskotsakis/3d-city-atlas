@@ -8,12 +8,73 @@ THREE.ColorManagement.enabled = false;
 
 const CITY_NAV_DETAILS = {
   rome: { focus: 'Colosseum', tone: 'marble' },
+  venice: { focus: 'Grand Canal', tone: 'lagoon' },
   athens: { focus: 'Acropolis', tone: 'stone' },
+  egypt: { focus: 'Giza Plateau', tone: 'desert' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
   london: { focus: 'Westminster', tone: 'river' },
   munich: { focus: 'Marienplatz', tone: 'copper' },
   berlin: { focus: 'Brandenburg', tone: 'neon' },
   'new-york': { focus: 'Midtown', tone: 'steel' }
+};
+
+const CITY_LANDMARKS = {
+  rome: [
+    { label: 'Colosseum', targetKey: 'colosseum' },
+    { label: 'Forum Romanum', targetKey: 'forum' },
+    { label: 'Circus Maximus', targetKey: 'circus' },
+    { label: 'Rome Aerial', targetKey: 'aerial' }
+  ],
+  venice: [
+    { label: "St Mark's Square", targetKey: 'sanMarco' },
+    { label: 'Grand Canal', targetKey: 'grandCanal' },
+    { label: 'Rialto Bridge', targetKey: 'rialto' },
+    { label: 'Lagoon Islands', targetKey: 'lagoon' }
+  ],
+  athens: [
+    { label: 'Parthenon', targetKey: 'parthenon' },
+    { label: 'Ancient Agora', targetKey: 'agora' },
+    { label: 'Syntagma', targetKey: 'syntagma' },
+    { label: 'Lycabettus', targetKey: 'lycabettus' }
+  ],
+  egypt: [
+    { label: 'Great Pyramid', targetKey: 'greatPyramid' },
+    { label: 'Great Sphinx', targetKey: 'sphinx' },
+    { label: 'Nile Docks', targetKey: 'nile' },
+    { label: 'Temple Courtyard', targetKey: 'temple' },
+    { label: 'Necropolis', targetKey: 'necropolis' }
+  ],
+  paris: [
+    { label: 'Eiffel Tower', targetKey: 'eiffel' },
+    { label: 'Louvre', targetKey: 'louvre' },
+    { label: 'Notre-Dame', targetKey: 'notreDame' },
+    { label: 'Montmartre', targetKey: 'montmartre' }
+  ],
+  london: [
+    { label: 'Elizabeth Tower', targetKey: 'bigBen' },
+    { label: 'Westminster', targetKey: 'westminster' },
+    { label: 'Tower Bridge', targetKey: 'towerBridge' },
+    { label: 'Thames', targetKey: 'thames' }
+  ],
+  munich: [
+    { label: 'Neues Rathaus', targetKey: 'rathaus' },
+    { label: 'Marienplatz', targetKey: 'marienplatz' },
+    { label: 'Isar River', targetKey: 'isar' },
+    { label: 'English Garden', targetKey: 'englishGarden' }
+  ],
+  berlin: [
+    { label: 'Brandenburg Gate', targetKey: 'brandenburg' },
+    { label: 'Reichstag', targetKey: 'reichstag' },
+    { label: 'Museum Island', targetKey: 'museumIsland' },
+    { label: 'TV Tower', targetKey: 'fernsehturm' },
+    { label: 'Potsdamer Platz', targetKey: 'potsdamer' }
+  ],
+  'new-york': [
+    { label: 'Empire State', targetKey: 'empire' },
+    { label: 'Times Square', targetKey: 'timesSquare' },
+    { label: 'Central Park South', targetKey: 'centralPark' },
+    { label: 'Downtown Skyline', targetKey: 'downtown' }
+  ]
 };
 
 const app = document.querySelector('#app');
@@ -119,6 +180,9 @@ window.__ROME_METRICS__ = {
   taxis: world.metrics.taxis,
   buses: world.metrics.buses,
   cabs: world.metrics.cabs,
+  gondolas: world.metrics.gondolas,
+  boats: world.metrics.boats,
+  pigeons: world.metrics.pigeons,
   connectors: world.metrics.connectors,
   drawCalls: 0,
   triangles: 0,
@@ -159,24 +223,20 @@ function createHud(metrics, navViews) {
       </button>
     </div>
     <div class="hud__body">
-      <p class="hud__summary">Seven handcrafted city centres in one flyable offline WebGL world.</p>
+      <p class="hud__summary">Nine handcrafted city centres in one flyable offline WebGL world.</p>
       <div class="metrics">
         <div class="metric"><b data-fps>--</b><span>FPS</span></div>
-        <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>voxels</span></div>
+        <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>
         <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0)}</b><span>people</span></div>
         <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
       </div>
-      <ul class="landmarks">
-        <li>Colosseum</li>
-        <li>Acropolis</li>
-        <li>Eiffel Tower</li>
-        <li>Big Ben</li>
-        <li>Neues Rathaus</li>
-        <li>Brandenburg Gate</li>
-        <li>TV Tower</li>
-        <li>Empire State</li>
-        <li>Long Routes</li>
-      </ul>
+      <section class="landmark-panel" aria-label="Current city landmarks">
+        <div class="landmark-panel__title">
+          <span data-city-name>City</span>
+          <strong data-landmark-count>0 landmarks</strong>
+        </div>
+        <div class="landmarks" data-landmarks></div>
+      </section>
     </div>
   `;
   document.body.append(root);
@@ -210,6 +270,9 @@ function createHud(metrics, navViews) {
 
   return {
     fps: root.querySelector('[data-fps]'),
+    cityName: root.querySelector('[data-city-name]'),
+    landmarkCount: root.querySelector('[data-landmark-count]'),
+    landmarks: root.querySelector('[data-landmarks]'),
     root,
     nav: controlsRoot,
     toggle: root.querySelector('[data-hud-toggle]')
@@ -245,6 +308,53 @@ function setActiveView(viewId) {
     button.setAttribute('aria-current', isActive ? 'page' : 'false');
     if (isActive) button.scrollIntoView({ block: 'nearest', inline: 'center' });
   });
+  updateCityLandmarks(activeViewId);
+}
+
+function updateCityLandmarks(cityId) {
+  if (!hud.landmarks) return;
+
+  const cityView = getCityView(cityId);
+  const landmarks = (CITY_LANDMARKS[cityId] ?? []).filter((landmark) => getLandmarkTarget(cityId, landmark.targetKey));
+  hud.cityName.textContent = cityView?.label ?? 'City';
+  hud.landmarkCount.textContent = `${landmarks.length} landmarks`;
+  hud.landmarks.replaceChildren();
+
+  for (const landmark of landmarks) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'landmark-chip';
+    button.textContent = landmark.label;
+    button.title = `Fly to ${landmark.label}`;
+    button.addEventListener('click', () => flyToLandmark(cityId, landmark.targetKey));
+    hud.landmarks.append(button);
+  }
+}
+
+function flyToLandmark(cityId, targetKey) {
+  const cityView = getCityView(cityId);
+  const target = getLandmarkTarget(cityId, targetKey);
+  if (!cityView || !target) return;
+
+  setActiveView(cityId);
+  flyTo(landmarkCameraFor(cityView, target), target);
+}
+
+function getCityView(cityId) {
+  return world.cityViews.find((view) => view.id === cityId) ?? world.navViews.find((view) => view.id === cityId);
+}
+
+function getLandmarkTarget(cityId, targetKey) {
+  return world.focusTargets[`${cityId}:${targetKey}`] ?? null;
+}
+
+function landmarkCameraFor(cityView, target) {
+  const direction = cityView.position.clone().sub(cityView.target);
+  const distance = Math.max(82, Math.min(168, direction.length() * 0.72));
+  return target
+    .clone()
+    .add(direction.normalize().multiplyScalar(distance))
+    .setY(Math.max(target.y + 42, Math.min(220, target.y + distance * 0.62)));
 }
 
 function setFlightMode(enabled, requestLock = false) {

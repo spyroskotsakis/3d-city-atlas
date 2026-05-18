@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Athens, Paris, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, roads, landmarks, dense urban blocks, animated crowds, and connector roads between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Paris, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -11,12 +11,12 @@ Live site: https://3d-city-atlas.vercel.app/
 - Fully self-contained runtime: no external models, images, textures, fonts, or CDN assets.
 - Share-ready metadata with Open Graph, Twitter card, manifest, app icons, sitemap, and a generated social preview image.
 - Procedural Canvas texture atlas for terrain, stone, water, roofs, glass, metal, graffiti, and neon.
-- WebGL rendering through Three.js with `InstancedMesh` batches for high voxel counts.
+- WebGL rendering through Three.js with `InstancedMesh` batches for high counts of reusable 3D blocks.
 - Free-flight navigation with keyboard, mouse look, and wheel movement.
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with 55+ FPS target. The current browser smoke test reported roughly 120 FPS, 127k static voxels, 1.5k animated people, 7 cities, and 8 connector segments.
+- Tested locally on macOS with a 55+ FPS target across the expanded nine-city world.
 
 ## Cities
 
@@ -24,9 +24,17 @@ Live site: https://3d-city-atlas.vercel.app/
 
 Ancient Rome is centered on a rounded Colosseum with seating tiers, exposed hypogeum, velarium, crowds, and gladiators. The city includes the Forum, Arch of Constantine, Temple of Venus and Roma, basilicas, colonnades, aqueducts, Circus Maximus, terracotta-roofed insulae, the Tiber River, Seven Hills terrain, and cardo/decumanus road structure.
 
+### Venice
+
+Venice is centered on the Grand Canal and St Mark's Square, with St Mark's Basilica, the Campanile, Doge's Palace, Rialto Bridge, Bridge of Sighs, Santa Maria della Salute, San Giorgio Maggiore, Ca' d'Oro, Teatro La Fenice, Accademia Bridge, lagoon islands, narrow canals, bridges, quays, palazzos, cafes, laundry lines, crowds, gondolas, vaporetti, and small boats.
+
 ### Athens
 
 Athens is centered on the Acropolis hill and the Parthenon. It includes the Propylaea, Erechtheion, Temple of Athena Nike, ancient walls, Ancient Agora, Roman Agora, Temple of Olympian Zeus, Hadrian's Library, Odeon of Herodes Atticus, Theatre of Dionysus, Syntagma Square, Panathenaic Stadium, Plaka, Monastiraki, Mount Lycabettus, rocky terrain, hillside paths, and visitors.
+
+### Egypt
+
+Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and the Great Sphinx. It includes the pyramids of Khafre and Menkaure, satellite pyramids, mastaba tombs, causeways, the Valley Temple, pylons, obelisks, hypostyle-style courtyards, sphinx-lined paths, a sacred lake, mudbrick villages, granaries, markets, workers, priests, guards, farmers, animals, Nile docks, irrigation canals, reed beds, palm groves, feluccas, cargo boats, and the contrast between green Nile land and desert plateau.
 
 ### Paris
 
@@ -54,12 +62,12 @@ New York is centered on dense Midtown Manhattan and the Empire State Building wi
 
 The bottom navigation is a city destination switcher:
 
-- `Rome`, `Athens`, `Paris`, `London`, `Munich`, `Berlin`, `New York`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Paris`, `London`, `Munich`, `Berlin`, `New York`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
 
-The atlas information panel opens on load, auto-collapses after a few seconds, and can be reopened or closed with its top-right toggle.
+The atlas information panel opens on load, auto-collapses after a few seconds, and can be reopened or closed with its top-right toggle. Its landmark buttons update to the active city and fly the camera directly to each city-specific focus point.
 
 Flight controls:
 
@@ -85,10 +93,12 @@ src/
   main.js           App bootstrap, renderer, camera, lights, HUD, controls, flight mode
   worldScene.js     City registry, connector roads, world bounds, nav targets, global height lookup
   atlas.js          Procedural Canvas texture generation and material library
-  voxelBatcher.js   Shared InstancedMesh batching for static voxel geometry
+  voxelBatcher.js   Shared InstancedMesh batching for static 3D block geometry
   planner.js        Rectangle reservation and collision checks for city planning
   romeScene.js      Procedural Rome module
+  veniceScene.js    Procedural Venice module
   athensScene.js    Procedural Athens module
+  egyptScene.js     Procedural Ancient Egypt module
   parisScene.js     Procedural Paris module
   londonScene.js    Procedural London module
   munichScene.js    Procedural Munich module
@@ -99,7 +109,7 @@ src/
 
 ### Rendering
 
-Static world geometry is grouped by material and rendered with `THREE.InstancedMesh`, using one box geometry scaled and positioned thousands of times. This keeps draw calls low while still allowing a dense city scene with many buildings, roads, bridges, plazas, monuments, trees, lamps, and street objects.
+Static world geometry is grouped by material and rendered with `THREE.InstancedMesh`, using one box geometry scaled and positioned thousands of times. These reusable 3D blocks are often called voxels in graphics programming. This keeps draw calls low while still allowing a dense city scene with many buildings, roads, bridges, plazas, monuments, trees, lamps, and street objects.
 
 Animated pedestrians, cyclists, taxis, cabs, buses, and trams are also instanced, but they use dynamic instance matrices that update every frame. People are composed from multiple small instanced body parts so they are visibly styled instead of black silhouettes.
 
@@ -124,7 +134,9 @@ The city modules use the shared `Planner` to reserve landmarks, bridges, roads, 
 
 The current connectors are:
 
+- Rome to Venice
 - Rome to Athens
+- Athens to Egypt
 - Rome to Paris
 - Paris to Munich
 - Munich to Berlin
@@ -163,14 +175,14 @@ The production bundle is generated into `dist/`. The repository ignores `dist/` 
 
 ## Performance Notes
 
-- Static voxels are batched by material with `InstancedMesh`.
+- Static 3D blocks are batched by material with `InstancedMesh`.
 - Runtime texture generation happens once at startup.
 - Dynamic agents reuse instanced geometry and update matrices only.
 - The renderer uses `powerPreference: 'high-performance'`.
 - Pixel ratio is capped to reduce GPU pressure on high-DPI displays.
 - The camera far plane and navigation bounds are tuned for the expanded multi-city map.
 
-The HUD exposes live FPS, voxel count, people count, and city count. A debug object is also available in the browser console:
+The HUD exposes live FPS, 3D block count, people count, and city count. A debug object is also available in the browser console:
 
 ```js
 window.__ROME_METRICS__
