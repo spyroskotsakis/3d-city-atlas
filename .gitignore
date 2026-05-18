@@ -13,3 +13,4 @@ dist/
 final-*.png
 *-smoke.png
 prompt.txt
+.vercel
