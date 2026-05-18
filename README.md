@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Paris, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Paris, Barcelona, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded nine-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded ten-city world.
 
 ## Cities
 
@@ -40,6 +40,10 @@ Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and
 
 Paris is centered on the Eiffel Tower with lattice legs, platforms, antenna, visitors, lighting details, and Champ de Mars gardens. The city includes the Seine, left-bank/right-bank layout, Louvre, Notre-Dame, Arc de Triomphe, Champs-Elysees, Trocadero, Grand Palais, Les Invalides, Musee d'Orsay, Pantheon, Sacre-Coeur on Montmartre, Haussmann blocks, cafes, bridges, lamps, and animated pedestrians.
 
+### Barcelona
+
+Barcelona is centered on the Sagrada Familia with spires, sculptural facades, mosaic accents, stained-glass color, plaza visitors, and construction-crane detail. It includes the Cerda grid, Passeig de Gracia, Avinguda Diagonal, Gran Via, La Rambla, Placa de Catalunya, Barri Gotic, Barcelona Cathedral, Arc de Triomf, Palau de la Musica Catalana, Park Guell, Casa Batllo, Casa Mila, Casa Vicens, Torre Bellesguard, Palau Guell, Montjuic, Magic Fountain, Port Vell, Barceloneta Beach, Tibidabo, Camp Nou, Modernist blocks, cafes, palms, bikes, scooters, buses, and Gaudi-inspired mosaic details.
+
 ### London
 
 London is centered on the Palace of Westminster and Big Ben / Elizabeth Tower. It includes the Thames, embankments, bridges, Westminster Abbey, London Eye, Trafalgar Square, Buckingham Palace, St Paul's Cathedral, Tower Bridge, Tower of London, The Shard, Somerset House, Covent Garden, Piccadilly Circus, red buses, black cabs, pubs, markets, parks, and animated crowds.
@@ -62,7 +66,7 @@ New York is centered on dense Midtown Manhattan and the Empire State Building wi
 
 The bottom navigation is a city destination switcher:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Paris`, `London`, `Munich`, `Berlin`, `New York`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -100,6 +104,7 @@ src/
   athensScene.js    Procedural Athens module
   egyptScene.js     Procedural Ancient Egypt module
   parisScene.js     Procedural Paris module
+  barcelonaScene.js Procedural Barcelona module
   londonScene.js    Procedural London module
   munichScene.js    Procedural Munich module
   berlinScene.js    Procedural Berlin module
@@ -138,6 +143,7 @@ The current connectors are:
 - Rome to Athens
 - Athens to Egypt
 - Rome to Paris
+- Paris to Barcelona
 - Paris to Munich
 - Munich to Berlin
 - Paris to London
