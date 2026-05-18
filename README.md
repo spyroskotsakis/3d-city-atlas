@@ -4,9 +4,12 @@ An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instan
 
 The current atlas includes Rome, Athens, Paris, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, roads, landmarks, dense urban blocks, animated crowds, and connector roads between cities.
 
+Live site: https://3d-city-atlas.vercel.app/
+
 ## Highlights
 
 - Fully self-contained runtime: no external models, images, textures, fonts, or CDN assets.
+- Share-ready metadata with Open Graph, Twitter card, manifest, app icons, sitemap, and a generated social preview image.
 - Procedural Canvas texture atlas for terrain, stone, water, roofs, glass, metal, graffiti, and neon.
 - WebGL rendering through Three.js with `InstancedMesh` batches for high voxel counts.
 - Free-flight navigation with keyboard, mouse look, and wheel movement.

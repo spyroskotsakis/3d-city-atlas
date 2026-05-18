@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="3D City Atlas icon">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#263334"/>
+      <stop offset="0.55" stop-color="#44564f"/>
+      <stop offset="1" stop-color="#1c2223"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffe2a1"/>
+      <stop offset="1" stop-color="#c58b34"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="92" fill="url(#sky)"/>
+  <path d="M44 330 468 176v96L44 426Z" fill="#77b8c7" opacity=".82"/>
+  <path d="M72 334 256 268 440 334 256 414Z" fill="#d7be88"/>
+  <path d="M112 286h52v76h-52zM184 230h54v132h-54zM258 270h52v92h-52zM330 198h68v164h-68z" fill="#d8cfb7"/>
+  <path d="M112 286h52v16h-52zM184 230h54v18h-54zM258 270h52v16h-52zM330 198h68v20h-68z" fill="url(#gold)"/>
+  <path d="M136 322h14v14h-14zM198 270h14v14h-14zM218 270h14v14h-14zM274 306h14v14h-14zM348 242h14v14h-14zM372 242h14v14h-14zM348 274h14v14h-14zM372 274h14v14h-14z" fill="#283030"/>
+  <path d="M76 142h112v28H76zM76 194h112v28H76zM160 142h28v80h-28zM228 142h94q38 0 61 22t23 58q0 35-23 57t-61 22h-94zm54 44v70h36q16 0 25-9t9-25q0-17-9-26t-25-10z" fill="#fff2d7"/>
+</svg>
