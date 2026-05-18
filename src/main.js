@@ -11,6 +11,7 @@ const CITY_NAV_DETAILS = {
   venice: { focus: 'Grand Canal', tone: 'lagoon' },
   athens: { focus: 'Acropolis', tone: 'stone' },
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
+  angkor: { focus: 'Angkor Wat', tone: 'jungle' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
   barcelona: { focus: 'Sagrada Familia', tone: 'mosaic' },
   london: { focus: 'Westminster', tone: 'river' },
@@ -44,6 +45,14 @@ const CITY_LANDMARKS = {
     { label: 'Nile Docks', targetKey: 'nile' },
     { label: 'Temple Courtyard', targetKey: 'temple' },
     { label: 'Necropolis', targetKey: 'necropolis' }
+  ],
+  angkor: [
+    { label: 'Angkor Wat', targetKey: 'angkorWat' },
+    { label: 'Outer Moat', targetKey: 'moat' },
+    { label: 'Bayon', targetKey: 'bayon' },
+    { label: 'Ta Prohm', targetKey: 'taProhm' },
+    { label: 'Barays', targetKey: 'baray' },
+    { label: 'Stilt Village', targetKey: 'village' }
   ],
   paris: [
     { label: 'Eiffel Tower', targetKey: 'eiffel' },
@@ -191,6 +200,7 @@ window.__ROME_METRICS__ = {
   cabs: world.metrics.cabs,
   gondolas: world.metrics.gondolas,
   boats: world.metrics.boats,
+  carts: world.metrics.carts,
   pigeons: world.metrics.pigeons,
   connectors: world.metrics.connectors,
   drawCalls: 0,
@@ -232,7 +242,7 @@ function createHud(metrics, navViews) {
       </button>
     </div>
     <div class="hud__body">
-      <p class="hud__summary">Ten handcrafted city centres in one flyable offline WebGL world.</p>
+      <p class="hud__summary">Eleven handcrafted city centres in one flyable offline WebGL world.</p>
       <div class="metrics">
         <div class="metric"><b data-fps>--</b><span>FPS</span></div>
         <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>

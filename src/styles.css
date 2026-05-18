@@ -312,7 +312,7 @@ body.is-flight canvas.webgl {
 .city-nav__rail {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(10, minmax(74px, 1fr));
+  grid-template-columns: repeat(11, minmax(68px, 1fr));
   gap: 7px;
 }
 
@@ -362,6 +362,10 @@ body.is-flight canvas.webgl {
 
 .city-card[data-tone="desert"]::before {
   background: #d8a334;
+}
+
+.city-card[data-tone="jungle"]::before {
+  background: #77a45b;
 }
 
 .city-card[data-tone="mosaic"]::before {

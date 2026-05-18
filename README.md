@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Paris, Barcelona, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded ten-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded eleven-city world.
 
 ## Cities
 
@@ -35,6 +35,10 @@ Athens is centered on the Acropolis hill and the Parthenon. It includes the Prop
 ### Egypt
 
 Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and the Great Sphinx. It includes the pyramids of Khafre and Menkaure, satellite pyramids, mastaba tombs, causeways, the Valley Temple, pylons, obelisks, hypostyle-style courtyards, sphinx-lined paths, a sacred lake, mudbrick villages, granaries, markets, workers, priests, guards, farmers, animals, Nile docks, irrigation canals, reed beds, palm groves, feluccas, cargo boats, and the contrast between green Nile land and desert plateau.
+
+### Angkor
+
+Angkor is centered on Angkor Wat with the outer moat, long axial causeway, symmetrical galleries, lotus-shaped tower quincunx, courtyards, bas-relief wall bands, naga balustrades, monks, visitors, and ceremonial activity. The region includes Angkor Thom, Bayon face towers, Baphuon, Terrace of the Elephants, Ta Prohm-style root-wrapped ruins, Preah Khan, Ta Keo, Banteay Kdei, Srah Srang, East and West Baray reservoirs, Banteay Srei, Phnom Bakheng, canals, bridges, rice fields, jungle paths, stilt houses, ox carts, boats, and dense tropical overgrowth.
 
 ### Paris
 
@@ -66,7 +70,7 @@ New York is centered on dense Midtown Manhattan and the Empire State Building wi
 
 The bottom navigation is a city destination switcher:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -103,6 +107,7 @@ src/
   veniceScene.js    Procedural Venice module
   athensScene.js    Procedural Athens module
   egyptScene.js     Procedural Ancient Egypt module
+  angkorScene.js    Procedural Angkor module
   parisScene.js     Procedural Paris module
   barcelonaScene.js Procedural Barcelona module
   londonScene.js    Procedural London module
@@ -142,6 +147,7 @@ The current connectors are:
 - Rome to Venice
 - Rome to Athens
 - Athens to Egypt
+- Egypt to Angkor
 - Rome to Paris
 - Paris to Barcelona
 - Paris to Munich

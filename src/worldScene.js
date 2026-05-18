@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createAngkorScene, angkorTerrainHeightAt } from './angkorScene.js';
 import { createAthensScene, athensTerrainHeightAt } from './athensScene.js';
 import { createBarcelonaScene, barcelonaTerrainHeightAt } from './barcelonaScene.js';
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
@@ -66,6 +67,20 @@ const CITY_SPECS = [
       title: 'Ancient Egypt Giza Plateau view',
       position: new THREE.Vector3(142, 138, 156),
       targetKey: 'greatPyramid'
+    }
+  },
+  {
+    id: 'angkor',
+    name: 'Angkor',
+    origin: new THREE.Vector3(-120, 0, 1540),
+    bounds: 228,
+    create: createAngkorScene,
+    heightAt: angkorTerrainHeightAt,
+    view: {
+      label: 'Angkor',
+      title: 'Angkor Wat temple complex view',
+      position: new THREE.Vector3(128, 132, 142),
+      targetKey: 'angkorWat'
     }
   },
   {
@@ -192,6 +207,18 @@ const CONNECTOR_SPECS = [
     cameraBack: 58
   },
   {
+    id: 'egypt-angkor-road',
+    label: 'E-A Road',
+    title: 'Egypt to Angkor connector road',
+    start: new THREE.Vector3(-120, 0, 1274),
+    end: new THREE.Vector3(-120, 0, 1312),
+    terrain: 'angkorTerrain',
+    width: 18,
+    curve: -3.2,
+    cameraLift: 62,
+    cameraBack: 58
+  },
+  {
     id: 'rome-paris-road',
     label: 'R-P Road',
     title: 'Rome to Paris connector road',
@@ -293,7 +320,7 @@ const CONNECTOR_SPECS = [
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-paris-barcelona-london-munich-berlin-new-york-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-new-york-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
@@ -340,6 +367,7 @@ export function createWorldScene(materials) {
       acc.cabs += module.city.metrics.cabs ?? 0;
       acc.gondolas += module.city.metrics.gondolas ?? 0;
       acc.boats += module.city.metrics.boats ?? 0;
+      acc.carts += module.city.metrics.carts ?? 0;
       acc.pigeons += module.city.metrics.pigeons ?? 0;
       acc.reservations += module.city.metrics.reservations ?? 0;
       acc.labels += module.city.labels.length;
@@ -355,6 +383,7 @@ export function createWorldScene(materials) {
       cabs: 0,
       gondolas: 0,
       boats: 0,
+      carts: 0,
       pigeons: 0,
       reservations: 0,
       labels: 0,
