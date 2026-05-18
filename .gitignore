@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Production build output
+dist/
+
+# Local logs and caches
+*.log
+.DS_Store
+.vite/
+
+# Local screenshots and prompt scratch files
+final-*.png
+*-smoke.png
+prompt.txt
