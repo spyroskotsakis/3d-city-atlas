@@ -49,11 +49,14 @@ New York is centered on dense Midtown Manhattan and the Empire State Building wi
 
 ## Navigation
 
-The bottom navigation jumps between city and route views:
+The bottom navigation is a city destination switcher:
 
 - `Rome`, `Athens`, `Paris`, `London`, `Munich`, `Berlin`, `New York`
-- `R-A Road`, `R-P Road`, `P-M Road`, `M-B Road`, `P-L Road`, `P-NY Route`
 - `Fly`
+
+Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
+
+The atlas information panel opens on load, auto-collapses after a few seconds, and can be reopened or closed with its top-right toggle.
 
 Flight controls:
 

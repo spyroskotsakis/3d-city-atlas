@@ -277,10 +277,9 @@ export function createWorldScene(materials) {
   );
 
   const bounds = computeWorldBounds(modules, connectors);
-  const navViews = [
-    ...modules.map((module) => buildCityView(module, focusTargets)),
-    ...connectors.filter((connector) => connector.showInNav !== false).map((connector) => buildConnectorView(connector))
-  ];
+  const cityViews = modules.map((module) => buildCityView(module, focusTargets));
+  const routeViews = connectors.filter((connector) => connector.showInNav !== false).map((connector) => buildConnectorView(connector));
+  const navViews = cityViews;
 
   return {
     group,
@@ -291,6 +290,8 @@ export function createWorldScene(materials) {
     metrics,
     bounds,
     navViews,
+    cityViews,
+    routeViews,
     heightAt(x, z) {
       const module = modules.find((candidate) => {
         const lx = x - candidate.origin.x;

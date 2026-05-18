@@ -6,6 +6,16 @@ import './styles.css';
 
 THREE.ColorManagement.enabled = false;
 
+const CITY_NAV_DETAILS = {
+  rome: { focus: 'Colosseum', tone: 'marble' },
+  athens: { focus: 'Acropolis', tone: 'stone' },
+  paris: { focus: 'Eiffel Tower', tone: 'iron' },
+  london: { focus: 'Westminster', tone: 'river' },
+  munich: { focus: 'Marienplatz', tone: 'copper' },
+  berlin: { focus: 'Brandenburg', tone: 'neon' },
+  'new-york': { focus: 'Midtown', tone: 'steel' }
+};
+
 const app = document.querySelector('#app');
 const canvas = document.createElement('canvas');
 canvas.className = 'webgl';
@@ -58,6 +68,7 @@ const world = createWorldScene(materials);
 scene.add(world.group);
 
 const hud = createHud(world.metrics, world.navViews);
+setupHudPanel(hud);
 const labelLayer = document.createElement('div');
 labelLayer.style.position = 'fixed';
 labelLayer.style.inset = '0';
@@ -115,8 +126,12 @@ window.__ROME_METRICS__ = {
   labels: world.labels.length
 };
 
+let activeViewId = world.navViews[0]?.id ?? null;
+setActiveView(activeViewId);
+
 for (const view of world.navViews) {
-  document.querySelector(`[data-view="${view.id}"]`).addEventListener('click', () => {
+  document.querySelector(`[data-view="${view.id}"]`)?.addEventListener('click', () => {
+    setActiveView(view.id);
     flyTo(view.position, view.target);
   });
 }
@@ -134,38 +149,102 @@ function createHud(metrics, navViews) {
   const root = document.createElement('aside');
   root.className = 'hud';
   root.innerHTML = `
-    <h1>Rome, Athens, Paris, London, Munich, Berlin and New York City Centres</h1>
-    <div class="metrics">
-      <div class="metric"><b data-fps>--</b><span>FPS</span></div>
-      <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>voxels</span></div>
-      <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0)}</b><span>people</span></div>
-      <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
+    <div class="hud__top">
+      <div class="hud__identity">
+        <div class="hud__eyebrow">Procedural atlas</div>
+        <h1>3D City Atlas</h1>
+      </div>
+      <button class="hud__toggle" data-hud-toggle type="button" aria-expanded="true" title="Close atlas panel">
+        <span aria-hidden="true"></span>
+      </button>
     </div>
-    <ul class="landmarks">
-      <li>Colosseum</li>
-      <li>Acropolis</li>
-      <li>Eiffel Tower</li>
-      <li>Big Ben</li>
-      <li>Neues Rathaus</li>
-      <li>Brandenburg Gate</li>
-      <li>TV Tower</li>
-      <li>Empire State</li>
-      <li>Long Routes</li>
-    </ul>
+    <div class="hud__body">
+      <p class="hud__summary">Seven handcrafted city centres in one flyable offline WebGL world.</p>
+      <div class="metrics">
+        <div class="metric"><b data-fps>--</b><span>FPS</span></div>
+        <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>voxels</span></div>
+        <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0)}</b><span>people</span></div>
+        <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
+      </div>
+      <ul class="landmarks">
+        <li>Colosseum</li>
+        <li>Acropolis</li>
+        <li>Eiffel Tower</li>
+        <li>Big Ben</li>
+        <li>Neues Rathaus</li>
+        <li>Brandenburg Gate</li>
+        <li>TV Tower</li>
+        <li>Empire State</li>
+        <li>Long Routes</li>
+      </ul>
+    </div>
   `;
   document.body.append(root);
 
   const controlsRoot = document.createElement('nav');
-  controlsRoot.className = 'controls';
+  controlsRoot.className = 'city-nav';
+  controlsRoot.setAttribute('aria-label', 'City navigation');
   controlsRoot.innerHTML = `
-    ${navViews.map((view) => `<button data-view="${view.id}" type="button" title="${view.title}">${view.label}</button>`).join('')}
-    <button data-mode="flight" type="button" title="Toggle flight controls" aria-pressed="false">Fly</button>
+    <div class="city-nav__header">
+      <span>Destinations</span>
+      <strong>${navViews.length} cities</strong>
+    </div>
+    <div class="city-nav__rail">
+      ${navViews.map((view, index) => {
+        const detail = CITY_NAV_DETAILS[view.id] ?? { focus: view.label, tone: 'stone' };
+        return `
+          <button class="city-card" data-view="${view.id}" data-tone="${detail.tone}" type="button" title="${view.title}">
+            <span class="city-card__index">${String(index + 1).padStart(2, '0')}</span>
+            <span class="city-card__name">${view.label}</span>
+            <span class="city-card__focus">${detail.focus}</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    <button class="flight-toggle" data-mode="flight" type="button" title="Toggle flight controls" aria-pressed="false">
+      <span class="flight-toggle__mark">Fly</span>
+      <span>Flight</span>
+    </button>
   `;
   document.body.append(controlsRoot);
 
   return {
-    fps: root.querySelector('[data-fps]')
+    fps: root.querySelector('[data-fps]'),
+    root,
+    nav: controlsRoot,
+    toggle: root.querySelector('[data-hud-toggle]')
   };
+}
+
+function setupHudPanel(hud) {
+  let autoCollapseTimer = window.setTimeout(() => setHudCollapsed(true), 5200);
+
+  const clearAutoCollapse = () => {
+    if (!autoCollapseTimer) return;
+    window.clearTimeout(autoCollapseTimer);
+    autoCollapseTimer = null;
+  };
+
+  const setHudCollapsed = (collapsed, fromUser = false) => {
+    hud.root.classList.toggle('is-collapsed', collapsed);
+    hud.toggle.setAttribute('aria-expanded', String(!collapsed));
+    hud.toggle.setAttribute('title', collapsed ? 'Open atlas panel' : 'Close atlas panel');
+    if (fromUser) clearAutoCollapse();
+  };
+
+  hud.toggle.addEventListener('click', () => {
+    setHudCollapsed(!hud.root.classList.contains('is-collapsed'), true);
+  });
+}
+
+function setActiveView(viewId) {
+  activeViewId = viewId;
+  document.querySelectorAll('[data-view]').forEach((button) => {
+    const isActive = button.getAttribute('data-view') === activeViewId;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-current', isActive ? 'page' : 'false');
+    if (isActive) button.scrollIntoView({ block: 'nearest', inline: 'center' });
+  });
 }
 
 function setFlightMode(enabled, requestLock = false) {
@@ -251,8 +330,10 @@ function updateLabels() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   const cameraPosition = camera.position;
-  const inHudZone = (screenX, screenY) => screenX < 360 && screenY < 230;
-  const inControlsZone = (screenX, screenY) => screenX > width - 1040 && screenY > height - 170;
+  const hudRect = hud.root.getBoundingClientRect();
+  const navRect = hud.nav.getBoundingClientRect();
+  const inHudZone = (screenX, screenY) => isInsideRect(screenX, screenY, hudRect, 12);
+  const inControlsZone = (screenX, screenY) => isInsideRect(screenX, screenY, navRect, 14);
 
   for (const label of labels) {
     const pos = label.position.clone().project(camera);
@@ -276,6 +357,10 @@ function updateLabels() {
     label.element.style.left = `${screenX}px`;
     label.element.style.top = `${screenY}px`;
   }
+}
+
+function isInsideRect(x, y, rect, pad = 0) {
+  return x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad;
 }
 
 function updateMetrics(now) {
