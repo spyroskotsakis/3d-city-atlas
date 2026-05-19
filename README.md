@@ -76,7 +76,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 ## Navigation
 
-The foldable destination panel is the city switcher. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
+The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
 - `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`, `Brazil`, `Peru`
 - `Fly`

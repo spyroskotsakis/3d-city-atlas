@@ -242,7 +242,7 @@ for (const view of world.navViews) {
   document.querySelector(`[data-view="${view.id}"]`)?.addEventListener('click', () => {
     setActiveView(view.id);
     flyTo(view.position, view.target);
-    if (window.innerWidth <= 720) hud.setNavCollapsed?.(true);
+    if (window.innerWidth <= 720) hud.setNavCollapsed?.(true, true);
   });
 }
 document.querySelector('[data-mode="flight"]').addEventListener('click', () => {
@@ -357,27 +357,44 @@ function setupHudPanel(hud) {
 
 function setupNavPanel(hud) {
   if (!hud.nav || !hud.navToggle) return;
+  let autoCollapseTimer = null;
+  let autoCollapseFrame = null;
 
-  const setNavCollapsed = (collapsed) => {
+  const clearAutoCollapse = () => {
+    if (autoCollapseFrame) window.cancelAnimationFrame(autoCollapseFrame);
+    if (autoCollapseTimer) window.clearTimeout(autoCollapseTimer);
+    autoCollapseFrame = null;
+    autoCollapseTimer = null;
+  };
+
+  const setNavCollapsed = (collapsed, fromUser = false) => {
     hud.nav.classList.toggle('is-collapsed', collapsed);
     hud.navToggle.setAttribute('aria-expanded', String(!collapsed));
     hud.navToggle.setAttribute('title', collapsed ? 'Open destinations' : 'Collapse destinations');
+    if (fromUser) clearAutoCollapse();
   };
 
   let compactLayout = window.innerWidth <= 720;
 
   hud.setNavCollapsed = setNavCollapsed;
-  setNavCollapsed(compactLayout);
+  setNavCollapsed(false);
+  autoCollapseFrame = window.requestAnimationFrame(() => {
+    autoCollapseFrame = null;
+    autoCollapseTimer = window.setTimeout(() => {
+      autoCollapseTimer = null;
+      setNavCollapsed(true);
+    }, 5000);
+  });
 
   hud.navToggle.addEventListener('click', () => {
-    setNavCollapsed(!hud.nav.classList.contains('is-collapsed'));
+    setNavCollapsed(!hud.nav.classList.contains('is-collapsed'), true);
   });
 
   window.addEventListener('resize', () => {
     const nextCompactLayout = window.innerWidth <= 720;
     if (nextCompactLayout === compactLayout) return;
     compactLayout = nextCompactLayout;
-    setNavCollapsed(compactLayout);
+    if (!autoCollapseTimer && compactLayout) setNavCollapsed(true);
   });
 }
 
