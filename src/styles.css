@@ -47,6 +47,7 @@ body.is-flight canvas.webgl {
   position: fixed;
   top: 16px;
   left: 16px;
+  z-index: 10;
   display: grid;
   gap: 10px;
   width: min(348px, calc(100vw - 32px));
@@ -267,35 +268,60 @@ body.is-flight canvas.webgl {
 
 .city-nav {
   position: fixed;
-  left: 50%;
-  bottom: 16px;
-  width: min(1080px, calc(100vw - 32px));
-  min-height: 88px;
+  top: 16px;
+  right: 16px;
+  z-index: 11;
+  width: min(318px, calc(100vw - 32px));
+  min-height: 0;
   padding: 10px;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr) 86px;
-  gap: 10px;
-  align-items: stretch;
-  transform: translateX(-50%);
+  gap: 8px;
+  align-items: start;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-strong);
   box-shadow: 0 22px 58px rgba(12, 16, 15, 0.34);
   backdrop-filter: blur(16px);
+  transition:
+    width 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
 }
 
-.city-nav__header {
+.city-nav.is-collapsed {
+  width: min(214px, calc(100vw - 32px));
+  border-color: rgba(255, 239, 204, 0.14);
+  background: rgba(34, 41, 40, 0.78);
+}
+
+.city-nav.is-collapsed .city-nav__body {
+  display: none;
+}
+
+.city-nav__toggle {
   min-width: 0;
-  padding: 10px;
+  min-height: 48px;
+  padding: 8px 9px;
   display: grid;
-  align-content: center;
-  gap: 5px;
-  border: 1px solid rgba(255, 244, 221, 0.12);
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 9px;
+  align-items: center;
+  border: 1px solid rgba(255, 234, 190, 0.18);
   border-radius: 6px;
-  background: rgba(255, 244, 221, 0.06);
+  background: rgba(255, 244, 221, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
-.city-nav__header span {
+.city-nav__title {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.city-nav__title span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 760;
@@ -303,17 +329,55 @@ body.is-flight canvas.webgl {
   text-transform: uppercase;
 }
 
-.city-nav__header strong {
+.city-nav__title strong {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 820;
   line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-nav__count {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(242, 196, 109, 0.28);
+  border-radius: 5px;
+  background: rgba(242, 196, 109, 0.12);
+  color: #fff0c8;
+  font-size: 13px;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.city-nav__body {
+  display: grid;
+  gap: 8px;
 }
 
 .city-nav__rail {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(11, minmax(68px, 1fr));
-  gap: 7px;
+  gap: 6px;
+  max-height: min(620px, calc(100vh - 158px));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-right: 2px;
+  scrollbar-color: rgba(255, 226, 165, 0.44) transparent;
+  scrollbar-width: thin;
+}
+
+.city-nav__rail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.city-nav__rail::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 226, 165, 0.34);
 }
 
 .city-card,
@@ -329,12 +393,12 @@ body.is-flight canvas.webgl {
 
 .city-card {
   position: relative;
-  height: 68px;
-  padding: 8px 9px;
+  height: 49px;
+  padding: 7px 9px;
   display: grid;
-  grid-template-rows: auto auto auto;
-  align-content: center;
-  gap: 3px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
   text-align: left;
   overflow: hidden;
 }
@@ -392,17 +456,38 @@ body.is-flight canvas.webgl {
   background: #9fb4c1;
 }
 
+.city-card[data-tone="tropical"]::before {
+  background: #36a5a3;
+}
+
+.city-card[data-tone="andes"]::before {
+  background: #d7b56f;
+}
+
 .city-card__index {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 231, 175, 0.14);
+  border-radius: 4px;
+  background: rgba(255, 244, 221, 0.06);
   color: rgba(255, 231, 175, 0.58);
   font-size: 10px;
   font-weight: 820;
   line-height: 1;
 }
 
+.city-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
 .city-card__name {
   overflow: hidden;
   color: #fff3d9;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.08;
   text-overflow: ellipsis;
@@ -420,15 +505,16 @@ body.is-flight canvas.webgl {
 }
 
 .flight-toggle {
-  height: 68px;
-  padding: 8px;
+  height: 44px;
+  padding: 7px 9px;
   display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 4px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
   color: #ffe7ad;
   font-size: 11px;
   font-weight: 780;
+  text-align: left;
   text-transform: uppercase;
 }
 
@@ -448,6 +534,8 @@ body.is-flight canvas.webgl {
 .city-card:hover,
 .city-card:focus-visible,
 .city-card.is-active,
+.city-nav__toggle:hover,
+.city-nav__toggle:focus-visible,
 .flight-toggle:hover,
 .flight-toggle:focus-visible,
 .flight-toggle.is-active {
@@ -483,29 +571,11 @@ body.is-flight canvas.webgl {
 
 @media (max-width: 920px) {
   .city-nav {
-    grid-template-columns: minmax(0, 1fr) 78px;
+    width: min(294px, calc(100vw - 32px));
   }
 
-  .city-nav__header {
-    display: none;
-  }
-
-  .city-nav__rail {
-    grid-template-columns: none;
-    grid-auto-columns: 118px;
-    grid-auto-flow: column;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-  }
-
-  .city-nav__rail::-webkit-scrollbar {
-    display: none;
-  }
-
-  .city-card {
-    scroll-snap-align: start;
+  .city-nav.is-collapsed {
+    width: min(204px, calc(100vw - 32px));
   }
 }
 
@@ -544,33 +614,39 @@ body.is-flight canvas.webgl {
   }
 
   .city-nav {
+    top: auto;
     right: 10px;
     bottom: 10px;
-    left: 10px;
-    width: calc(100vw - 20px);
-    max-width: calc(100vw - 20px);
-    min-height: 82px;
+    left: auto;
+    width: min(286px, calc(100vw - 20px));
     padding: 8px;
-    gap: 8px;
-    grid-template-columns: minmax(0, 1fr) 66px;
     overflow: hidden;
-    transform: none;
+  }
+
+  .city-nav.is-collapsed {
+    width: min(190px, calc(100vw - 20px));
+  }
+
+  .city-nav__toggle {
+    min-height: 44px;
+    padding: 7px 8px;
+  }
+
+  .city-nav__title strong {
+    font-size: 14px;
   }
 
   .city-nav__rail {
-    width: 100%;
-    max-width: 100%;
-    grid-auto-columns: 112px;
+    max-height: min(420px, calc(100vh - 210px));
   }
 
-  .city-card,
-  .flight-toggle {
-    height: 64px;
+  .city-card {
+    height: 46px;
   }
 
   .flight-toggle {
-    width: 66px;
-    padding: 7px 6px;
+    height: 42px;
+    padding: 7px 8px;
   }
 
   .flight-toggle__mark {

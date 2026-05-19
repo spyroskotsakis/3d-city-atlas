@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, and New York. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded eleven-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded thirteen-city world.
 
 ## Cities
 
@@ -66,11 +66,19 @@ Berlin also adds club-culture atmosphere through industrial nightlife zones insp
 
 New York is centered on dense Midtown Manhattan and the Empire State Building with Art Deco massing, stepped crown, spire, observation decks, and street-level activity. It includes Hudson and East River edges, Manhattan grid roads, Times Square, Chrysler Building, Grand Central Terminal, Rockefeller Center, One Vanderbilt, Flatiron Building, Bryant Park, Central Park South, Madison Square Garden, New York Public Library, Lower Manhattan skyline elements, Brooklyn Bridge, yellow taxis, steam vents, billboards, subway entrances, vendors, trees, and crowds.
 
+### Brazil
+
+Brazil is centered on Rio de Janeiro with Christ the Redeemer on Corcovado, Sugarloaf Mountain, Guanabara Bay, Copacabana, Ipanema, Maracana, Lapa Arches, Selaron Steps, Botanical Garden, Rodrigo de Freitas Lagoon, hillside communities, local vendors, motorbikes, buses, beach life, cable cars, and boats. It expands outward with compact regional scenes for Sao Paulo, Brasilia, Salvador, Recife and Olinda, the Amazon River, Pantanal wetlands, Iguacu Falls, and Lencois Maranhenses.
+
+### Peru
+
+Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricultural terraces, Inca stone structures, temples, stairways, plazas, visitors, llamas, cloud-forest ridgelines, and elevated viewpoints. Cusco includes a historic plaza core, cathedral, colonial arcades, Inca stone walls, narrow streets, red-tiled roofs, and markets. The broader module includes Sacsayhuaman, the Sacred Valley, Ollantaytambo, Lake Titicaca, Arequipa, Lima coastal cliffs, Nazca-inspired desert plains, Colca Canyon, Amazon Basin settlements, Rainbow Mountain, Andean villages, buses, mototaxis, boats, textiles, and terraced farming.
+
 ## Navigation
 
-The bottom navigation is a city destination switcher:
+The foldable destination panel is the city switcher. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -114,8 +122,12 @@ src/
   munichScene.js    Procedural Munich module
   berlinScene.js    Procedural Berlin module
   newYorkScene.js   Procedural New York module
+  brazilScene.js    Procedural Brazil / Rio de Janeiro module
+  peruScene.js      Procedural Peru / Machu Picchu and Cusco module
   styles.css        HUD, controls, labels, responsive layout
 ```
+
+Vercel Web Analytics is initialized once from `src/main.js` with the framework-agnostic `@vercel/analytics` client injection. It only adds page-view tracking for the deployed frontend and does not expose analytics data in the app.
 
 ### Rendering
 
@@ -154,6 +166,8 @@ The current connectors are:
 - Munich to Berlin
 - Paris to London
 - Paris to New York, modelled as a longer triple route
+- New York to Brazil
+- Brazil to Peru
 
 ## Requirements
 

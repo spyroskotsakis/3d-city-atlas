@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import { inject as injectVercelAnalytics } from '@vercel/analytics';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createMaterialLibrary } from './atlas.js';
 import { createWorldScene } from './worldScene.js';
 import './styles.css';
 
+injectVercelAnalytics();
 THREE.ColorManagement.enabled = false;
 
 const CITY_NAV_DETAILS = {
@@ -17,7 +19,9 @@ const CITY_NAV_DETAILS = {
   london: { focus: 'Westminster', tone: 'river' },
   munich: { focus: 'Marienplatz', tone: 'copper' },
   berlin: { focus: 'Brandenburg', tone: 'neon' },
-  'new-york': { focus: 'Midtown', tone: 'steel' }
+  'new-york': { focus: 'Midtown', tone: 'steel' },
+  brazil: { focus: 'Rio de Janeiro', tone: 'tropical' },
+  peru: { focus: 'Machu Picchu', tone: 'andes' }
 };
 
 const CITY_LANDMARKS = {
@@ -92,6 +96,27 @@ const CITY_LANDMARKS = {
     { label: 'Times Square', targetKey: 'timesSquare' },
     { label: 'Central Park South', targetKey: 'centralPark' },
     { label: 'Downtown Skyline', targetKey: 'downtown' }
+  ],
+  brazil: [
+    { label: 'Christ the Redeemer', targetKey: 'christ' },
+    { label: 'Sugarloaf', targetKey: 'sugarloaf' },
+    { label: 'Copacabana', targetKey: 'copacabana' },
+    { label: 'Maracana', targetKey: 'maracana' },
+    { label: 'Hillside Community', targetKey: 'favela' },
+    { label: 'Amazon River', targetKey: 'amazon' },
+    { label: 'Iguacu Falls', targetKey: 'iguacu' },
+    { label: 'Brazil Aerial', targetKey: 'aerial' }
+  ],
+  peru: [
+    { label: 'Machu Picchu', targetKey: 'machu' },
+    { label: 'Cusco', targetKey: 'cusco' },
+    { label: 'Sacsayhuaman', targetKey: 'sacsayhuaman' },
+    { label: 'Sacred Valley', targetKey: 'sacredValley' },
+    { label: 'Lake Titicaca', targetKey: 'titicaca' },
+    { label: 'Lima Coast', targetKey: 'lima' },
+    { label: 'Amazon Basin', targetKey: 'amazon' },
+    { label: 'Rainbow Mountain', targetKey: 'rainbow' },
+    { label: 'Peru Aerial', targetKey: 'aerial' }
   ]
 };
 
@@ -116,7 +141,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9ec8d3);
 scene.fog = new THREE.FogExp2(0xb9d2d5, 0.001);
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3200);
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5200);
 camera.position.set(132, 222, 162);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -124,7 +149,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.075;
 controls.enablePan = true;
 controls.minDistance = 4;
-controls.maxDistance = 2200;
+controls.maxDistance = 3800;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.target.set(0, 8, 0);
 
@@ -148,6 +173,7 @@ scene.add(world.group);
 
 const hud = createHud(world.metrics, world.navViews);
 setupHudPanel(hud);
+setupNavPanel(hud);
 const labelLayer = document.createElement('div');
 labelLayer.style.position = 'fixed';
 labelLayer.style.inset = '0';
@@ -216,6 +242,7 @@ for (const view of world.navViews) {
   document.querySelector(`[data-view="${view.id}"]`)?.addEventListener('click', () => {
     setActiveView(view.id);
     flyTo(view.position, view.target);
+    if (window.innerWidth <= 720) hud.setNavCollapsed?.(true);
   });
 }
 document.querySelector('[data-mode="flight"]').addEventListener('click', () => {
@@ -242,7 +269,7 @@ function createHud(metrics, navViews) {
       </button>
     </div>
     <div class="hud__body">
-      <p class="hud__summary">Eleven handcrafted city centres in one flyable offline WebGL world.</p>
+      <p class="hud__summary">${metrics.cities} handcrafted city centres in one flyable offline WebGL world.</p>
       <div class="metrics">
         <div class="metric"><b data-fps>--</b><span>FPS</span></div>
         <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>
@@ -264,26 +291,33 @@ function createHud(metrics, navViews) {
   controlsRoot.className = 'city-nav';
   controlsRoot.setAttribute('aria-label', 'City navigation');
   controlsRoot.innerHTML = `
-    <div class="city-nav__header">
-      <span>Destinations</span>
-      <strong>${navViews.length} cities</strong>
-    </div>
-    <div class="city-nav__rail">
-      ${navViews.map((view, index) => {
-        const detail = CITY_NAV_DETAILS[view.id] ?? { focus: view.label, tone: 'stone' };
-        return `
-          <button class="city-card" data-view="${view.id}" data-tone="${detail.tone}" type="button" title="${view.title}">
-            <span class="city-card__index">${String(index + 1).padStart(2, '0')}</span>
-            <span class="city-card__name">${view.label}</span>
-            <span class="city-card__focus">${detail.focus}</span>
-          </button>
-        `;
-      }).join('')}
-    </div>
-    <button class="flight-toggle" data-mode="flight" type="button" title="Toggle flight controls" aria-pressed="false">
-      <span class="flight-toggle__mark">Fly</span>
-      <span>Flight</span>
+    <button class="city-nav__toggle" data-nav-toggle type="button" aria-expanded="true" aria-controls="city-nav-body" title="Collapse destinations">
+      <span class="city-nav__title">
+        <span>Destinations</span>
+        <strong data-active-destination>${navViews[0]?.label ?? 'City'}</strong>
+      </span>
+      <span class="city-nav__count">${navViews.length}</span>
     </button>
+    <div class="city-nav__body" id="city-nav-body">
+      <div class="city-nav__rail">
+        ${navViews.map((view, index) => {
+          const detail = CITY_NAV_DETAILS[view.id] ?? { focus: view.label, tone: 'stone' };
+          return `
+            <button class="city-card" data-view="${view.id}" data-tone="${detail.tone}" type="button" title="${view.title}">
+              <span class="city-card__index">${String(index + 1).padStart(2, '0')}</span>
+              <span class="city-card__copy">
+                <span class="city-card__name">${view.label}</span>
+                <span class="city-card__focus">${detail.focus}</span>
+              </span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+      <button class="flight-toggle" data-mode="flight" type="button" title="Toggle flight controls" aria-pressed="false">
+        <span class="flight-toggle__mark">Fly</span>
+        <span>Flight</span>
+      </button>
+    </div>
   `;
   document.body.append(controlsRoot);
 
@@ -294,6 +328,8 @@ function createHud(metrics, navViews) {
     landmarks: root.querySelector('[data-landmarks]'),
     root,
     nav: controlsRoot,
+    navToggle: controlsRoot.querySelector('[data-nav-toggle]'),
+    activeDestination: controlsRoot.querySelector('[data-active-destination]'),
     toggle: root.querySelector('[data-hud-toggle]')
   };
 }
@@ -319,8 +355,36 @@ function setupHudPanel(hud) {
   });
 }
 
+function setupNavPanel(hud) {
+  if (!hud.nav || !hud.navToggle) return;
+
+  const setNavCollapsed = (collapsed) => {
+    hud.nav.classList.toggle('is-collapsed', collapsed);
+    hud.navToggle.setAttribute('aria-expanded', String(!collapsed));
+    hud.navToggle.setAttribute('title', collapsed ? 'Open destinations' : 'Collapse destinations');
+  };
+
+  let compactLayout = window.innerWidth <= 720;
+
+  hud.setNavCollapsed = setNavCollapsed;
+  setNavCollapsed(compactLayout);
+
+  hud.navToggle.addEventListener('click', () => {
+    setNavCollapsed(!hud.nav.classList.contains('is-collapsed'));
+  });
+
+  window.addEventListener('resize', () => {
+    const nextCompactLayout = window.innerWidth <= 720;
+    if (nextCompactLayout === compactLayout) return;
+    compactLayout = nextCompactLayout;
+    setNavCollapsed(compactLayout);
+  });
+}
+
 function setActiveView(viewId) {
   activeViewId = viewId;
+  const cityView = getCityView(activeViewId);
+  if (hud.activeDestination) hud.activeDestination.textContent = cityView?.label ?? 'City';
   document.querySelectorAll('[data-view]').forEach((button) => {
     const isActive = button.getAttribute('data-view') === activeViewId;
     button.classList.toggle('is-active', isActive);

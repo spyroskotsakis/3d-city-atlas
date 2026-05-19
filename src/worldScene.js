@@ -3,11 +3,13 @@ import { createAngkorScene, angkorTerrainHeightAt } from './angkorScene.js';
 import { createAthensScene, athensTerrainHeightAt } from './athensScene.js';
 import { createBarcelonaScene, barcelonaTerrainHeightAt } from './barcelonaScene.js';
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
+import { createBrazilScene, brazilTerrainHeightAt } from './brazilScene.js';
 import { createEgyptScene, egyptTerrainHeightAt } from './egyptScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
 import { createMunichScene, munichTerrainHeightAt } from './munichScene.js';
 import { createNewYorkScene, newYorkTerrainHeightAt } from './newYorkScene.js';
 import { createParisScene, parisTerrainHeightAt } from './parisScene.js';
+import { createPeruScene, peruTerrainHeightAt } from './peruScene.js';
 import { createRomeScene, terrainHeightAt as romeTerrainHeightAt } from './romeScene.js';
 import { createVeniceScene, veniceTerrainHeightAt } from './veniceScene.js';
 import { VoxelBatcher } from './voxelBatcher.js';
@@ -166,6 +168,34 @@ const CITY_SPECS = [
       position: new THREE.Vector3(112, 168, 132),
       targetKey: 'empire'
     }
+  },
+  {
+    id: 'brazil',
+    name: 'Brazil',
+    origin: new THREE.Vector3(2240, 0, 230),
+    bounds: 238,
+    create: createBrazilScene,
+    heightAt: brazilTerrainHeightAt,
+    view: {
+      label: 'Brazil',
+      title: 'Brazil Rio de Janeiro view',
+      position: new THREE.Vector3(132, 166, 148),
+      targetKey: 'christ'
+    }
+  },
+  {
+    id: 'peru',
+    name: 'Peru',
+    origin: new THREE.Vector3(2760, 0, 540),
+    bounds: 234,
+    create: createPeruScene,
+    heightAt: peruTerrainHeightAt,
+    view: {
+      label: 'Peru',
+      title: 'Peru Machu Picchu and Cusco view',
+      position: new THREE.Vector3(122, 164, 142),
+      targetKey: 'machu'
+    }
   }
 ];
 
@@ -315,12 +345,36 @@ const CONNECTOR_SPECS = [
     cameraLift: 66,
     cameraBack: 72,
     showInNav: false
+  },
+  {
+    id: 'new-york-brazil-road',
+    label: 'NY-B Road',
+    title: 'New York to Brazil connector road',
+    start: new THREE.Vector3(1850, 0, -134),
+    end: new THREE.Vector3(2076, 0, 28),
+    terrain: 'brazilTerrain',
+    width: 18,
+    curve: -12.0,
+    cameraLift: 76,
+    cameraBack: 82
+  },
+  {
+    id: 'brazil-peru-road',
+    label: 'B-P Road',
+    title: 'Brazil to Peru connector road',
+    start: new THREE.Vector3(2462, 0, 412),
+    end: new THREE.Vector3(2548, 0, 438),
+    terrain: 'peruTerrain',
+    width: 18,
+    curve: 5.8,
+    cameraLift: 66,
+    cameraBack: 62
   }
 ];
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-new-york-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-new-york-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
