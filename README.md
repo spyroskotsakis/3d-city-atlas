@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded thirteen-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded fourteen-city world.
 
 ## Cities
 
@@ -62,6 +62,10 @@ Berlin is centered on the Brandenburg Gate with the Fernsehturm visible above Al
 
 Berlin also adds club-culture atmosphere through industrial nightlife zones inspired by power stations, vault clubs, riverside venues, and warehouse yards, with concrete exteriors, fenced queues, subtle neon signage, bouncers, smokers, kiosks, bikes, taxis, and late-night street activity.
 
+### Vienna
+
+Vienna is centered on Stephansdom with a patterned roof, tall Gothic spire, detailed stone facade, Stephansplatz activity, visitors, and dense old-town streets. It includes Hofburg Palace, Vienna State Opera, Karlskirche, Belvedere Palace, Schonbrunn Palace, Rathaus, Parliament, MuseumsQuartier, Prater with the Giant Ferris Wheel, Hundertwasserhaus, Stadtpark, Ringstrasse architecture, trams, cafes, fountains, market stalls, carriages, bicycles, and animated crowds. The Danube Canal and Danube waterfront add quays, embankments, bridges, promenades, moored party boats, floating dining venues, string lights, subtle neon, seated guests, and night-river ambience.
+
 ### New York
 
 New York is centered on dense Midtown Manhattan and the Empire State Building with Art Deco massing, stepped crown, spire, observation decks, and street-level activity. It includes Hudson and East River edges, Manhattan grid roads, Times Square, Chrysler Building, Grand Central Terminal, Rockefeller Center, One Vanderbilt, Flatiron Building, Bryant Park, Central Park South, Madison Square Garden, New York Public Library, Lower Manhattan skyline elements, Brooklyn Bridge, yellow taxis, steam vents, billboards, subway entrances, vendors, trees, and crowds.
@@ -78,7 +82,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `New York`, `Brazil`, `Peru`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -121,6 +125,7 @@ src/
   londonScene.js    Procedural London module
   munichScene.js    Procedural Munich module
   berlinScene.js    Procedural Berlin module
+  viennaScene.js    Procedural Vienna module
   newYorkScene.js   Procedural New York module
   brazilScene.js    Procedural Brazil / Rio de Janeiro module
   peruScene.js      Procedural Peru / Machu Picchu and Cusco module
@@ -164,6 +169,7 @@ The current connectors are:
 - Paris to Barcelona
 - Paris to Munich
 - Munich to Berlin
+- Berlin to Vienna
 - Paris to London
 - Paris to New York, modelled as a longer triple route
 - New York to Brazil

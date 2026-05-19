@@ -19,6 +19,7 @@ const CITY_NAV_DETAILS = {
   london: { focus: 'Westminster', tone: 'river' },
   munich: { focus: 'Marienplatz', tone: 'copper' },
   berlin: { focus: 'Brandenburg', tone: 'neon' },
+  vienna: { focus: 'Stephansdom', tone: 'imperial' },
   'new-york': { focus: 'Midtown', tone: 'steel' },
   brazil: { focus: 'Rio de Janeiro', tone: 'tropical' },
   peru: { focus: 'Machu Picchu', tone: 'andes' }
@@ -90,6 +91,18 @@ const CITY_LANDMARKS = {
     { label: 'Museum Island', targetKey: 'museumIsland' },
     { label: 'TV Tower', targetKey: 'fernsehturm' },
     { label: 'Potsdamer Platz', targetKey: 'potsdamer' }
+  ],
+  vienna: [
+    { label: 'Stephansdom', targetKey: 'stephansdom' },
+    { label: 'Hofburg', targetKey: 'hofburg' },
+    { label: 'State Opera', targetKey: 'opera' },
+    { label: 'Karlskirche', targetKey: 'karlskirche' },
+    { label: 'Belvedere', targetKey: 'belvedere' },
+    { label: 'Danube Canal', targetKey: 'danube' },
+    { label: 'Night Boats', targetKey: 'nightlife' },
+    { label: 'Prater', targetKey: 'prater' },
+    { label: 'Schonbrunn', targetKey: 'schonbrunn' },
+    { label: 'Vienna Aerial', targetKey: 'aerial' }
   ],
   'new-york': [
     { label: 'Empire State', targetKey: 'empire' },
@@ -287,6 +300,25 @@ function createHud(metrics, navViews) {
   `;
   document.body.append(root);
 
+  const exploreRoot = document.createElement('div');
+  exploreRoot.className = 'explore-dock';
+  exploreRoot.setAttribute('role', 'group');
+  exploreRoot.setAttribute('aria-label', 'Exploration controls');
+
+  const flightRoot = document.createElement('div');
+  flightRoot.className = 'flight-dock';
+  flightRoot.setAttribute('aria-label', 'Flight controls');
+  flightRoot.innerHTML = `
+    <button class="flight-toggle" data-mode="flight" type="button" title="Enter flight mode" aria-label="Turn flight mode on" aria-pressed="false">
+      <span class="flight-toggle__mark" aria-hidden="true">Fly</span>
+      <span class="flight-toggle__copy">
+        <span class="flight-toggle__label" data-flight-label>Flight mode</span>
+        <span class="flight-toggle__hint" data-flight-state>Ready</span>
+      </span>
+    </button>
+  `;
+  exploreRoot.append(flightRoot);
+
   const controlsRoot = document.createElement('nav');
   controlsRoot.className = 'city-nav';
   controlsRoot.setAttribute('aria-label', 'City navigation');
@@ -313,13 +345,10 @@ function createHud(metrics, navViews) {
           `;
         }).join('')}
       </div>
-      <button class="flight-toggle" data-mode="flight" type="button" title="Toggle flight controls" aria-pressed="false">
-        <span class="flight-toggle__mark">Fly</span>
-        <span>Flight</span>
-      </button>
     </div>
   `;
-  document.body.append(controlsRoot);
+  exploreRoot.append(controlsRoot);
+  document.body.append(exploreRoot);
 
   return {
     fps: root.querySelector('[data-fps]'),
@@ -327,7 +356,9 @@ function createHud(metrics, navViews) {
     landmarkCount: root.querySelector('[data-landmark-count]'),
     landmarks: root.querySelector('[data-landmarks]'),
     root,
+    exploreDock: exploreRoot,
     nav: controlsRoot,
+    flightDock: flightRoot,
     navToggle: controlsRoot.querySelector('[data-nav-toggle]'),
     activeDestination: controlsRoot.querySelector('[data-active-destination]'),
     toggle: root.querySelector('[data-hud-toggle]')
@@ -466,8 +497,15 @@ function setFlightMode(enabled, requestLock = false) {
   document.body.classList.toggle('is-flight', enabled);
 
   const button = document.querySelector('[data-mode="flight"]');
+  if (!button) return;
   button.classList.toggle('is-active', enabled);
   button.setAttribute('aria-pressed', String(enabled));
+  button.setAttribute('aria-label', enabled ? 'Exit flight mode' : 'Turn flight mode on');
+  button.setAttribute('title', enabled ? 'Exit flight mode' : 'Enter flight mode');
+  const label = button.querySelector('[data-flight-label]');
+  if (label) label.textContent = enabled ? 'Exit flight' : 'Flight mode';
+  const state = button.querySelector('[data-flight-state]');
+  if (state) state.textContent = enabled ? 'Active' : 'Ready';
 
   if (enabled) {
     syncFlightAnglesFromCamera();
@@ -541,9 +579,9 @@ function updateLabels() {
   const height = window.innerHeight;
   const cameraPosition = camera.position;
   const hudRect = hud.root.getBoundingClientRect();
-  const navRect = hud.nav.getBoundingClientRect();
+  const controlsRect = hud.exploreDock.getBoundingClientRect();
   const inHudZone = (screenX, screenY) => isInsideRect(screenX, screenY, hudRect, 12);
-  const inControlsZone = (screenX, screenY) => isInsideRect(screenX, screenY, navRect, 14);
+  const inControlsZone = (screenX, screenY) => isInsideRect(screenX, screenY, controlsRect, 14);
 
   for (const label of labels) {
     const pos = label.position.clone().project(camera);

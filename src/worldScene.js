@@ -12,6 +12,7 @@ import { createParisScene, parisTerrainHeightAt } from './parisScene.js';
 import { createPeruScene, peruTerrainHeightAt } from './peruScene.js';
 import { createRomeScene, terrainHeightAt as romeTerrainHeightAt } from './romeScene.js';
 import { createVeniceScene, veniceTerrainHeightAt } from './veniceScene.js';
+import { createViennaScene, viennaTerrainHeightAt } from './viennaScene.js';
 import { VoxelBatcher } from './voxelBatcher.js';
 
 const CITY_SPECS = [
@@ -156,6 +157,20 @@ const CITY_SPECS = [
     }
   },
   {
+    id: 'vienna',
+    name: 'Vienna',
+    origin: new THREE.Vector3(1320, 0, -820),
+    bounds: 216,
+    create: createViennaScene,
+    heightAt: viennaTerrainHeightAt,
+    view: {
+      label: 'Vienna',
+      title: 'Vienna Stephansdom view',
+      position: new THREE.Vector3(116, 132, 128),
+      targetKey: 'stephansdom'
+    }
+  },
+  {
     id: 'new-york',
     name: 'New York',
     origin: new THREE.Vector3(1710, 0, -330),
@@ -297,6 +312,18 @@ const CONNECTOR_SPECS = [
     cameraBack: 58
   },
   {
+    id: 'berlin-vienna-road',
+    label: 'B-V Road',
+    title: 'Berlin to Vienna connector road',
+    start: new THREE.Vector3(1180, 0, -612),
+    end: new THREE.Vector3(1228, 0, -604),
+    terrain: 'viennaTerrain',
+    width: 18,
+    curve: 4.2,
+    cameraLift: 60,
+    cameraBack: 58
+  },
+  {
     id: 'paris-london-road',
     label: 'P-L Road',
     title: 'Paris to London connector road',
@@ -374,7 +401,7 @@ const CONNECTOR_SPECS = [
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-new-york-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-vienna-new-york-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);

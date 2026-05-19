@@ -266,12 +266,19 @@ body.is-flight canvas.webgl {
   color: #fff3d9;
 }
 
-.city-nav {
+.explore-dock {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 11;
   width: min(318px, calc(100vw - 32px));
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.city-nav {
+  width: 100%;
   min-height: 0;
   padding: 10px;
   display: grid;
@@ -289,7 +296,7 @@ body.is-flight canvas.webgl {
 }
 
 .city-nav.is-collapsed {
-  width: min(214px, calc(100vw - 32px));
+  width: min(214px, 100%);
   border-color: rgba(255, 239, 204, 0.14);
   background: rgba(34, 41, 40, 0.78);
 }
@@ -363,7 +370,7 @@ body.is-flight canvas.webgl {
   min-width: 0;
   display: grid;
   gap: 6px;
-  max-height: min(620px, calc(100vh - 158px));
+  max-height: min(540px, calc(100vh - 232px));
   overflow-y: auto;
   overscroll-behavior-y: contain;
   padding-right: 2px;
@@ -380,8 +387,7 @@ body.is-flight canvas.webgl {
   background: rgba(255, 226, 165, 0.34);
 }
 
-.city-card,
-.flight-toggle {
+.city-card {
   min-width: 0;
   border: 1px solid rgba(255, 234, 190, 0.18);
   border-radius: 6px;
@@ -452,6 +458,10 @@ body.is-flight canvas.webgl {
   background: var(--violet);
 }
 
+.city-card[data-tone="imperial"]::before {
+  background: #d8cfb7;
+}
+
 .city-card[data-tone="steel"]::before {
   background: #9fb4c1;
 }
@@ -504,31 +514,81 @@ body.is-flight canvas.webgl {
   white-space: nowrap;
 }
 
+.flight-dock {
+  width: min(216px, 100%);
+  justify-self: end;
+}
+
 .flight-toggle {
-  height: 44px;
-  padding: 7px 9px;
+  min-width: 0;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 54px minmax(0, 1fr);
   gap: 9px;
   align-items: center;
+  border: 1px solid rgba(255, 234, 190, 0.24);
+  border-radius: 8px;
+  background: rgba(34, 41, 40, 0.86);
+  box-shadow: 0 18px 48px rgba(12, 16, 15, 0.3);
+  backdrop-filter: blur(16px);
   color: #ffe7ad;
-  font-size: 11px;
-  font-weight: 780;
+  cursor: pointer;
+  font: inherit;
   text-align: left;
-  text-transform: uppercase;
 }
 
 .flight-toggle__mark {
-  width: 44px;
-  height: 28px;
+  width: 52px;
+  height: 34px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(242, 196, 109, 0.28);
-  border-radius: 4px;
+  border-radius: 6px;
   background: rgba(242, 196, 109, 0.12);
   color: #fff0c8;
   font-size: 13px;
-  text-transform: none;
+  font-weight: 860;
+  line-height: 1;
+}
+
+.flight-toggle__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.flight-toggle__label,
+.flight-toggle__hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flight-toggle__label {
+  color: #fff3d9;
+  font-size: 14px;
+  font-weight: 820;
+  line-height: 1.05;
+}
+
+.flight-toggle__hint {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.flight-toggle.is-active .flight-toggle__mark {
+  border-color: rgba(116, 184, 197, 0.48);
+  background: rgba(116, 184, 197, 0.18);
+  color: #dffaff;
+}
+
+.flight-toggle.is-active .flight-toggle__hint {
+  color: #dffaff;
 }
 
 .city-card:hover,
@@ -542,6 +602,13 @@ body.is-flight canvas.webgl {
   outline: none;
   background: rgba(255, 218, 142, 0.15);
   border-color: var(--line-strong);
+}
+
+.flight-toggle:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(255, 242, 215, 0.72),
+    0 0 0 5px rgba(242, 196, 109, 0.26),
+    0 18px 48px rgba(12, 16, 15, 0.3);
 }
 
 .city-card.is-active {
@@ -570,12 +637,12 @@ body.is-flight canvas.webgl {
 }
 
 @media (max-width: 920px) {
-  .city-nav {
+  .explore-dock {
     width: min(294px, calc(100vw - 32px));
   }
 
   .city-nav.is-collapsed {
-    width: min(204px, calc(100vw - 32px));
+    width: min(204px, 100%);
   }
 }
 
@@ -613,18 +680,23 @@ body.is-flight canvas.webgl {
     padding-right: 3px;
   }
 
-  .city-nav {
+  .explore-dock {
     top: auto;
-    right: 10px;
-    bottom: 10px;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
     left: auto;
     width: min(286px, calc(100vw - 20px));
+    gap: 7px;
+  }
+
+  .city-nav {
+    width: 100%;
     padding: 8px;
     overflow: hidden;
   }
 
   .city-nav.is-collapsed {
-    width: min(190px, calc(100vw - 20px));
+    width: min(190px, 100%);
   }
 
   .city-nav__toggle {
@@ -637,20 +709,37 @@ body.is-flight canvas.webgl {
   }
 
   .city-nav__rail {
-    max-height: min(420px, calc(100vh - 210px));
+    max-height: min(360px, calc(100dvh - 300px));
   }
 
   .city-card {
     height: 46px;
   }
 
+  .flight-dock {
+    width: min(156px, 100%);
+  }
+
   .flight-toggle {
-    height: 42px;
+    min-height: 50px;
     padding: 7px 8px;
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 7px;
+    text-align: left;
   }
 
   .flight-toggle__mark {
-    width: 42px;
+    width: 48px;
+    height: 30px;
+  }
+
+  .flight-toggle__label {
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .flight-toggle__hint {
+    display: none;
   }
 
   .city-card__name {
