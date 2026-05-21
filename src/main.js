@@ -5,8 +5,18 @@ import { createMaterialLibrary } from './atlas.js';
 import { createWorldScene } from './worldScene.js';
 import './styles.css';
 
-injectVercelAnalytics();
+if (shouldInjectAnalytics()) injectVercelAnalytics();
 THREE.ColorManagement.enabled = false;
+
+function shouldInjectAnalytics() {
+  const hostname = window.location.hostname;
+  return hostname !== 'localhost' &&
+    hostname !== '127.0.0.1' &&
+    hostname !== '0.0.0.0' &&
+    !hostname.startsWith('192.168.') &&
+    !hostname.startsWith('10.') &&
+    !hostname.startsWith('172.16.');
+}
 
 const CITY_NAV_DETAILS = {
   rome: { focus: 'Colosseum', tone: 'marble' },
@@ -210,13 +220,26 @@ let desiredPosition = camera.position.clone();
 const flight = {
   active: false,
   dragging: false,
+  lookPointerId: null,
+  lookLastX: 0,
+  lookLastY: 0,
   pitch: 0,
   yaw: 0,
   keys: new Set(),
   speed: 62,
   fastSpeed: 160,
   slowSpeed: 24,
-  bounds: world.bounds
+  bounds: world.bounds,
+  mobile: {
+    movePointerId: null,
+    liftPointerId: null,
+    moveCenterX: 0,
+    moveCenterY: 0,
+    moveRadius: 1,
+    moveX: 0,
+    moveY: 0,
+    lift: 0
+  }
 };
 const forward = new THREE.Vector3();
 const right = new THREE.Vector3();
@@ -228,6 +251,8 @@ const fpsState = {
   last: performance.now(),
   fps: 60
 };
+
+setupMobileFlightControls(hud);
 
 window.__ROME_METRICS__ = {
   fps: 0,
@@ -355,6 +380,22 @@ function createHud(metrics, navViews) {
   exploreRoot.append(controlsRoot);
   document.body.append(exploreRoot);
 
+  const mobileControls = document.createElement('div');
+  mobileControls.className = 'mobile-flight-controls';
+  mobileControls.setAttribute('aria-hidden', 'true');
+  mobileControls.innerHTML = `
+    <div class="mobile-flight-stick" data-mobile-move-stick role="group" tabindex="0" aria-label="Move in flight mode with touch drag or keyboard movement keys">
+      <div class="mobile-flight-stick__base" aria-hidden="true">
+        <span class="mobile-flight-stick__knob" data-mobile-move-knob></span>
+      </div>
+    </div>
+    <div class="mobile-flight-lift" role="group" aria-label="Altitude in flight mode">
+      <button class="mobile-flight-lift__button" data-mobile-lift="up" type="button" aria-label="Ascend">+</button>
+      <button class="mobile-flight-lift__button" data-mobile-lift="down" type="button" aria-label="Descend">-</button>
+    </div>
+  `;
+  document.body.append(mobileControls);
+
   return {
     fps: root.querySelector('[data-fps]'),
     cityName: root.querySelector('[data-city-name]'),
@@ -364,6 +405,10 @@ function createHud(metrics, navViews) {
     exploreDock: exploreRoot,
     nav: controlsRoot,
     flightDock: flightRoot,
+    mobileControls,
+    mobileMoveStick: mobileControls.querySelector('[data-mobile-move-stick]'),
+    mobileMoveKnob: mobileControls.querySelector('[data-mobile-move-knob]'),
+    mobileLiftButtons: mobileControls.querySelectorAll('[data-mobile-lift]'),
     navToggle: controlsRoot.querySelector('[data-nav-toggle]'),
     activeDestination: controlsRoot.querySelector('[data-active-destination]'),
     toggle: root.querySelector('[data-hud-toggle]')
@@ -432,6 +477,182 @@ function setupNavPanel(hud) {
     compactLayout = nextCompactLayout;
     if (!autoCollapseTimer && compactLayout) setNavCollapsed(true);
   });
+}
+
+function setupMobileFlightControls(hud) {
+  if (!hud.mobileControls || !hud.mobileMoveStick || !hud.mobileMoveKnob) return;
+
+  const updateMoveStick = (event) => {
+    const rawX = event.clientX - flight.mobile.moveCenterX;
+    const rawY = event.clientY - flight.mobile.moveCenterY;
+    const maxRadius = flight.mobile.moveRadius;
+    const distance = Math.hypot(rawX, rawY);
+    const scaleFactor = distance > maxRadius ? maxRadius / distance : 1;
+    const dx = rawX * scaleFactor;
+    const dy = rawY * scaleFactor;
+    const axisX = dx / maxRadius;
+    const axisY = -dy / maxRadius;
+    const axisLength = Math.hypot(axisX, axisY);
+
+    if (axisLength < 0.12) {
+      flight.mobile.moveX = 0;
+      flight.mobile.moveY = 0;
+    } else {
+      const normalizedLength = (axisLength - 0.12) / 0.88;
+      const axisScale = Math.min(1, normalizedLength) / axisLength;
+      flight.mobile.moveX = axisX * axisScale;
+      flight.mobile.moveY = axisY * axisScale;
+    }
+    hud.mobileMoveKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+
+  const beginMove = (event) => {
+    if (!flight.active || flight.mobile.movePointerId !== null) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    flight.mobile.movePointerId = event.pointerId;
+    const rect = hud.mobileMoveStick.getBoundingClientRect();
+    flight.mobile.moveCenterX = rect.left + rect.width * 0.5;
+    flight.mobile.moveCenterY = rect.top + rect.height * 0.5;
+    flight.mobile.moveRadius = Math.max(26, Math.min(rect.width, rect.height) * 0.34);
+    hud.mobileMoveStick.classList.add('is-active');
+    capturePointer(hud.mobileMoveStick, event.pointerId);
+    updateMoveStick(event);
+  };
+
+  const moveStick = (event) => {
+    if (event.pointerId !== flight.mobile.movePointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    updateMoveStick(event);
+  };
+
+  const endMove = (event) => {
+    if (event.pointerId !== flight.mobile.movePointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    releasePointerCapture(hud.mobileMoveStick, event.pointerId);
+    resetMobileMoveInput();
+  };
+
+  hud.mobileMoveStick.addEventListener('pointerdown', beginMove);
+  hud.mobileMoveStick.addEventListener('pointermove', moveStick);
+  hud.mobileMoveStick.addEventListener('pointerup', endMove);
+  hud.mobileMoveStick.addEventListener('pointercancel', endMove);
+  hud.mobileMoveStick.addEventListener('lostpointercapture', endMove);
+  hud.mobileMoveStick.addEventListener('contextmenu', (event) => event.preventDefault());
+  window.addEventListener('pointerup', endMove);
+  window.addEventListener('pointercancel', endMove);
+
+  hud.mobileLiftButtons.forEach((button) => {
+    const direction = button.getAttribute('data-mobile-lift') === 'up' ? 1 : -1;
+    let pointerActivated = false;
+
+    const beginLift = (event) => {
+      if (!flight.active || flight.mobile.liftPointerId !== null) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      pointerActivated = true;
+      flight.mobile.liftPointerId = event.pointerId;
+      flight.mobile.lift = direction;
+      button.classList.add('is-active');
+      capturePointer(button, event.pointerId);
+    };
+
+    const endLift = (event) => {
+      if (event.pointerId !== flight.mobile.liftPointerId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      releasePointerCapture(button, event.pointerId);
+      resetMobileLiftInput();
+      pulseMobileLift(direction, button);
+      window.setTimeout(() => {
+        pointerActivated = false;
+      }, 220);
+    };
+
+    button.addEventListener('pointerdown', beginLift);
+    button.addEventListener('pointerup', endLift);
+    button.addEventListener('pointercancel', endLift);
+    button.addEventListener('lostpointercapture', endLift);
+    button.addEventListener('contextmenu', (event) => event.preventDefault());
+    window.addEventListener('pointerup', endLift);
+    window.addEventListener('pointercancel', endLift);
+    button.addEventListener('keydown', (event) => {
+      if (!flight.active || !isActivationKey(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      flight.mobile.lift = direction;
+      button.classList.add('is-active');
+    });
+    button.addEventListener('keyup', (event) => {
+      if (!isActivationKey(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      resetMobileLiftInput();
+    });
+    button.addEventListener('blur', resetMobileLiftInput);
+    button.addEventListener('click', (event) => {
+      if (!flight.active) return;
+      if (pointerActivated) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      pulseMobileLift(direction, button);
+    });
+  });
+}
+
+function pulseMobileLift(direction, button) {
+  flight.mobile.lift = direction;
+  button.classList.add('is-active');
+  window.setTimeout(resetMobileLiftInput, 180);
+}
+
+function isActivationKey(event) {
+  return event.code === 'Space' || event.code === 'Enter';
+}
+
+function resetMobileMoveInput() {
+  flight.mobile.movePointerId = null;
+  flight.mobile.moveX = 0;
+  flight.mobile.moveY = 0;
+  hud.mobileMoveStick?.classList.remove('is-active');
+  if (hud.mobileMoveKnob) hud.mobileMoveKnob.style.transform = 'translate(0, 0)';
+}
+
+function resetMobileLiftInput() {
+  flight.mobile.liftPointerId = null;
+  flight.mobile.lift = 0;
+  hud.mobileLiftButtons?.forEach((button) => button.classList.remove('is-active'));
+}
+
+function resetMobileFlightInput() {
+  resetMobileMoveInput();
+  resetMobileLiftInput();
+  flight.dragging = false;
+  flight.lookPointerId = null;
+}
+
+function capturePointer(element, pointerId) {
+  try {
+    element?.setPointerCapture?.(pointerId);
+  } catch {
+    // Synthetic events and cancelled native touches may not have an active pointer.
+  }
+}
+
+function releasePointerCapture(element, pointerId) {
+  try {
+    element?.releasePointerCapture?.(pointerId);
+  } catch {
+    // The browser may already have released capture after pointerup/cancel.
+  }
 }
 
 function setActiveView(viewId) {
@@ -505,8 +726,10 @@ function setFlightMode(enabled, requestLock = false) {
 
   flight.active = enabled;
   flight.dragging = false;
+  flight.lookPointerId = null;
   controls.enabled = !enabled;
   document.body.classList.toggle('is-flight', enabled);
+  hud.mobileControls?.setAttribute('aria-hidden', String(!enabled));
 
   const button = document.querySelector('[data-mode="flight"]');
   if (!button) return;
@@ -523,11 +746,12 @@ function setFlightMode(enabled, requestLock = false) {
     syncFlightAnglesFromCamera();
     desiredPosition.copy(camera.position);
     desiredTarget.copy(controls.target);
-    if (requestLock && document.pointerLockElement !== canvas) {
+    if (requestLock && shouldRequestPointerLock() && document.pointerLockElement !== canvas) {
       canvas.requestPointerLock?.();
     }
   } else {
     flight.keys.clear();
+    resetMobileFlightInput();
     if (document.pointerLockElement === canvas) document.exitPointerLock?.();
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).addScaledVector(forward, 34);
@@ -540,6 +764,10 @@ function syncFlightAnglesFromCamera() {
   euler.setFromQuaternion(camera.quaternion, 'YXZ');
   flight.pitch = euler.x;
   flight.yaw = euler.y;
+}
+
+function shouldRequestPointerLock() {
+  return !window.matchMedia?.('(pointer: coarse)').matches;
 }
 
 function updateFlightLook(movementX, movementY) {
@@ -564,12 +792,24 @@ function moveFlight(delta) {
   right.set(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
   moveVector.set(0, 0, 0);
 
-  if (flight.keys.has('KeyW') || flight.keys.has('ArrowUp')) moveVector.add(forward);
-  if (flight.keys.has('KeyS') || flight.keys.has('ArrowDown')) moveVector.sub(forward);
-  if (flight.keys.has('KeyD') || flight.keys.has('ArrowRight')) moveVector.add(right);
-  if (flight.keys.has('KeyA') || flight.keys.has('ArrowLeft')) moveVector.sub(right);
-  if (flight.keys.has('KeyE') || flight.keys.has('Space')) moveVector.y += 1;
-  if (flight.keys.has('KeyQ') || flight.keys.has('ControlLeft') || flight.keys.has('ControlRight')) moveVector.y -= 1;
+  let forwardAxis = flight.mobile.moveY;
+  let strafeAxis = flight.mobile.moveX;
+  let liftAxis = flight.mobile.lift;
+
+  if (flight.keys.has('KeyW') || flight.keys.has('ArrowUp')) forwardAxis += 1;
+  if (flight.keys.has('KeyS') || flight.keys.has('ArrowDown')) forwardAxis -= 1;
+  if (flight.keys.has('KeyD') || flight.keys.has('ArrowRight')) strafeAxis += 1;
+  if (flight.keys.has('KeyA') || flight.keys.has('ArrowLeft')) strafeAxis -= 1;
+  if (flight.keys.has('KeyE') || flight.keys.has('Space')) liftAxis += 1;
+  if (flight.keys.has('KeyQ') || flight.keys.has('ControlLeft') || flight.keys.has('ControlRight')) liftAxis -= 1;
+
+  forwardAxis = clampInputAxis(forwardAxis);
+  strafeAxis = clampInputAxis(strafeAxis);
+  liftAxis = clampInputAxis(liftAxis);
+
+  if (forwardAxis !== 0) moveVector.addScaledVector(forward, forwardAxis);
+  if (strafeAxis !== 0) moveVector.addScaledVector(right, strafeAxis);
+  moveVector.y += liftAxis;
 
   if (moveVector.lengthSq() > 0) {
     const speed = flight.keys.has('ShiftLeft') || flight.keys.has('ShiftRight')
@@ -577,7 +817,8 @@ function moveFlight(delta) {
       : flight.keys.has('AltLeft') || flight.keys.has('AltRight')
         ? flight.slowSpeed
         : flight.speed;
-    camera.position.addScaledVector(moveVector.normalize(), speed * delta);
+    const inputLength = moveVector.length();
+    camera.position.addScaledVector(moveVector.multiplyScalar(1 / inputLength), speed * delta * Math.min(1, inputLength));
     clampFlightPosition();
   }
 
@@ -586,14 +827,26 @@ function moveFlight(delta) {
   desiredTarget.copy(controls.target);
 }
 
+function clampInputAxis(value) {
+  return Math.max(-1, Math.min(1, value));
+}
+
 function updateLabels() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   const cameraPosition = camera.position;
   const hudRect = hud.root.getBoundingClientRect();
   const controlsRect = hud.exploreDock.getBoundingClientRect();
+  const mobileControlsRect = hud.mobileControls?.getBoundingClientRect();
   const inHudZone = (screenX, screenY) => isInsideRect(screenX, screenY, hudRect, 12);
   const inControlsZone = (screenX, screenY) => isInsideRect(screenX, screenY, controlsRect, 14);
+  const inMobileControlsZone = (screenX, screenY) => {
+    return flight.active &&
+      mobileControlsRect &&
+      mobileControlsRect.width > 0 &&
+      mobileControlsRect.height > 0 &&
+      isInsideRect(screenX, screenY, mobileControlsRect, 14);
+  };
 
   for (const label of labels) {
     const pos = label.position.clone().project(camera);
@@ -607,6 +860,7 @@ function updateLabels() {
       screenY < height - 24 &&
       !inHudZone(screenX, screenY) &&
       !inControlsZone(screenX, screenY) &&
+      !inMobileControlsZone(screenX, screenY) &&
       cameraPosition.distanceTo(label.position) < 260;
     if (!visible) {
       label.element.style.display = 'none';
@@ -674,6 +928,11 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
   renderer.setSize(window.innerWidth, window.innerHeight);
+  resetMobileFlightInput();
+});
+
+window.visualViewport?.addEventListener('resize', () => {
+  resetMobileFlightInput();
 });
 
 window.addEventListener('keydown', (event) => {
@@ -688,31 +947,65 @@ window.addEventListener('keyup', (event) => {
 
 window.addEventListener('blur', () => {
   flight.keys.clear();
-  flight.dragging = false;
+  resetMobileFlightInput();
+});
+
+window.addEventListener('pagehide', () => {
+  flight.keys.clear();
+  resetMobileFlightInput();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    flight.keys.clear();
+    resetMobileFlightInput();
+  }
 });
 
 document.addEventListener('pointerlockchange', () => {
   if (flight.active && document.pointerLockElement !== canvas) {
     flight.dragging = false;
+    flight.lookPointerId = null;
   }
 });
 
 canvas.addEventListener('pointerdown', (event) => {
   if (!flight.active) return;
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (flight.lookPointerId !== null) return;
   event.preventDefault();
   flight.dragging = true;
-  canvas.setPointerCapture?.(event.pointerId);
+  flight.lookPointerId = event.pointerId;
+  flight.lookLastX = event.clientX;
+  flight.lookLastY = event.clientY;
+  capturePointer(canvas, event.pointerId);
 });
 
-canvas.addEventListener('pointerup', (event) => {
+function endFlightLook(event) {
+  if (event.pointerId !== flight.lookPointerId) return;
   flight.dragging = false;
-  canvas.releasePointerCapture?.(event.pointerId);
-});
+  flight.lookPointerId = null;
+  releasePointerCapture(canvas, event.pointerId);
+}
+
+canvas.addEventListener('pointerup', endFlightLook);
+canvas.addEventListener('pointercancel', endFlightLook);
+canvas.addEventListener('lostpointercapture', endFlightLook);
+window.addEventListener('pointerup', endFlightLook);
+window.addEventListener('pointercancel', endFlightLook);
 
 canvas.addEventListener('pointermove', (event) => {
   if (!flight.active) return;
-  if (document.pointerLockElement !== canvas && !flight.dragging) return;
-  updateFlightLook(event.movementX, event.movementY);
+  if (document.pointerLockElement !== canvas && event.pointerId !== flight.lookPointerId) return;
+  const movementX = document.pointerLockElement === canvas
+    ? event.movementX
+    : event.clientX - flight.lookLastX;
+  const movementY = document.pointerLockElement === canvas
+    ? event.movementY
+    : event.clientY - flight.lookLastY;
+  flight.lookLastX = event.clientX;
+  flight.lookLastY = event.clientY;
+  updateFlightLook(movementX, movementY);
 });
 
 canvas.addEventListener(
