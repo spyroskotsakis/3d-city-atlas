@@ -944,9 +944,9 @@ body.is-flight canvas.webgl {
     --mobile-knob-size: 40px;
     --mobile-lift-size: 44px;
     position: fixed;
-    right: max(10px, env(safe-area-inset-right));
+    left: max(10px, env(safe-area-inset-left));
     bottom: max(10px, env(safe-area-inset-bottom));
-    left: auto;
+    right: auto;
     z-index: 12;
     display: grid;
     grid-template-columns: var(--mobile-stick-size) var(--mobile-lift-size);

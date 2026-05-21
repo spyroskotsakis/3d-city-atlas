@@ -241,6 +241,12 @@ const flight = {
     lift: 0
   }
 };
+const FLIGHT_CITY_SYNC_INSET = 18;
+const FLIGHT_CITY_SYNC_DWELL_MS = 550;
+const flightCitySync = {
+  candidateId: null,
+  candidateSince: 0
+};
 const forward = new THREE.Vector3();
 const right = new THREE.Vector3();
 const moveVector = new THREE.Vector3();
@@ -257,6 +263,7 @@ setupMobileFlightControls(hud);
 window.__ROME_METRICS__ = {
   fps: 0,
   mode: 'orbit',
+  activeCity: null,
   camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
   cityCount: world.metrics.cities,
   instanceCount: world.metrics.instances,
@@ -655,15 +662,18 @@ function releasePointerCapture(element, pointerId) {
   }
 }
 
-function setActiveView(viewId) {
+function setActiveView(viewId, options = {}) {
+  const { revealInNav = true, focusButton = false } = options;
   activeViewId = viewId;
+  window.__ROME_METRICS__.activeCity = activeViewId;
   const cityView = getCityView(activeViewId);
   if (hud.activeDestination) hud.activeDestination.textContent = cityView?.label ?? 'City';
   document.querySelectorAll('[data-view]').forEach((button) => {
     const isActive = button.getAttribute('data-view') === activeViewId;
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-current', isActive ? 'page' : 'false');
-    if (isActive) button.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (isActive && revealInNav) button.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (isActive && focusButton) button.focus({ preventScroll: !revealInNav });
   });
   updateCityLandmarks(activeViewId);
 }
@@ -727,6 +737,7 @@ function setFlightMode(enabled, requestLock = false) {
   flight.active = enabled;
   flight.dragging = false;
   flight.lookPointerId = null;
+  resetFlightCitySync();
   controls.enabled = !enabled;
   document.body.classList.toggle('is-flight', enabled);
   hud.mobileControls?.setAttribute('aria-hidden', String(!enabled));
@@ -767,7 +778,7 @@ function syncFlightAnglesFromCamera() {
 }
 
 function shouldRequestPointerLock() {
-  return !window.matchMedia?.('(pointer: coarse)').matches;
+  return !window.matchMedia?.('(any-pointer: coarse)').matches;
 }
 
 function updateFlightLook(movementX, movementY) {
@@ -783,6 +794,45 @@ function clampFlightPosition() {
   camera.position.x = Math.max(flight.bounds.minX, Math.min(flight.bounds.maxX, camera.position.x));
   camera.position.z = Math.max(flight.bounds.minZ, Math.min(flight.bounds.maxZ, camera.position.z));
   camera.position.y = Math.max(world.heightAt(camera.position.x, camera.position.z) + 2.2, Math.min(640, camera.position.y));
+}
+
+function resetFlightCitySync() {
+  flightCitySync.candidateId = null;
+  flightCitySync.candidateSince = 0;
+}
+
+function updateFlightCitySync(now) {
+  if (typeof world.locateCity !== 'function') return;
+
+  const timestamp = Number.isFinite(now) ? now : performance.now();
+  const located = world.locateCity(camera.position.x, camera.position.z);
+  const nextCityId = getFlightLocatedCityId(located);
+  if (!nextCityId || nextCityId === activeViewId) {
+    resetFlightCitySync();
+    return;
+  }
+
+  if (flightCitySync.candidateId !== nextCityId) {
+    flightCitySync.candidateId = nextCityId;
+    flightCitySync.candidateSince = timestamp;
+    return;
+  }
+
+  if (timestamp - flightCitySync.candidateSince < FLIGHT_CITY_SYNC_DWELL_MS) return;
+  setActiveView(nextCityId, { revealInNav: false });
+  resetFlightCitySync();
+}
+
+function getFlightLocatedCityId(located) {
+  if (!located) return null;
+
+  const cityId = located.cityId ?? null;
+  if (cityId && getCityView(cityId)) {
+    if (cityId === activeViewId || !Number.isFinite(located.signedDistance)) return cityId;
+    return located.signedDistance <= -FLIGHT_CITY_SYNC_INSET ? cityId : null;
+  }
+
+  return null;
 }
 
 function moveFlight(delta) {
@@ -889,6 +939,7 @@ function updateMetrics(now) {
 
   window.__ROME_METRICS__.fps = fpsState.fps;
   window.__ROME_METRICS__.mode = flight.active ? 'flight' : 'orbit';
+  window.__ROME_METRICS__.activeCity = activeViewId;
   window.__ROME_METRICS__.camera = {
     x: Math.round(camera.position.x * 10) / 10,
     y: Math.round(camera.position.y * 10) / 10,
@@ -904,6 +955,7 @@ function animate(now) {
 
   if (flight.active) {
     moveFlight(delta);
+    updateFlightCitySync(now);
   } else {
     camera.position.lerp(desiredPosition, 0.018);
     controls.target.lerp(desiredTarget, 0.018);

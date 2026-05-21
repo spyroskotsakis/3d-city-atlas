@@ -220,6 +220,8 @@ const CONNECTOR_SPECS = [
     id: 'rome-venice-road',
     label: 'R-V Road',
     title: 'Rome to Venice connector road',
+    fromCity: 'rome',
+    toCity: 'venice',
     start: new THREE.Vector3(18, 0, -204),
     end: new THREE.Vector3(18, 0, -292),
     terrain: 'veniceTerrain',
@@ -232,6 +234,8 @@ const CONNECTOR_SPECS = [
     id: 'rome-athens-road',
     label: 'R-A Road',
     title: 'Rome to Athens connector road',
+    fromCity: 'rome',
+    toCity: 'athens',
     start: new THREE.Vector3(-38, 0, 204),
     end: new THREE.Vector3(-126, 0, 338),
     terrain: 'athensTerrain',
@@ -244,6 +248,8 @@ const CONNECTOR_SPECS = [
     id: 'athens-egypt-road',
     label: 'A-E Road',
     title: 'Athens to Egypt connector road',
+    fromCity: 'athens',
+    toCity: 'egypt',
     start: new THREE.Vector3(-124, 0, 758),
     end: new THREE.Vector3(-120, 0, 814),
     terrain: 'egyptDesert',
@@ -256,6 +262,8 @@ const CONNECTOR_SPECS = [
     id: 'egypt-angkor-road',
     label: 'E-A Road',
     title: 'Egypt to Angkor connector road',
+    fromCity: 'egypt',
+    toCity: 'angkor',
     start: new THREE.Vector3(-120, 0, 1274),
     end: new THREE.Vector3(-120, 0, 1312),
     terrain: 'angkorTerrain',
@@ -268,6 +276,8 @@ const CONNECTOR_SPECS = [
     id: 'rome-paris-road',
     label: 'R-P Road',
     title: 'Rome to Paris connector road',
+    fromCity: 'rome',
+    toCity: 'paris',
     start: new THREE.Vector3(204, 0, -22),
     end: new THREE.Vector3(312, 0, -18),
     terrain: 'parisTerrain',
@@ -280,6 +290,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-munich-road',
     label: 'P-M Road',
     title: 'Paris to Munich connector road',
+    fromCity: 'paris',
+    toCity: 'munich',
     start: new THREE.Vector3(752, 0, 60),
     end: new THREE.Vector3(822, 0, 90),
     terrain: 'munichTerrain',
@@ -292,6 +304,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-barcelona-road',
     label: 'P-B Road',
     title: 'Paris to Barcelona connector road',
+    fromCity: 'paris',
+    toCity: 'barcelona',
     start: new THREE.Vector3(548, 0, 222),
     end: new THREE.Vector3(560, 0, 264),
     terrain: 'barcelonaTerrain',
@@ -304,6 +318,8 @@ const CONNECTOR_SPECS = [
     id: 'munich-berlin-road',
     label: 'M-B Road',
     title: 'Munich to Berlin connector road',
+    fromCity: 'munich',
+    toCity: 'berlin',
     start: new THREE.Vector3(1048, 0, -94),
     end: new THREE.Vector3(1068, 0, -206),
     terrain: 'berlinTerrain',
@@ -316,6 +332,8 @@ const CONNECTOR_SPECS = [
     id: 'berlin-vienna-road',
     label: 'B-V Road',
     title: 'Berlin to Vienna connector road',
+    fromCity: 'berlin',
+    toCity: 'vienna',
     start: new THREE.Vector3(1180, 0, -612),
     end: new THREE.Vector3(1228, 0, -604),
     terrain: 'viennaTerrain',
@@ -328,6 +346,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-london-road',
     label: 'P-L Road',
     title: 'Paris to London connector road',
+    fromCity: 'paris',
+    toCity: 'london',
     start: new THREE.Vector3(532, 0, -238),
     end: new THREE.Vector3(520, 0, -306),
     terrain: 'londonTerrain',
@@ -340,6 +360,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-new-york-road-a',
     label: 'P-NY A',
     title: 'Paris to New York route segment',
+    fromCity: 'paris',
+    toCity: 'new-york',
     start: new THREE.Vector3(750, 0, -118),
     end: new THREE.Vector3(990, 0, -250),
     terrain: 'nyTerrain',
@@ -353,6 +375,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-new-york-road-b',
     label: 'P-NY Route',
     title: 'Long Paris to New York connector route',
+    fromCity: 'paris',
+    toCity: 'new-york',
     start: new THREE.Vector3(990, 0, -250),
     end: new THREE.Vector3(1240, 0, -390),
     terrain: 'nyTerrain',
@@ -365,6 +389,8 @@ const CONNECTOR_SPECS = [
     id: 'paris-new-york-road-c',
     label: 'P-NY C',
     title: 'Paris to New York route segment',
+    fromCity: 'paris',
+    toCity: 'new-york',
     start: new THREE.Vector3(1240, 0, -390),
     end: new THREE.Vector3(1496, 0, -330),
     terrain: 'nyTerrain',
@@ -378,6 +404,8 @@ const CONNECTOR_SPECS = [
     id: 'new-york-brazil-road',
     label: 'NY-B Road',
     title: 'New York to Brazil connector road',
+    fromCity: 'new-york',
+    toCity: 'brazil',
     start: new THREE.Vector3(1850, 0, -134),
     end: new THREE.Vector3(2076, 0, 28),
     terrain: 'brazilTerrain',
@@ -390,6 +418,8 @@ const CONNECTOR_SPECS = [
     id: 'brazil-peru-road',
     label: 'B-P Road',
     title: 'Brazil to Peru connector road',
+    fromCity: 'brazil',
+    toCity: 'peru',
     start: new THREE.Vector3(2462, 0, 412),
     end: new THREE.Vector3(2548, 0, 438),
     terrain: 'peruTerrain',
@@ -399,6 +429,10 @@ const CONNECTOR_SPECS = [
     cameraBack: 62
   }
 ];
+
+const CONNECTOR_LOCATOR_STEPS = 32;
+const CONNECTOR_LOCATOR_PAD = 24;
+const CONNECTOR_ENDPOINT_PROGRESS = 0.18;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
@@ -410,12 +444,22 @@ export function createWorldScene(materials) {
     group.add(city.group);
     return { ...spec, city };
   });
+  const cityLocators = buildCityLocators(modules);
+  const cityLocatorResult = {
+    kind: 'between',
+    cityId: null,
+    nearestCityId: null,
+    signedDistance: Infinity,
+    connectorId: null,
+    connectorProgress: 0
+  };
 
   const connectors = CONNECTOR_SPECS.map((spec) => {
     const connector = buildConnector(materials, spec);
     group.add(connector.group);
     return { ...spec, ...connector };
   });
+  const connectorLocators = buildConnectorLocators(connectors);
 
   const labels = [];
   const focusTargets = {};
@@ -497,6 +541,10 @@ export function createWorldScene(materials) {
     navViews,
     cityViews,
     routeViews,
+    // Reuses the default result object so flight polling stays allocation-free.
+    locateCity(x, z, target = cityLocatorResult) {
+      return locateCityFromBounds(cityLocators, connectorLocators, x, z, target);
+    },
     heightAt(x, z) {
       const module = modules.find((candidate) => {
         const lx = x - candidate.origin.x;
@@ -573,6 +621,147 @@ function computeWorldBounds(modules, connectors) {
   }
 
   return bounds;
+}
+
+function buildCityLocators(modules) {
+  return modules.map((module) => ({
+    id: module.id,
+    minX: module.origin.x - module.bounds,
+    maxX: module.origin.x + module.bounds,
+    minZ: module.origin.z - module.bounds,
+    maxZ: module.origin.z + module.bounds
+  }));
+}
+
+function buildConnectorLocators(connectors) {
+  return connectors.map((connector) => {
+    const points = [];
+    for (let i = 0; i <= CONNECTOR_LOCATOR_STEPS; i += 1) {
+      const frame = connectorFrame(connector, i / CONNECTOR_LOCATOR_STEPS);
+      points.push({
+        x: frame.center.x,
+        z: frame.center.z,
+        progress: i / CONNECTOR_LOCATOR_STEPS
+      });
+    }
+
+    const radius = connector.width + CONNECTOR_LOCATOR_PAD;
+    return {
+      id: connector.id,
+      fromCity: connector.fromCity,
+      toCity: connector.toCity,
+      radiusSq: radius * radius,
+      points
+    };
+  });
+}
+
+function locateCityFromBounds(cityLocators, connectorLocators, x, z, target) {
+  let cityId = null;
+  let nearestCityId = null;
+  let signedDistance = Infinity;
+  let nearestDistanceSq = Infinity;
+
+  for (const city of cityLocators) {
+    const left = city.minX - x;
+    const right = x - city.maxX;
+    const below = city.minZ - z;
+    const above = z - city.maxZ;
+    const outsideX = Math.max(left, right, 0);
+    const outsideZ = Math.max(below, above, 0);
+    const distanceSq = outsideX * outsideX + outsideZ * outsideZ;
+
+    if (distanceSq < nearestDistanceSq) {
+      nearestDistanceSq = distanceSq;
+      nearestCityId = city.id;
+    }
+
+    if (distanceSq === 0 && cityId === null) {
+      const insideDistance = Math.min(x - city.minX, city.maxX - x, z - city.minZ, city.maxZ - z);
+      cityId = city.id;
+      signedDistance = -insideDistance;
+      nearestCityId = city.id;
+      nearestDistanceSq = 0;
+    }
+  }
+
+  const onConnector = locateConnectorFromSegments(connectorLocators, x, z, target);
+  if (onConnector) {
+    const endpointCityId = getConnectorEndpointCityId(target);
+    const endpointSignedDistance = endpointCityId
+      ? signedDistanceToCity(cityLocators, endpointCityId, x, z)
+      : Infinity;
+    if (endpointSignedDistance <= 0) {
+      cityId = endpointCityId;
+      nearestCityId = endpointCityId;
+      nearestDistanceSq = 0;
+      signedDistance = endpointSignedDistance;
+    } else if (cityId) {
+      cityId = null;
+    }
+  }
+
+  if (cityId === null) {
+    signedDistance = Math.sqrt(nearestDistanceSq);
+  }
+
+  target.kind = cityId ? 'city' : onConnector ? 'connector' : 'between';
+  target.cityId = cityId;
+  target.nearestCityId = nearestCityId;
+  target.signedDistance = signedDistance;
+  return target;
+}
+
+function locateConnectorFromSegments(connectorLocators, x, z, target) {
+  let connectorId = null;
+  let connectorProgress = 0;
+  let connectorFromCity = null;
+  let connectorToCity = null;
+  let closestDistanceSq = Infinity;
+
+  for (const connector of connectorLocators) {
+    for (let i = 1; i < connector.points.length; i += 1) {
+      const a = connector.points[i - 1];
+      const b = connector.points[i];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const lengthSq = dx * dx + dz * dz;
+      const t = lengthSq <= 0.0001
+        ? 0
+        : Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / lengthSq));
+      const px = a.x + dx * t;
+      const pz = a.z + dz * t;
+      const ox = x - px;
+      const oz = z - pz;
+      const distanceSq = ox * ox + oz * oz;
+
+      if (distanceSq <= connector.radiusSq && distanceSq < closestDistanceSq) {
+        closestDistanceSq = distanceSq;
+        connectorId = connector.id;
+        connectorProgress = a.progress + (b.progress - a.progress) * t;
+        connectorFromCity = connector.fromCity;
+        connectorToCity = connector.toCity;
+      }
+    }
+  }
+
+  target.connectorId = connectorId;
+  target.connectorProgress = connectorProgress;
+  target.connectorFromCity = connectorFromCity;
+  target.connectorToCity = connectorToCity;
+  return connectorId !== null;
+}
+
+function getConnectorEndpointCityId(locatorResult) {
+  if (locatorResult.connectorProgress <= CONNECTOR_ENDPOINT_PROGRESS) return locatorResult.connectorFromCity;
+  if (locatorResult.connectorProgress >= 1 - CONNECTOR_ENDPOINT_PROGRESS) return locatorResult.connectorToCity;
+  return null;
+}
+
+function signedDistanceToCity(cityLocators, cityId, x, z) {
+  const city = cityLocators.find((candidate) => candidate.id === cityId);
+  if (!city) return Infinity;
+  return Math.max(city.minX - x, x - city.maxX, city.minZ - z, z - city.maxZ);
 }
 
 function buildConnector(materials, spec) {
