@@ -13,6 +13,7 @@ import { createPeruScene, peruTerrainHeightAt } from './peruScene.js';
 import { createRomeScene, terrainHeightAt as romeTerrainHeightAt } from './romeScene.js';
 import { createVeniceScene, veniceTerrainHeightAt } from './veniceScene.js';
 import { createViennaScene, viennaTerrainHeightAt } from './viennaScene.js';
+import { buildSpyrosTourists } from './spyrosTourist.js';
 import { VoxelBatcher } from './voxelBatcher.js';
 
 const CITY_SPECS = [
@@ -437,6 +438,11 @@ export function createWorldScene(materials) {
     }
   }
 
+  const spyrosTourists = buildSpyrosTourists({ modules, focusTargets });
+  group.add(spyrosTourists.group);
+  for (const label of spyrosTourists.labels) labels.push(label);
+  Object.assign(focusTargets, spyrosTourists.focusTargets);
+
   const metrics = modules.reduce(
     (acc, module) => {
       acc.instances += module.city.metrics.instances;
@@ -455,7 +461,7 @@ export function createWorldScene(materials) {
       return acc;
     },
     {
-      instances: connectors.reduce((sum, connector) => sum + connector.instances, 0),
+      instances: connectors.reduce((sum, connector) => sum + connector.instances, spyrosTourists.metrics.instances),
       pedestrians: 0,
       cyclists: 0,
       trams: 0,
@@ -468,10 +474,12 @@ export function createWorldScene(materials) {
       pigeons: 0,
       reservations: 0,
       labels: 0,
+      spyrosTourists: spyrosTourists.metrics.spyrosTourists,
       cities: modules.length,
       connectors: connectors.length
     }
   );
+  metrics.labels += spyrosTourists.labels.length;
 
   const bounds = computeWorldBounds(modules, connectors);
   const cityViews = modules.map((module) => buildCityView(module, focusTargets));
@@ -505,6 +513,7 @@ export function createWorldScene(materials) {
       return 0.7;
     },
     update(elapsed) {
+      spyrosTourists.update(elapsed);
       for (const module of modules) module.city.update(elapsed);
     }
   };

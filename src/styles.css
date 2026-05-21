@@ -243,8 +243,9 @@ body.is-flight canvas.webgl {
 }
 
 .landmark-chip {
+  min-height: 30px;
   max-width: 100%;
-  padding: 4px 7px;
+  padding: 6px 8px;
   overflow: hidden;
   border: 1px solid rgba(255, 231, 175, 0.16);
   border-radius: 4px;
@@ -675,9 +676,14 @@ body.is-flight canvas.webgl {
   }
 
   .landmarks {
-    max-height: 62px;
+    max-height: 88px;
     overflow-y: auto;
     padding-right: 3px;
+  }
+
+  .landmark-chip {
+    min-height: 40px;
+    padding: 8px 9px;
   }
 
   .explore-dock {

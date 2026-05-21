@@ -133,6 +133,10 @@ const CITY_LANDMARKS = {
   ]
 };
 
+for (const [cityId, landmarks] of Object.entries(CITY_LANDMARKS)) {
+  landmarks.unshift({ label: 'SPYROS Tourist', targetKey: 'spyros' });
+}
+
 const app = document.querySelector('#app');
 const canvas = document.createElement('canvas');
 canvas.className = 'webgl';
@@ -241,6 +245,7 @@ window.__ROME_METRICS__ = {
   boats: world.metrics.boats,
   carts: world.metrics.carts,
   pigeons: world.metrics.pigeons,
+  spyrosTourists: world.metrics.spyrosTourists,
   connectors: world.metrics.connectors,
   drawCalls: 0,
   triangles: 0,
@@ -286,7 +291,7 @@ function createHud(metrics, navViews) {
       <div class="metrics">
         <div class="metric"><b data-fps>--</b><span>FPS</span></div>
         <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>
-        <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0)}</b><span>people</span></div>
+        <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0) + (metrics.spyrosTourists ?? 0)}</b><span>people</span></div>
         <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
       </div>
       <section class="landmark-panel" aria-label="Current city landmarks">
@@ -468,7 +473,7 @@ function flyToLandmark(cityId, targetKey) {
   if (!cityView || !target) return;
 
   setActiveView(cityId);
-  flyTo(landmarkCameraFor(cityView, target), target);
+  flyTo(landmarkCameraFor(cityView, target, targetKey), target);
 }
 
 function getCityView(cityId) {
@@ -479,8 +484,15 @@ function getLandmarkTarget(cityId, targetKey) {
   return world.focusTargets[`${cityId}:${targetKey}`] ?? null;
 }
 
-function landmarkCameraFor(cityView, target) {
+function landmarkCameraFor(cityView, target, targetKey = '') {
   const direction = cityView.position.clone().sub(cityView.target);
+  if (targetKey === 'spyros') {
+    return target
+      .clone()
+      .add(direction.normalize().multiplyScalar(34))
+      .setY(Math.max(target.y + 14, Math.min(120, target.y + 24)));
+  }
+
   const distance = Math.max(82, Math.min(168, direction.length() * 0.72));
   return target
     .clone()
