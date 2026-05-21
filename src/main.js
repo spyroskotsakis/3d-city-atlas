@@ -134,7 +134,7 @@ const CITY_LANDMARKS = {
 };
 
 for (const [cityId, landmarks] of Object.entries(CITY_LANDMARKS)) {
-  landmarks.unshift({ label: 'SPYROS Tourist', targetKey: 'spyros' });
+  landmarks.unshift({ label: 'Find Spyros', targetKey: 'spyros' });
 }
 
 const app = document.querySelector('#app');
