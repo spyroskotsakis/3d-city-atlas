@@ -15,10 +15,19 @@ const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
 const LIVE_MEET_DISTANCE = 30;
 const LIVE_MEET_MAX_DISTANCE = 46;
 const LIVE_MEET_MIN_HORIZONTAL_DISTANCE = 16;
+const LIVE_MEET_MAX_VERTICAL_SLOPE = 1.1;
+const LIVE_MEET_ELEVATED_VIEW_BASE_HEIGHT = 48;
+const LIVE_MEET_ELEVATED_VIEW_DROP_FACTOR = 0.18;
+const LIVE_MEET_ELEVATED_VIEW_MAX_DROP = 40;
 const LIVE_AVATAR_EYE_OFFSET = 3.2;
+const LIVE_AVATAR_MEET_EYE_OFFSET = 4.4;
+const LIVE_AVATAR_BODY_GROUND_OFFSET = 6;
+const LIVE_AVATAR_MEET_BODY_GROUND_OFFSET = 5;
 const LIVE_MEET_FRAME_OFFSET = 1.4;
 const LIVE_PICK_MAX_DRAG_PX = 6;
 const LIVE_PICK_MAX_CLICK_MS = 650;
+const ORBIT_MAX_POLAR_ANGLE = Math.PI * 0.5;
+const LIVE_MEET_MAX_POLAR_ANGLE = Math.PI * 0.92;
 
 let liveDisplayName = readStoredLiveDisplayName();
 let liveVisitorsRenderKey = '';
@@ -248,7 +257,7 @@ function resizeRendererToCanvas() {
 controls.enablePan = true;
 controls.minDistance = 4;
 controls.maxDistance = 3800;
-controls.maxPolarAngle = Math.PI * 0.5;
+controls.maxPolarAngle = ORBIT_MAX_POLAR_ANGLE;
 controls.target.set(0, 8, 0);
 
 const hemi = new THREE.HemisphereLight(0xfff0ca, 0x748075, 1.25);
@@ -408,6 +417,11 @@ document.querySelector('[data-mode="flight"]').addEventListener('click', () => {
 
 function flyTo(position, target, options = {}) {
   setFlightMode(false);
+  controls.maxPolarAngle = options.meet ? LIVE_MEET_MAX_POLAR_ANGLE : ORBIT_MAX_POLAR_ANGLE;
+  if (!options.meet && activeMeetingKey) {
+    activeMeetingKey = null;
+    syncLiveVisitorMeetButtons();
+  }
   desiredPosition = position.clone();
   desiredTarget = target.clone();
   if (options.instant) {
@@ -439,7 +453,7 @@ function meetLiveVisitorPose(pose) {
   const { position, target } = liveVisitorCameraFor(pose);
   activeMeetingKey = pose.key;
   announceLiveStatus(`Moving to meet ${pose.name ?? 'visitor'}.`);
-  flyTo(position, target, { instant: prefersReducedMotion() });
+  flyTo(position, target, { instant: prefersReducedMotion(), meet: true });
   livePresence?.forcePublish?.();
   syncLiveVisitorMeetButtons();
 
@@ -459,7 +473,6 @@ function liveVisitorCameraFor(pose) {
 function liveMeetDirectionFor(pose) {
   const viewForward = pose.viewForward?.clone?.() ?? pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
   if (viewForward.lengthSq() > 0.0001 && Math.hypot(viewForward.x, viewForward.z) >= 0.28) {
-    viewForward.y = 0;
     return viewForward.normalize();
   }
 
@@ -471,17 +484,48 @@ function liveMeetDirectionFor(pose) {
 
 function frontPreservingMeetPosition(target, direction) {
   const horizontalLength = Math.max(0.001, Math.hypot(direction.x, direction.z));
+  const horizontalDirection = direction.clone().setY(0).normalize();
+  if (horizontalDirection.lengthSq() < 0.0001) horizontalDirection.set(0, 0, 1);
+  const verticalSlope = Math.max(
+    -LIVE_MEET_MAX_VERTICAL_SLOPE,
+    Math.min(LIVE_MEET_MAX_VERTICAL_SLOPE, direction.y / horizontalLength)
+  );
+  const elevatedViewDrop = elevatedMeetDropFor(target);
   const idealDistance = Math.min(
     LIVE_MEET_MAX_DISTANCE,
-    Math.max(LIVE_MEET_DISTANCE, LIVE_MEET_MIN_HORIZONTAL_DISTANCE / horizontalLength)
+    Math.max(LIVE_MEET_DISTANCE, LIVE_MEET_MIN_HORIZONTAL_DISTANCE)
   );
 
   for (let distance = idealDistance; distance >= LIVE_MEET_MIN_HORIZONTAL_DISTANCE; distance -= 2) {
-    const raw = target.clone().addScaledVector(direction, distance);
-    if (isInWorldBounds(raw)) return clampLiveMeetEyePosition(raw);
+    const raw = target.clone().addScaledVector(horizontalDirection, distance);
+    const pitchDrop = Math.max(0, -verticalSlope * distance);
+    raw.y += verticalSlope * distance - Math.max(0, elevatedViewDrop - pitchDrop);
+    if (isInWorldBounds(raw)) return clampLiveMeetEyePosition(raw, elevatedViewDrop > 0);
   }
 
-  return clampLiveMeetEyePosition(target.clone().addScaledVector(direction, idealDistance));
+  const fallback = target.clone().addScaledVector(horizontalDirection, idealDistance);
+  const fallbackPitchDrop = Math.max(0, -verticalSlope * idealDistance);
+  fallback.y += verticalSlope * idealDistance - Math.max(0, elevatedViewDrop - fallbackPitchDrop);
+  return clampLiveMeetEyePosition(fallback, elevatedViewDrop > 0);
+}
+
+function elevatedMeetDropFor(target) {
+  const heightAboveTerrain = target.y - world.heightAt(target.x, target.z);
+  const terrainDrop = Math.max(
+    0,
+    Math.min(
+      LIVE_MEET_ELEVATED_VIEW_MAX_DROP,
+      (heightAboveTerrain - LIVE_MEET_ELEVATED_VIEW_BASE_HEIGHT) * LIVE_MEET_ELEVATED_VIEW_DROP_FACTOR
+    )
+  );
+  const absoluteDrop = Math.max(
+    0,
+    Math.min(
+      LIVE_MEET_ELEVATED_VIEW_MAX_DROP,
+      (target.y - 120) * 0.35
+    )
+  );
+  return Math.max(terrainDrop, absoluteDrop);
 }
 
 function isInWorldBounds(position) {
@@ -491,10 +535,11 @@ function isInWorldBounds(position) {
     position.z <= world.bounds.maxZ;
 }
 
-function clampLiveMeetEyePosition(position) {
+function clampLiveMeetEyePosition(position, relaxHeight = false) {
   position.x = Math.max(world.bounds.minX, Math.min(world.bounds.maxX, position.x));
   position.z = Math.max(world.bounds.minZ, Math.min(world.bounds.maxZ, position.z));
-  const minEyeY = world.heightAt(position.x, position.z) + 6 + LIVE_AVATAR_EYE_OFFSET;
+  const terrainMinEyeY = world.heightAt(position.x, position.z) + LIVE_AVATAR_BODY_GROUND_OFFSET + LIVE_AVATAR_EYE_OFFSET;
+  const minEyeY = relaxHeight ? Math.min(terrainMinEyeY, position.y) : terrainMinEyeY;
   position.y = Math.max(minEyeY, Math.min(660, position.y));
   return position;
 }
@@ -1075,9 +1120,16 @@ function getLivePresenceSnapshot() {
   const cityId = locatedCityId || activeViewId || 'between';
   const cityView = getCityView(cityId);
   const groundY = world.heightAt(camera.position.x, camera.position.z);
+  const isMeeting = Boolean(activeMeetingKey);
+  const avatarEyeOffset = isMeeting ? LIVE_AVATAR_MEET_EYE_OFFSET : LIVE_AVATAR_EYE_OFFSET;
+  const bodyGroundOffset = isMeeting ? LIVE_AVATAR_MEET_BODY_GROUND_OFFSET : LIVE_AVATAR_BODY_GROUND_OFFSET;
   liveAvatarPose.bodyPosition.copy(camera.position);
-  liveAvatarPose.bodyPosition.y = Math.max(groundY + 6, Math.min(660, camera.position.y - LIVE_AVATAR_EYE_OFFSET));
-  liveAvatarPose.eyePosition.copy(liveAvatarPose.bodyPosition).setY(liveAvatarPose.bodyPosition.y + LIVE_AVATAR_EYE_OFFSET);
+  liveAvatarPose.bodyPosition.y = Math.max(groundY + bodyGroundOffset, Math.min(660, camera.position.y - avatarEyeOffset));
+  liveAvatarPose.eyePosition.copy(camera.position);
+  liveAvatarPose.eyePosition.y = Math.max(
+    liveAvatarPose.bodyPosition.y + LIVE_AVATAR_EYE_OFFSET,
+    Math.min(660, camera.position.y)
+  );
   liveAvatarPose.avatarEuler.setFromQuaternion(camera.quaternion, 'YXZ');
   liveAvatarPose.avatarEuler.x = 0;
   liveAvatarPose.avatarEuler.z = 0;

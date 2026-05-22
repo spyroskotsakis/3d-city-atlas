@@ -17,6 +17,9 @@ const RETRY_MAX_MS = 30000;
 const USER_NAME_MAX_LENGTH = 24;
 const LEAVE_TOMBSTONE_MS = 10000;
 const REMOTE_EYE_OFFSET = 3.2;
+const REMOTE_DIRECTION_MARKER_FORWARD_OFFSET = 4.8;
+const REMOTE_DIRECTION_MARKER_Y_OFFSET = -4.5;
+const REMOTE_DIRECTION_MARKER_SCALE = 0.42;
 const CONNECTION_LABELS = {
   initialized: 'Joining live world',
   connecting: 'Joining live world',
@@ -944,8 +947,9 @@ class RemoteExplorersLayer {
       this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, scale);
       this.bodyMesh.setMatrixAt(index, this.tmpMatrix);
 
-      this.tmpPosition.copy(record.renderPosition).addScaledVector(getForward(this.tmpQuaternion, this.tmpNextPosition), 5.5);
-      this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, scale);
+      this.tmpPosition.copy(record.renderPosition).addScaledVector(getForward(this.tmpQuaternion, this.tmpNextPosition), REMOTE_DIRECTION_MARKER_FORWARD_OFFSET);
+      this.tmpPosition.y += REMOTE_DIRECTION_MARKER_Y_OFFSET;
+      this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, this.tmpScale.setScalar(fadeScale * REMOTE_DIRECTION_MARKER_SCALE));
       this.arrowMesh.setColorAt(index, this.tmpColor.copy(record.color).lerp(this.arrowMixColor, 0.45));
       this.arrowMesh.setMatrixAt(index, this.tmpMatrix);
 
