@@ -13,8 +13,9 @@ const PANEL_AUTO_COLLAPSE_MS = 5000;
 const LIVE_DISPLAY_NAME_STORAGE_KEY = 'atlas.liveDisplayName';
 const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
 const LIVE_MEET_DISTANCE = 26;
+const LIVE_MEET_MAX_DISTANCE = 42;
 const LIVE_MEET_MIN_HORIZONTAL_DISTANCE = 16;
-const LIVE_MEET_HEIGHT_OFFSET = 0.8;
+const LIVE_AVATAR_EYE_OFFSET = 3.2;
 const LIVE_PICK_MAX_DRAG_PX = 6;
 const LIVE_PICK_MAX_CLICK_MS = 650;
 
@@ -246,7 +247,7 @@ function resizeRendererToCanvas() {
 controls.enablePan = true;
 controls.minDistance = 4;
 controls.maxDistance = 3800;
-controls.maxPolarAngle = Math.PI * 0.49;
+controls.maxPolarAngle = Math.PI * 0.5;
 controls.target.set(0, 8, 0);
 
 const hemi = new THREE.HemisphereLight(0xfff0ca, 0x748075, 1.25);
@@ -327,6 +328,12 @@ const liveLocalMotion = {
   position: camera.position.clone(),
   quaternion: camera.quaternion.clone(),
   moving: false
+};
+const liveAvatarPose = {
+  bodyPosition: new THREE.Vector3(),
+  eyePosition: new THREE.Vector3(),
+  avatarQuaternion: new THREE.Quaternion(),
+  avatarEuler: new THREE.Euler(0, 0, 0, 'YXZ')
 };
 const fpsState = {
   frames: 0,
@@ -432,56 +439,59 @@ function meetLiveVisitorPose(pose) {
   activeMeetingKey = pose.key;
   announceLiveStatus(`Moving to meet ${pose.name ?? 'visitor'}.`);
   flyTo(position, target, { instant: prefersReducedMotion() });
+  livePresence?.forcePublish?.();
   syncLiveVisitorMeetButtons();
 
   if (window.innerWidth <= 720) hud.setLiveExpanded?.(false);
 }
 
 function liveVisitorCameraFor(pose) {
-  const target = pose.position.clone();
-  const front = pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
-  front.y = 0;
-
-  if (front.lengthSq() < 0.0001) {
-    front.subVectors(camera.position, target).setY(0);
-  }
-  if (front.lengthSq() < 0.0001) front.set(0, 0, 1);
-  front.normalize();
-
-  const position = bestLiveVisitorCameraPosition(target, front);
-  const groundY = world.heightAt(position.x, position.z);
-  position.y = Math.max(groundY + 3.2, Math.min(640, target.y + LIVE_MEET_HEIGHT_OFFSET));
-  target.y += 0.6;
+  const target = (pose.eyePosition ?? pose.position).clone();
+  const front = liveMeetDirectionFor(pose);
+  const position = frontPreservingMeetPosition(target, front);
 
   return { position, target };
 }
 
-function bestLiveVisitorCameraPosition(target, front) {
-  const angles = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI, Math.PI * 0.75, -Math.PI * 0.75];
-  const axis = new THREE.Vector3(0, 1, 0);
-  let best = null;
-
-  for (const angle of angles) {
-    const direction = front.clone().applyAxisAngle(axis, angle).normalize();
-    const raw = target.clone().addScaledVector(direction, LIVE_MEET_DISTANCE);
-    const position = clampLiveMeetPosition(raw);
-    const horizontalDistance = Math.hypot(position.x - target.x, position.z - target.z);
-    const wasClamped = Math.abs(position.x - raw.x) > 0.01 || Math.abs(position.z - raw.z) > 0.01;
-    const score =
-      (horizontalDistance < LIVE_MEET_MIN_HORIZONTAL_DISTANCE ? 1000 : 0) +
-      Math.abs(horizontalDistance - LIVE_MEET_DISTANCE) +
-      (wasClamped ? 30 : 0) +
-      Math.abs(angle) * 0.02;
-
-    if (!best || score < best.score) best = { position, score };
+function liveMeetDirectionFor(pose) {
+  const viewForward = pose.viewForward?.clone?.() ?? pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
+  if (viewForward.lengthSq() > 0.0001 && Math.hypot(viewForward.x, viewForward.z) >= 0.28) {
+    return viewForward.normalize();
   }
 
-  return best?.position ?? clampLiveMeetPosition(target.clone().addScaledVector(front, LIVE_MEET_DISTANCE));
+  const avatarForward = pose.avatarForward?.clone?.() ?? pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
+  avatarForward.y = 0;
+  if (avatarForward.lengthSq() < 0.0001) avatarForward.set(0, 0, 1);
+  return avatarForward.normalize();
 }
 
-function clampLiveMeetPosition(position) {
+function frontPreservingMeetPosition(target, direction) {
+  const horizontalLength = Math.max(0.001, Math.hypot(direction.x, direction.z));
+  const idealDistance = Math.min(
+    LIVE_MEET_MAX_DISTANCE,
+    Math.max(LIVE_MEET_DISTANCE, LIVE_MEET_MIN_HORIZONTAL_DISTANCE / horizontalLength)
+  );
+
+  for (let distance = idealDistance; distance >= LIVE_MEET_MIN_HORIZONTAL_DISTANCE; distance -= 2) {
+    const raw = target.clone().addScaledVector(direction, distance);
+    if (isInWorldBounds(raw)) return clampLiveMeetEyePosition(raw);
+  }
+
+  return clampLiveMeetEyePosition(target.clone().addScaledVector(direction, idealDistance));
+}
+
+function isInWorldBounds(position) {
+  return position.x >= world.bounds.minX &&
+    position.x <= world.bounds.maxX &&
+    position.z >= world.bounds.minZ &&
+    position.z <= world.bounds.maxZ;
+}
+
+function clampLiveMeetEyePosition(position) {
   position.x = Math.max(world.bounds.minX, Math.min(world.bounds.maxX, position.x));
   position.z = Math.max(world.bounds.minZ, Math.min(world.bounds.maxZ, position.z));
+  const minEyeY = world.heightAt(position.x, position.z) + 6 + LIVE_AVATAR_EYE_OFFSET;
+  position.y = Math.max(minEyeY, Math.min(660, position.y));
   return position;
 }
 
@@ -1060,6 +1070,14 @@ function getLivePresenceSnapshot() {
   const locatedCityId = getFlightLocatedCityId(located);
   const cityId = locatedCityId || activeViewId || 'between';
   const cityView = getCityView(cityId);
+  const groundY = world.heightAt(camera.position.x, camera.position.z);
+  liveAvatarPose.bodyPosition.copy(camera.position);
+  liveAvatarPose.bodyPosition.y = Math.max(groundY + 6, Math.min(660, camera.position.y - LIVE_AVATAR_EYE_OFFSET));
+  liveAvatarPose.eyePosition.copy(liveAvatarPose.bodyPosition).setY(liveAvatarPose.bodyPosition.y + LIVE_AVATAR_EYE_OFFSET);
+  liveAvatarPose.avatarEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+  liveAvatarPose.avatarEuler.x = 0;
+  liveAvatarPose.avatarEuler.z = 0;
+  liveAvatarPose.avatarQuaternion.setFromEuler(liveAvatarPose.avatarEuler);
 
   return {
     cityId,
@@ -1069,7 +1087,11 @@ function getLivePresenceSnapshot() {
     userName: liveDisplayName,
     fps: fpsState.fps,
     position: camera.position,
-    quaternion: camera.quaternion
+    quaternion: camera.quaternion,
+    bodyPosition: liveAvatarPose.bodyPosition,
+    eyePosition: liveAvatarPose.eyePosition,
+    avatarQuaternion: liveAvatarPose.avatarQuaternion,
+    viewQuaternion: camera.quaternion
   };
 }
 
@@ -1254,7 +1276,7 @@ function updateLiveVisitorRow(row, visitor) {
     button.dataset.liveVisitorName = nextName;
     button.disabled = !visitor.meetAvailable;
     button.setAttribute('aria-label', visitor.meetAvailable
-      ? `Meet ${nextName} face to face`
+      ? `${isMeeting ? 'Meeting' : 'Meet'} ${nextName} face to face`
       : `${nextName} is unavailable to meet`);
     button.setAttribute('title', visitor.meetAvailable ? `Meet ${nextName} face to face` : `${nextName} is unavailable`);
   }
@@ -1273,6 +1295,10 @@ function syncLiveVisitorMeetButtons() {
     if (!button || !action) continue;
     const isMeeting = Boolean(activeMeetingKey && button.dataset.liveVisitorTargetKey === activeMeetingKey);
     row.classList.toggle('is-meeting', isMeeting);
+    const visitorName = button.dataset.liveVisitorName || 'visitor';
+    button.setAttribute('aria-label', button.disabled
+      ? `${visitorName} is unavailable to meet`
+      : `${isMeeting ? 'Meeting' : 'Meet'} ${visitorName} face to face`);
     const nextAction = button.disabled ? 'Unavailable' : (isMeeting ? 'Meeting' : 'Meet');
     if (action.textContent !== nextAction) action.textContent = nextAction;
   }

@@ -16,6 +16,7 @@ const RETRY_MIN_MS = 4000;
 const RETRY_MAX_MS = 30000;
 const USER_NAME_MAX_LENGTH = 24;
 const LEAVE_TOMBSTONE_MS = 10000;
+const REMOTE_EYE_OFFSET = 3.2;
 const CONNECTION_LABELS = {
   initialized: 'Joining live world',
   connecting: 'Joining live world',
@@ -81,6 +82,7 @@ export function createLivePresence({
     setDisplayName,
     getVisitorTargetPose,
     pickVisitorAt,
+    forcePublish,
     dispose
   };
 
@@ -179,6 +181,11 @@ export function createLivePresence({
 
   function pickVisitorAt(clientX, clientY, domElement, now = performance.now()) {
     return layer.pickVisitorAt(clientX, clientY, domElement, now);
+  }
+
+  function forcePublish(now = performance.now()) {
+    forceNextMovement();
+    publishMovementIfNeeded(now);
   }
 
   function dispose() {
@@ -385,10 +392,7 @@ export function createLivePresence({
       cityId: data.cityId,
       cityName: data.cityName,
       mode: data.mode,
-      pose: {
-        p: data.p,
-        q: data.q
-      },
+      pose: data.pose,
       seq: data.seq,
       speed: data.speed,
       moving: data.moving,
@@ -579,8 +583,11 @@ export function createLivePresence({
     try {
       const raw = getSnapshot(now);
       if (!raw) return null;
-      const position = raw.position;
-      const quaternion = raw.quaternion;
+      const bodyPosition = raw.bodyPosition ?? raw.position;
+      const eyePosition = raw.eyePosition ?? raw.position ?? bodyPosition;
+      const avatarQuaternion = raw.avatarQuaternion ?? raw.quaternion;
+      const viewQuaternion = raw.viewQuaternion ?? raw.quaternion ?? avatarQuaternion;
+      if (!bodyPosition || !eyePosition || !avatarQuaternion || !viewQuaternion) return null;
       return {
         cityId: raw.cityId || 'between',
         cityName: raw.cityName || formatCityName(raw.cityId),
@@ -588,21 +595,31 @@ export function createLivePresence({
         moving: Boolean(raw.moving),
         userName: sanitizeUserName(raw.userName),
         fps: Number(raw.fps) || 60,
-        p: [
-          round(position.x, 1),
-          round(position.y, 1),
-          round(position.z, 1)
-        ],
-        q: [
-          round(quaternion.x, 3),
-          round(quaternion.y, 3),
-          round(quaternion.z, 3),
-          round(quaternion.w, 3)
-        ]
+        p: vectorPayload(bodyPosition),
+        eye: vectorPayload(eyePosition),
+        q: quaternionPayload(avatarQuaternion),
+        vq: quaternionPayload(viewQuaternion)
       };
     } catch {
       return null;
     }
+  }
+
+  function vectorPayload(position) {
+    return [
+      round(position.x, 1),
+      round(position.y, 1),
+      round(position.z, 1)
+    ];
+  }
+
+  function quaternionPayload(quaternion) {
+    return [
+      round(quaternion.x, 3),
+      round(quaternion.y, 3),
+      round(quaternion.z, 3),
+      round(quaternion.w, 3)
+    ];
   }
 
   function shouldSendImmediately(snapshot) {
@@ -617,7 +634,12 @@ export function createLivePresence({
       Math.abs(snapshot.q[1] - lastSnapshot.q[1]) +
       Math.abs(snapshot.q[2] - lastSnapshot.q[2]) +
       Math.abs(snapshot.q[3] - lastSnapshot.q[3]);
-    return Math.hypot(dx, dy, dz) >= positionEpsilon || dq >= rotationEpsilon;
+    const lastViewQuaternion = lastSnapshot.vq ?? lastSnapshot.q;
+    const dvq = Math.abs(snapshot.vq[0] - lastViewQuaternion[0]) +
+      Math.abs(snapshot.vq[1] - lastViewQuaternion[1]) +
+      Math.abs(snapshot.vq[2] - lastViewQuaternion[2]) +
+      Math.abs(snapshot.vq[3] - lastViewQuaternion[3]);
+    return Math.hypot(dx, dy, dz) >= positionEpsilon || dq >= rotationEpsilon || dvq >= rotationEpsilon;
   }
 
   function targetPublishHz() {
@@ -641,7 +663,9 @@ export function createLivePresence({
       cityName: snapshot.cityName,
       mode: snapshot.mode,
       p: snapshot.p,
+      eye: snapshot.eye,
       q: snapshot.q,
+      vq: snapshot.vq,
       speed: estimateSpeed(snapshot, now),
       moving: snapshot.moving,
       t: Date.now()
@@ -661,7 +685,9 @@ export function createLivePresence({
       mode: snapshot.mode,
       pose: {
         p: snapshot.p,
-        q: snapshot.q
+        eye: snapshot.eye,
+        q: snapshot.q,
+        vq: snapshot.vq
       },
       moving: snapshot.moving,
       t: Date.now()
@@ -838,6 +864,8 @@ class RemoteExplorersLayer {
       samples: [],
       renderPosition: new THREE.Vector3(),
       renderQuaternion: new THREE.Quaternion(),
+      renderEyePosition: new THREE.Vector3(),
+      renderViewQuaternion: new THREE.Quaternion(),
       color: new THREE.Color(participant.color ?? '#f2c46d')
     };
     record.clientId = participant.clientId;
@@ -851,10 +879,19 @@ class RemoteExplorersLayer {
     record.lastSeen = receivedAt;
     const sample = record.samples.length >= 4
       ? record.samples.shift()
-      : { t: 0, p: new THREE.Vector3(), q: new THREE.Quaternion() };
+      : {
+          t: 0,
+          p: new THREE.Vector3(),
+          eye: new THREE.Vector3(),
+          q: new THREE.Quaternion(),
+          vq: new THREE.Quaternion()
+        };
     sample.t = receivedAt;
     this.sanitizePosition(pose.p, sample.p);
+    if (pose.hasEye) this.sanitizeEyePosition(pose.eye, sample.eye, sample.p);
+    else sample.eye.copy(sample.p);
     sample.q.set(pose.q[0], pose.q[1], pose.q[2], pose.q[3]).normalize();
+    sample.vq.set(pose.vq[0], pose.vq[1], pose.vq[2], pose.vq[3]).normalize();
     record.samples.push(sample);
     this.records.set(participant.key, record);
   }
@@ -945,7 +982,8 @@ class RemoteExplorersLayer {
     if (!record || record.samples.length === 0 || now - (record.lastSeen || 0) > STALE_REMOVE_MS) return null;
 
     this.sampleRecord(record, now);
-    const quaternion = record.renderQuaternion.clone();
+    const avatarQuaternion = record.renderQuaternion.clone();
+    const viewQuaternion = record.renderViewQuaternion.clone();
     return {
       key: record.key,
       clientId: record.clientId ?? participant?.clientId ?? null,
@@ -955,9 +993,14 @@ class RemoteExplorersLayer {
       cityId: record.cityId ?? participant?.cityId ?? null,
       cityName: record.cityName ?? participant?.cityName ?? null,
       mode: record.mode ?? participant?.mode ?? 'orbit',
-      position: record.renderPosition.clone(),
-      quaternion,
-      forward: getForward(quaternion, new THREE.Vector3()),
+      position: record.renderEyePosition.clone(),
+      eyePosition: record.renderEyePosition.clone(),
+      bodyPosition: record.renderPosition.clone(),
+      quaternion: viewQuaternion,
+      avatarQuaternion,
+      forward: getForward(viewQuaternion, new THREE.Vector3()),
+      viewForward: getForward(viewQuaternion, new THREE.Vector3()),
+      avatarForward: getForward(avatarQuaternion, new THREE.Vector3()),
       lastSeen: record.lastSeen || 0,
       stale: now - (record.lastSeen || 0) > STALE_FADE_MS
     };
@@ -989,7 +1032,9 @@ class RemoteExplorersLayer {
     const targetTime = now - delay;
     if (samples.length === 1 || targetTime <= samples[0].t) {
       record.renderPosition.copy(samples[0].p);
+      record.renderEyePosition.copy(samples[0].eye);
       record.renderQuaternion.copy(samples[0].q);
+      record.renderViewQuaternion.copy(samples[0].vq);
       return;
     }
 
@@ -1006,7 +1051,9 @@ class RemoteExplorersLayer {
     const span = Math.max(1, to.t - from.t);
     const alpha = Math.max(0, Math.min(1, (targetTime - from.t) / span));
     record.renderPosition.lerpVectors(from.p, to.p, alpha);
+    record.renderEyePosition.lerpVectors(from.eye, to.eye, alpha);
     record.renderQuaternion.slerpQuaternions(from.q, to.q, alpha);
+    record.renderViewQuaternion.slerpQuaternions(from.vq, to.vq, alpha);
   }
 
   sanitizePosition(position, target) {
@@ -1015,6 +1062,14 @@ class RemoteExplorersLayer {
     const z = Math.max(bounds.minZ, Math.min(bounds.maxZ, position[2]));
     const groundY = this.world.heightAt(x, z);
     const y = Math.max(groundY + 6, Math.min(660, position[1]));
+    return target.set(x, y, z);
+  }
+
+  sanitizeEyePosition(position, target, bodyPosition) {
+    const bounds = this.world.bounds;
+    const x = Math.max(bounds.minX, Math.min(bounds.maxX, position[0]));
+    const z = Math.max(bounds.minZ, Math.min(bounds.maxZ, position[2]));
+    const y = Math.max(bodyPosition.y + REMOTE_EYE_OFFSET, Math.min(660, position[1]));
     return target.set(x, y, z);
   }
 
@@ -1100,8 +1155,7 @@ function normalizeMovementData(data, clientId) {
     cityId: cleanCity(data.cityId),
     cityName: typeof data.cityName === 'string' ? data.cityName.slice(0, 32) : formatCityName(data.cityId),
     mode: data.mode === 'flight' ? 'flight' : 'orbit',
-    p: pose.p,
-    q: pose.q,
+    pose,
     speed: Number.isFinite(data.speed) ? data.speed : 0,
     moving: Boolean(data.moving)
   };
@@ -1178,9 +1232,24 @@ function sanitizeColor(value) {
 function normalizePose(data) {
   const p = data.p;
   const q = data.q;
-  if (!Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite)) return null;
-  if (!Array.isArray(q) || q.length !== 4 || !q.every(Number.isFinite)) return null;
-  return { p, q };
+  const eye = data.eye;
+  const vq = data.vq;
+  const hasEye = isFiniteTuple(eye, 3);
+  const hasViewQuaternion = isFiniteTuple(vq, 4);
+  if (!isFiniteTuple(p, 3)) return null;
+  if (!isFiniteTuple(q, 4)) return null;
+  return {
+    p,
+    eye: hasEye ? eye : p,
+    q,
+    vq: hasViewQuaternion ? vq : q,
+    hasEye,
+    hasViewQuaternion
+  };
+}
+
+function isFiniteTuple(value, length) {
+  return Array.isArray(value) && value.length === length && value.every(Number.isFinite);
 }
 
 function cleanCity(cityId) {
