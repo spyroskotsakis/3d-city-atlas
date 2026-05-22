@@ -263,12 +263,50 @@ function resizeRendererToCanvas() {
   renderer.setSize(size.width, size.height, false);
 }
 
+function normalizeCityId(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^#/, '')
+    .replace(/^\/+/, '')
+    .split(/[?&]/)[0]
+    .replace(/\s+/g, '-');
+}
+
+let shouldClearStartupCityParam = false;
+
+function readStartupCityCandidates() {
+  const cityParams = new URLSearchParams(window.location.search).getAll('city');
+  shouldClearStartupCityParam = cityParams.length > 0;
+  return cityParams;
+}
+
+function findCityView(navViews, cityId) {
+  const normalized = normalizeCityId(cityId);
+  if (!normalized) return null;
+  return navViews.find((view) => view.id === normalized) ?? null;
+}
+
 function pickStartupView(navViews) {
   if (!Array.isArray(navViews) || navViews.length === 0) return null;
+  const requestedView = readStartupCityCandidates()
+    .map((candidate) => findCityView(navViews, candidate))
+    .find(Boolean);
+  if (requestedView) return requestedView;
+
   const randomValue = window.crypto?.getRandomValues
     ? window.crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296
     : Math.random();
   return navViews[Math.floor(randomValue * navViews.length)] ?? navViews[0];
+}
+
+function clearStartupCityUrl() {
+  if (!shouldClearStartupCityParam || !window.history?.replaceState) return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('city');
+  shouldClearStartupCityParam = false;
+  if (url.href === window.location.href) return;
+  window.history.replaceState(window.history.state, '', url);
 }
 
 controls.enablePan = true;
@@ -404,6 +442,8 @@ window.__ROME_METRICS__ = {
 
 let activeViewId = startupView?.id ?? world.navViews[0]?.id ?? null;
 setActiveView(activeViewId, { revealInNav: false });
+clearStartupCityUrl();
+setupCityShare(hud);
 
 const livePresence = createLivePresence({
   scene,
@@ -676,13 +716,22 @@ function createHud(metrics, navViews) {
   controlsRoot.className = 'city-nav';
   controlsRoot.setAttribute('aria-label', 'City navigation');
   controlsRoot.innerHTML = `
-    <button class="city-nav__toggle" data-nav-toggle type="button" aria-expanded="true" aria-controls="city-nav-body" title="Collapse destinations">
-      <span class="city-nav__title">
-        <span>Destinations</span>
-        <strong data-active-destination>${navViews[0]?.label ?? 'City'}</strong>
-      </span>
-      <span class="city-nav__count">${navViews.length}</span>
-    </button>
+    <div class="city-nav__header">
+      <button class="city-nav__toggle" data-nav-toggle type="button" aria-expanded="true" aria-controls="city-nav-body" title="Collapse destinations">
+        <span class="city-nav__title">
+          <span>Destinations</span>
+          <strong data-active-destination>${navViews[0]?.label ?? 'City'}</strong>
+        </span>
+        <span class="city-nav__count">${navViews.length}</span>
+      </button>
+      <button class="city-nav__share" data-city-share type="button" aria-label="Copy link to ${navViews[0]?.label ?? 'current city'}" title="Copy link to ${navViews[0]?.label ?? 'current city'}">
+        <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+          <path d="M10.8 13.2a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M13.2 10.8a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="sr-only" data-city-share-status role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="city-nav__body" id="city-nav-body">
       <div class="city-nav__rail">
         ${navViews.map((view, index) => {
@@ -748,7 +797,10 @@ function createHud(metrics, navViews) {
     mobileMoveKnob: mobileControls.querySelector('[data-mobile-move-knob]'),
     mobileLiftButtons: mobileControls.querySelectorAll('[data-mobile-lift]'),
     navToggle: controlsRoot.querySelector('[data-nav-toggle]'),
+    navBody: controlsRoot.querySelector('.city-nav__body'),
     activeDestination: controlsRoot.querySelector('[data-active-destination]'),
+    cityShare: controlsRoot.querySelector('[data-city-share]'),
+    cityShareStatus: controlsRoot.querySelector('[data-city-share-status]'),
     toggle: root.querySelector('[data-hud-toggle]')
   };
 }
@@ -811,7 +863,7 @@ function setupNavPanel(hud) {
   };
 
   const setNavCollapsed = (collapsed, fromUser = false) => {
-    if (collapsed && hud.nav.contains(document.activeElement) && document.activeElement !== hud.navToggle) {
+    if (collapsed && hud.navBody?.contains(document.activeElement)) {
       hud.navToggle.focus({ preventScroll: true });
     }
     hud.nav.classList.toggle('is-collapsed', collapsed);
@@ -835,6 +887,44 @@ function setupNavPanel(hud) {
     if (nextCompactLayout === compactLayout) return;
     compactLayout = nextCompactLayout;
     if (compactLayout) setNavCollapsed(true);
+  });
+}
+
+function setupCityShare(hud) {
+  if (!hud.cityShare) return;
+  let resetTimer = null;
+
+  const setShareFeedback = (state, message = '') => {
+    if (resetTimer) window.clearTimeout(resetTimer);
+    resetTimer = null;
+    hud.cityShare.classList.toggle('is-copied', state === 'success');
+    hud.cityShare.classList.toggle('is-failed', state === 'error');
+    hud.cityShare.setAttribute('aria-busy', state === 'pending' ? 'true' : 'false');
+    if (hud.cityShareStatus) hud.cityShareStatus.textContent = message;
+    syncCityShareLabel(state);
+
+    if (state === 'success' || state === 'error') {
+      resetTimer = window.setTimeout(() => {
+        hud.cityShare.classList.remove('is-copied', 'is-failed');
+        hud.cityShare.setAttribute('aria-busy', 'false');
+        if (hud.cityShareStatus) hud.cityShareStatus.textContent = '';
+        syncCityShareLabel();
+      }, 2200);
+    }
+  };
+
+  hud.cityShare.addEventListener('click', async () => {
+    if (hud.cityShare.getAttribute('aria-busy') === 'true') return;
+    const cityView = getCityView(activeViewId);
+    if (!cityView) return;
+    const shareUrl = cityShareUrl(cityView.id);
+    setShareFeedback('pending');
+    try {
+      await copyText(shareUrl);
+      setShareFeedback('success', `${cityView.label} link copied to clipboard.`);
+    } catch {
+      setShareFeedback('error', 'Copy failed. Try the share button again.');
+    }
   });
 }
 
@@ -1074,6 +1164,7 @@ function setActiveView(viewId, options = {}) {
   window.__ROME_METRICS__.activeCity = activeViewId;
   const cityView = getCityView(activeViewId);
   if (hud.activeDestination) hud.activeDestination.textContent = cityView?.label ?? 'City';
+  syncCityShareLabel();
   document.querySelectorAll('[data-view]').forEach((button) => {
     const isActive = button.getAttribute('data-view') === activeViewId;
     button.classList.toggle('is-active', isActive);
@@ -1082,6 +1173,90 @@ function setActiveView(viewId, options = {}) {
     if (isActive && focusButton) button.focus({ preventScroll: !revealInNav });
   });
   updateCityLandmarks(activeViewId);
+}
+
+function syncCityShareLabel(state = 'idle') {
+  if (!hud.cityShare) return;
+  if (state === 'idle') {
+    hud.cityShare.classList.remove('is-copied', 'is-failed');
+    hud.cityShare.setAttribute('aria-busy', 'false');
+    if (hud.cityShareStatus) hud.cityShareStatus.textContent = '';
+  }
+  const cityView = getCityView(activeViewId);
+  const cityLabel = cityView?.label ?? 'current city';
+  const labels = {
+    idle: `Copy link to ${cityLabel}`,
+    pending: `Copying link to ${cityLabel}`,
+    success: `Copied link to ${cityLabel}`,
+    error: `Copy failed for ${cityLabel}`
+  };
+  const nextLabel = labels[state] ?? labels.idle;
+  hud.cityShare.setAttribute('aria-label', nextLabel);
+  hud.cityShare.setAttribute('title', nextLabel);
+}
+
+function cityShareUrl(cityId) {
+  const url = new URL(window.location.pathname, window.location.origin);
+  url.searchParams.set('city', cityId);
+  return url.toString();
+}
+
+async function copyText(text) {
+  const value = String(text ?? '');
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // Fall back for browsers or permissions that reject async clipboard writes.
+    }
+  }
+
+  if (!copyTextFallback(value)) {
+    throw new Error('Clipboard copy failed');
+  }
+}
+
+function copyTextFallback(value) {
+  const activeElement = document.activeElement;
+  const selection = document.getSelection?.();
+  const ranges = [];
+  if (selection) {
+    for (let i = 0; i < selection.rangeCount; i += 1) {
+      ranges.push(selection.getRangeAt(i).cloneRange());
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.inset = '0 auto auto 0';
+  textarea.style.width = '1px';
+  textarea.style.height = '1px';
+  textarea.style.opacity = '0';
+  textarea.style.fontSize = '16px';
+  textarea.style.pointerEvents = 'none';
+  document.body.append(textarea);
+
+  let copied = false;
+  try {
+    textarea.focus({ preventScroll: true });
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  } finally {
+    textarea.remove();
+    if (selection) {
+      selection.removeAllRanges();
+      ranges.forEach((range) => selection.addRange(range));
+    }
+    if (activeElement instanceof HTMLElement) activeElement.focus({ preventScroll: true });
+  }
+
+  return copied;
 }
 
 function updateCityLandmarks(cityId) {

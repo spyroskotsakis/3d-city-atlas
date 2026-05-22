@@ -657,7 +657,7 @@ body.is-flight canvas.webgl {
 }
 
 .city-nav.is-collapsed {
-  width: min(214px, 100%);
+  width: min(260px, 100%);
   border-color: rgba(255, 239, 204, 0.14);
   background: rgba(34, 41, 40, 0.78);
 }
@@ -666,13 +666,19 @@ body.is-flight canvas.webgl {
   display: none;
 }
 
-.city-nav__toggle {
+.city-nav__header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.city-nav__toggle,
+.city-nav__share {
   min-width: 0;
   min-height: 48px;
   padding: 8px 9px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
-  gap: 9px;
   align-items: center;
   border: 1px solid rgba(255, 234, 190, 0.18);
   border-radius: 6px;
@@ -681,6 +687,29 @@ body.is-flight canvas.webgl {
   cursor: pointer;
   font: inherit;
   text-align: left;
+}
+
+.city-nav__toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 9px;
+}
+
+.city-nav__share {
+  width: 44px;
+  display: grid;
+  place-items: center;
+  color: #ffe5ad;
+  text-align: center;
+}
+
+.city-nav__share[aria-busy="true"] {
+  cursor: wait;
+}
+
+.city-nav__share svg {
+  width: 18px;
+  height: 18px;
 }
 
 .city-nav__title {
@@ -960,10 +989,28 @@ body.is-flight canvas.webgl {
 .city-card:focus-visible,
 .city-card.is-active,
 .city-nav__toggle:hover,
-.city-nav__toggle:focus-visible {
+.city-nav__toggle:focus-visible,
+.city-nav__share:hover,
+.city-nav__share:focus-visible {
   outline: none;
   background: rgba(255, 218, 142, 0.15);
   border-color: var(--line-strong);
+}
+
+.city-nav__share:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 239, 204, 0.32);
+}
+
+.city-nav__share.is-copied {
+  border-color: rgba(116, 184, 197, 0.54);
+  background: rgba(116, 184, 197, 0.18);
+  color: #dffaff;
+}
+
+.city-nav__share.is-failed {
+  border-color: rgba(255, 159, 122, 0.52);
+  background: rgba(255, 159, 122, 0.16);
+  color: #ffd8c8;
 }
 
 .flight-toggle:not(.is-active):hover,
@@ -1210,7 +1257,7 @@ body.is-flight canvas.webgl {
   }
 
   .city-nav.is-collapsed {
-    width: min(204px, 100%);
+    width: min(252px, 100%);
   }
 }
 
@@ -1317,12 +1364,18 @@ body.is-flight canvas.webgl {
   }
 
   .city-nav.is-collapsed {
-    width: min(190px, 100%);
+    width: min(252px, 100%);
   }
 
-  .city-nav__toggle {
+  .city-nav__toggle,
+  .city-nav__share {
     min-height: 44px;
     padding: 7px 8px;
+  }
+
+  .city-nav__header {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 6px;
   }
 
   .city-nav__title strong {
