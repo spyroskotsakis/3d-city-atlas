@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { inject as injectVercelAnalytics } from '@vercel/analytics';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createMaterialLibrary } from './atlas.js';
+import { createLivePresence } from './livePresence.js';
 import { createWorldScene } from './worldScene.js';
 import './styles.css';
 
@@ -18,6 +19,13 @@ function shouldInjectAnalytics() {
     !hostname.startsWith('192.168.') &&
     !hostname.startsWith('10.') &&
     !hostname.startsWith('172.16.');
+}
+
+function shouldStartLivePresence() {
+  const liveFlag = import.meta.env.VITE_LIVE_PRESENCE;
+  if (liveFlag === 'false') return false;
+  if (liveFlag === 'true') return true;
+  return import.meta.env.PROD;
 }
 
 const CITY_NAV_DETAILS = {
@@ -203,6 +211,7 @@ scene.add(world.group);
 const hud = createHud(world.metrics, world.navViews);
 setupHudPanel(hud);
 setupNavPanel(hud);
+setupLivePanel(hud);
 const labelLayer = document.createElement('div');
 labelLayer.style.position = 'fixed';
 labelLayer.style.inset = '0';
@@ -255,6 +264,11 @@ const right = new THREE.Vector3();
 const moveVector = new THREE.Vector3();
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const clock = new THREE.Clock();
+const liveLocalMotion = {
+  position: camera.position.clone(),
+  quaternion: camera.quaternion.clone(),
+  moving: false
+};
 const fpsState = {
   frames: 0,
   last: performance.now(),
@@ -282,6 +296,7 @@ window.__ROME_METRICS__ = {
   pigeons: world.metrics.pigeons,
   spyrosTourists: world.metrics.spyrosTourists,
   connectors: world.metrics.connectors,
+  live: { status: 'solo', online: 0, remote: 0 },
   drawCalls: 0,
   triangles: 0,
   reservations: world.metrics.reservations,
@@ -290,6 +305,27 @@ window.__ROME_METRICS__ = {
 
 let activeViewId = world.navViews[0]?.id ?? null;
 setActiveView(activeViewId);
+
+const livePresence = createLivePresence({
+  scene,
+  camera,
+  world,
+  getSnapshot: getLivePresenceSnapshot,
+  onStateChange: updateLivePresenceUi,
+  isReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+});
+if (shouldStartLivePresence()) {
+  void livePresence.start();
+} else {
+  updateLivePresenceUi({
+    status: 'solo',
+    statusLabel: 'Solo mode',
+    onlineCount: 0,
+    remoteCount: 0,
+    visitorsVisible: true,
+    participants: []
+  });
+}
 
 for (const view of world.navViews) {
   document.querySelector(`[data-view="${view.id}"]`)?.addEventListener('click', () => {
@@ -321,6 +357,7 @@ function createHud(metrics, navViews) {
         <span aria-hidden="true"></span>
       </button>
     </div>
+    <div class="hud__live-pill" data-live-pill>Solo mode</div>
     <div class="hud__body">
       <p class="hud__summary">${metrics.cities} handcrafted city centres in one flyable offline WebGL world.</p>
       <div class="metrics">
@@ -328,7 +365,26 @@ function createHud(metrics, navViews) {
         <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>
         <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0) + (metrics.spyrosTourists ?? 0)}</b><span>people</span></div>
         <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
+        <div class="metric metric--live"><b data-live-count>0</b><span>online</span></div>
       </div>
+      <section class="live-panel" aria-label="Live visitors">
+        <button class="live-panel__toggle" data-live-toggle type="button" aria-expanded="false" aria-controls="live-panel-body" title="Open live visitors">
+          <span class="live-panel__dot" data-live-dot aria-hidden="true"></span>
+          <span class="live-panel__copy">
+            <span data-live-label>Solo mode</span>
+            <strong data-live-summary>No visitors online</strong>
+          </span>
+        </button>
+        <div class="live-panel__body" id="live-panel-body" data-live-body hidden>
+          <div class="live-panel__actions">
+            <button class="live-panel__action" data-live-visibility type="button" aria-pressed="true">Visitors visible</button>
+          </div>
+          <div class="live-visitors" data-live-visitors>
+            <p>No live visitors yet.</p>
+          </div>
+        </div>
+        <div class="sr-only" data-live-status role="status" aria-live="polite" aria-atomic="true">Solo mode</div>
+      </section>
       <section class="landmark-panel" aria-label="Current city landmarks">
         <div class="landmark-panel__title">
           <span data-city-name>City</span>
@@ -411,6 +467,16 @@ function createHud(metrics, navViews) {
     cityName: root.querySelector('[data-city-name]'),
     landmarkCount: root.querySelector('[data-landmark-count]'),
     landmarks: root.querySelector('[data-landmarks]'),
+    liveCount: root.querySelector('[data-live-count]'),
+    liveDot: root.querySelector('[data-live-dot]'),
+    livePill: root.querySelector('[data-live-pill]'),
+    liveLabel: root.querySelector('[data-live-label]'),
+    liveSummary: root.querySelector('[data-live-summary]'),
+    liveStatus: root.querySelector('[data-live-status]'),
+    liveToggle: root.querySelector('[data-live-toggle]'),
+    liveBody: root.querySelector('[data-live-body]'),
+    liveVisitors: root.querySelector('[data-live-visitors]'),
+    liveVisibility: root.querySelector('[data-live-visibility]'),
     root,
     exploreDock: exploreRoot,
     nav: controlsRoot,
@@ -438,6 +504,10 @@ function setupHudPanel(hud) {
     clearAutoCollapse();
     autoCollapseTimer = window.setTimeout(() => {
       autoCollapseTimer = null;
+      if (hud.root.contains(document.activeElement) && document.activeElement !== hud.toggle) {
+        scheduleAutoCollapse();
+        return;
+      }
       setHudCollapsed(true);
     }, PANEL_AUTO_COLLAPSE_MS);
   };
@@ -503,6 +573,38 @@ function setupNavPanel(hud) {
     if (nextCompactLayout === compactLayout) return;
     compactLayout = nextCompactLayout;
     if (compactLayout) setNavCollapsed(true);
+  });
+}
+
+function setupLivePanel(hud) {
+  if (!hud.liveToggle || !hud.liveBody) return;
+
+  const setLiveExpanded = (expanded) => {
+    if (!expanded && hud.liveBody.contains(document.activeElement)) {
+      hud.liveToggle.focus({ preventScroll: true });
+    }
+    hud.liveBody.hidden = !expanded;
+    hud.liveToggle.setAttribute('aria-expanded', String(expanded));
+    hud.liveToggle.setAttribute('title', expanded ? 'Close live visitors' : 'Open live visitors');
+  };
+
+  hud.setLiveExpanded = setLiveExpanded;
+  hud.liveToggle.addEventListener('click', () => {
+    setLiveExpanded(hud.liveBody.hidden);
+  });
+  hud.liveToggle.addEventListener('keydown', (event) => {
+    if (event.code !== 'Escape') return;
+    event.preventDefault();
+    setLiveExpanded(false);
+  });
+  hud.liveBody.addEventListener('keydown', (event) => {
+    if (event.code !== 'Escape') return;
+    event.preventDefault();
+    setLiveExpanded(false);
+  });
+  hud.liveVisibility?.addEventListener('click', () => {
+    const nextVisible = hud.liveVisibility.getAttribute('aria-pressed') !== 'true';
+    livePresence?.setVisitorsVisible(nextVisible);
   });
 }
 
@@ -733,6 +835,104 @@ function getCityView(cityId) {
 
 function getLandmarkTarget(cityId, targetKey) {
   return world.focusTargets[`${cityId}:${targetKey}`] ?? null;
+}
+
+function getLivePresenceSnapshot() {
+  const mode = flight.active ? 'flight' : 'orbit';
+  const positionMoved = camera.position.distanceTo(liveLocalMotion.position);
+  const rotationDelta = 1 - Math.abs(camera.quaternion.dot(liveLocalMotion.quaternion));
+  const hasFlightInput = flight.active && (
+    flight.keys.size > 0 ||
+    Math.abs(flight.mobile.moveX) > 0.02 ||
+    Math.abs(flight.mobile.moveY) > 0.02 ||
+    Math.abs(flight.mobile.lift) > 0.02 ||
+    flight.dragging
+  );
+  const moving = hasFlightInput || positionMoved > 0.18 || rotationDelta > 0.00008;
+  liveLocalMotion.position.copy(camera.position);
+  liveLocalMotion.quaternion.copy(camera.quaternion);
+
+  const located = typeof world.locateCity === 'function'
+    ? world.locateCity(camera.position.x, camera.position.z)
+    : null;
+  const locatedCityId = getFlightLocatedCityId(located);
+  const cityId = locatedCityId || activeViewId || 'between';
+  const cityView = getCityView(cityId);
+
+  return {
+    cityId,
+    cityName: cityView?.label ?? 'Across the atlas',
+    mode,
+    moving,
+    fps: fpsState.fps,
+    position: camera.position,
+    quaternion: camera.quaternion
+  };
+}
+
+function updateLivePresenceUi(state) {
+  if (!state || !hud.liveToggle) return;
+
+  hud.root.dataset.liveStatus = state.status;
+  const onlineText = state.status === 'connected' ? String(state.onlineCount) : '0';
+  const remoteText = state.remoteCount === 1 ? '1 visitor nearby' : `${state.remoteCount} visitors nearby`;
+  const summary = state.status === 'connected'
+    ? `${state.onlineCount} online · ${remoteText}`
+    : state.status === 'disconnected'
+      ? 'Reconnecting to live visitors'
+      : 'Live visitors unavailable';
+  const livePill = state.status === 'connected'
+    ? `Live world · ${state.onlineCount} online`
+    : state.status === 'disconnected'
+      ? 'Live paused · reconnecting'
+      : 'Solo mode';
+
+  if (hud.liveCount) hud.liveCount.textContent = onlineText;
+  if (hud.livePill) hud.livePill.textContent = livePill;
+  if (hud.liveLabel) hud.liveLabel.textContent = state.statusLabel ?? 'Solo mode';
+  if (hud.liveSummary) hud.liveSummary.textContent = summary;
+  if (hud.liveStatus) hud.liveStatus.textContent = summary;
+  if (hud.liveDot) hud.liveDot.dataset.status = state.status;
+  if (hud.liveVisibility) {
+    hud.liveVisibility.setAttribute('aria-pressed', String(state.visitorsVisible));
+    hud.liveVisibility.textContent = state.visitorsVisible ? 'Visitors visible' : 'Visitors hidden';
+  }
+  renderLiveVisitors(state.participants ?? []);
+
+  window.__ROME_METRICS__.live = {
+    status: state.status,
+    online: state.onlineCount,
+    remote: state.remoteCount
+  };
+}
+
+function renderLiveVisitors(participants) {
+  if (!hud.liveVisitors) return;
+  hud.liveVisitors.replaceChildren();
+  if (!participants.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No live visitors yet.';
+    hud.liveVisitors.append(empty);
+    return;
+  }
+
+  for (const visitor of participants.slice(0, 8)) {
+    const row = document.createElement('div');
+    row.className = 'live-visitor';
+    const swatch = document.createElement('span');
+    swatch.className = 'live-visitor__swatch';
+    swatch.setAttribute('aria-hidden', 'true');
+    swatch.style.setProperty('--visitor-color', /^#[0-9a-f]{6}$/i.test(visitor.color) ? visitor.color : '#f2c46d');
+    const copy = document.createElement('span');
+    copy.className = 'live-visitor__copy';
+    const name = document.createElement('strong');
+    name.textContent = visitor.name ?? 'Explorer';
+    const meta = document.createElement('span');
+    meta.textContent = `${visitor.mode === 'flight' ? 'Flying' : 'Exploring'} ${visitor.cityName ?? 'across the atlas'}`;
+    copy.append(name, meta);
+    row.append(swatch, copy);
+    hud.liveVisitors.append(row);
+  }
 }
 
 function landmarkCameraFor(cityView, target, targetKey = '') {
@@ -1000,6 +1200,7 @@ function animate(now) {
   }
 
   world.update(elapsed);
+  livePresence.update(now, delta);
   renderer.render(scene, camera);
   updateLabels();
   updateMetrics(now);

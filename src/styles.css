@@ -51,6 +51,7 @@ body.is-flight canvas.webgl {
   display: grid;
   gap: 10px;
   width: min(348px, calc(100vw - max(32px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 32px))));
+  max-height: calc(100dvh - max(32px, calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 32px)));
   padding: 14px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -72,6 +73,27 @@ body.is-flight canvas.webgl {
   padding: 10px 11px;
   border-color: rgba(255, 239, 204, 0.14);
   background: rgba(28, 34, 35, 0.58);
+}
+
+.hud__live-pill {
+  display: none;
+}
+
+.hud.is-collapsed .hud__live-pill {
+  width: max-content;
+  max-width: 100%;
+  padding: 3px 7px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(116, 184, 197, 0.28);
+  border-radius: 4px;
+  background: rgba(116, 184, 197, 0.1);
+  color: #dffaff;
+  font-size: 10px;
+  font-weight: 780;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hud__top {
@@ -144,6 +166,11 @@ body.is-flight canvas.webgl {
 .hud__body {
   display: grid;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 226, 165, 0.44) transparent;
 }
 
 .hud.is-collapsed .hud__body {
@@ -176,7 +203,7 @@ body.is-flight canvas.webgl {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 7px;
 }
 
@@ -201,6 +228,188 @@ body.is-flight canvas.webgl {
 .metric span {
   color: rgba(255, 244, 221, 0.75);
   white-space: nowrap;
+}
+
+.metric--live {
+  border-color: rgba(116, 184, 197, 0.22);
+  background: rgba(116, 184, 197, 0.09);
+}
+
+.metric--live b {
+  color: #dffaff;
+}
+
+.live-panel {
+  display: grid;
+  gap: 7px;
+}
+
+.live-panel__toggle,
+.live-panel__action {
+  min-width: 0;
+  border: 1px solid rgba(255, 234, 190, 0.16);
+  border-radius: 6px;
+  background: rgba(37, 48, 44, 0.5);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.live-panel__toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 13px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+}
+
+.live-panel__toggle:hover,
+.live-panel__toggle:focus-visible,
+.live-panel__action:hover,
+.live-panel__action:focus-visible {
+  outline: none;
+  border-color: var(--line-strong);
+  background: rgba(255, 218, 142, 0.15);
+}
+
+.live-panel__dot {
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(255, 242, 215, 0.52);
+  border-radius: 50%;
+  background: rgba(255, 242, 215, 0.32);
+  box-shadow: 0 0 0 3px rgba(255, 242, 215, 0.06);
+}
+
+.live-panel__dot[data-status="connected"] {
+  border-color: rgba(116, 184, 197, 0.86);
+  background: var(--blue);
+  box-shadow: 0 0 0 3px rgba(116, 184, 197, 0.16);
+}
+
+.live-panel__dot[data-status="disconnected"],
+.live-panel__dot[data-status="connecting"] {
+  border-color: rgba(242, 196, 109, 0.78);
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(242, 196, 109, 0.14);
+}
+
+.live-panel__dot[data-status="solo"] {
+  border-color: rgba(255, 244, 221, 0.24);
+  background: rgba(255, 244, 221, 0.18);
+}
+
+.live-panel__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.live-panel__copy span,
+.live-panel__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-panel__copy span {
+  color: #fff3d9;
+  font-size: 12px;
+  font-weight: 820;
+  line-height: 1.1;
+}
+
+.live-panel__copy strong {
+  color: rgba(255, 244, 221, 0.72);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.live-panel__body {
+  display: grid;
+  gap: 7px;
+}
+
+.live-panel__body[hidden] {
+  display: none;
+}
+
+.live-panel__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.live-panel__action {
+  min-height: 30px;
+  padding: 6px 8px;
+  color: rgba(255, 243, 220, 0.84);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.live-visitors {
+  display: grid;
+  gap: 5px;
+  max-height: 138px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.live-visitors p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.live-visitor {
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 7px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  border: 1px solid rgba(255, 244, 221, 0.12);
+  border-radius: 5px;
+  background: rgba(224, 231, 214, 0.07);
+}
+
+.live-visitor__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--visitor-color, var(--gold));
+  box-shadow: 0 0 0 3px rgba(255, 242, 215, 0.07);
+}
+
+.live-visitor__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.live-visitor__copy strong,
+.live-visitor__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-visitor__copy strong {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.05;
+}
+
+.live-visitor__copy span {
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.05;
 }
 
 .landmark-panel {
@@ -807,6 +1016,43 @@ body.is-flight canvas.webgl {
   white-space: nowrap;
 }
 
+.live-label-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.live-label {
+  position: absolute;
+  max-width: min(240px, calc(100vw - 32px));
+  padding: 3px 7px;
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(116, 184, 197, 0.3);
+  border-radius: 4px;
+  background: rgba(24, 32, 33, 0.76);
+  color: #dffaff;
+  box-shadow: 0 10px 30px rgba(12, 16, 15, 0.22);
+  backdrop-filter: blur(10px);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (max-width: 920px) {
   .explore-dock {
     width: min(294px, calc(100vw - 32px));
@@ -843,7 +1089,16 @@ body.is-flight canvas.webgl {
     top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px));
     left: max(10px, calc(env(safe-area-inset-left, 0px) + 10px));
     width: min(318px, calc(100vw - max(20px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 20px))));
+    max-height: calc(100dvh - max(198px, calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 198px)));
     padding: 11px;
+  }
+
+  .hud:not(.is-collapsed) {
+    width: min(318px, calc(100vw - max(20px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 20px))));
+  }
+
+  .hud__body {
+    max-height: calc(100dvh - 278px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 
   .hud h1 {
@@ -856,6 +1111,10 @@ body.is-flight canvas.webgl {
 
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric--live {
+    grid-column: span 2;
   }
 
   .landmark-panel {

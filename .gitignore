@@ -8,6 +8,8 @@ dist/
 *.log
 .DS_Store
 .vite/
+.env*
+!.env.example
 
 # Local screenshots and prompt scratch files
 final-*.png
