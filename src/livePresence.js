@@ -35,6 +35,7 @@ const CONNECTION_LABELS = {
   failed: 'Solo mode',
   solo: 'Solo mode'
 };
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 export function createLivePresence({
   scene,
@@ -1143,10 +1144,13 @@ function normalizePresenceData(data, clientId) {
   const movement = normalizePose(data.pose);
   if (!movement) return null;
   const displayId = displayIdFromClientId(clientId) || sanitizeDisplayId(data.displayId);
+  const hasUserName = hasOwn(data, 'userName');
   const userName = sanitizeUserName(data.userName);
   return {
     seq: Number.isFinite(data.seq) ? data.seq : 0,
     displayId,
+    userName,
+    hasUserName,
     name: formatVisitorName(userName, displayId, data.name),
     color: sanitizeColor(data.color),
     cityId: cleanCity(data.cityId),
@@ -1161,11 +1165,14 @@ function normalizeMovementData(data, clientId) {
   const pose = normalizePose(data);
   if (!pose) return null;
   const displayId = displayIdFromClientId(clientId) || sanitizeDisplayId(data.displayId);
+  const hasUserName = hasOwn(data, 'userName');
   const userName = sanitizeUserName(data.userName);
   return {
     cid: typeof data.cid === 'string' ? data.cid : null,
     seq: Number.isFinite(data.seq) ? data.seq : 0,
     displayId,
+    userName,
+    hasUserName,
     name: formatVisitorName(userName, displayId, data.name),
     color: sanitizeColor(data.color),
     cityId: cleanCity(data.cityId),
@@ -1189,6 +1196,7 @@ function formatVisitorName(userName, displayId, fallbackName = '') {
 
 function preferredVisitorName(existing, incoming) {
   const displayId = incoming.displayId ?? existing?.displayId;
+  if (incoming.hasUserName) return incoming.name ?? (displayId ? `Visitor #${displayId}` : 'Visitor');
   if (incoming.name && !isFallbackVisitorName(incoming.name, displayId)) return incoming.name;
   if (existing?.name && !isFallbackVisitorName(existing.name, displayId)) return existing.name;
   return incoming.name ?? existing?.name ?? (displayId ? `Visitor #${displayId}` : 'Visitor');

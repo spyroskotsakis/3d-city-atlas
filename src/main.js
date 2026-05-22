@@ -669,9 +669,10 @@ function createHud(metrics, navViews) {
             </div>
             <label class="sr-only" for="live-display-name">Display name</label>
             <div class="live-name-form__controls">
-              <input id="live-display-name" data-live-name-input type="text" maxlength="${LIVE_DISPLAY_NAME_MAX_LENGTH}" autocomplete="nickname" placeholder="Your name" aria-describedby="live-name-help live-self-id">
+              <input id="live-display-name" data-live-name-input type="text" maxlength="${LIVE_DISPLAY_NAME_MAX_LENGTH}" autocomplete="off" placeholder="Your name" aria-describedby="live-name-help live-self-id">
               <button class="live-panel__action live-name-form__save" data-live-name-save type="submit">Save</button>
             </div>
+            <p class="live-name-form__feedback" data-live-name-feedback aria-live="polite"></p>
             <p class="sr-only" id="live-name-help">Optional name shown next to your visitor ID.</p>
           </form>
           <div class="live-panel__actions">
@@ -786,6 +787,7 @@ function createHud(metrics, navViews) {
     liveVisibility: root.querySelector('[data-live-visibility]'),
     liveNameForm: root.querySelector('[data-live-name-form]'),
     liveNameInput: root.querySelector('[data-live-name-input]'),
+    liveNameFeedback: root.querySelector('[data-live-name-feedback]'),
     liveNameSave: root.querySelector('[data-live-name-save]'),
     liveSelfId: root.querySelector('[data-live-self-id]'),
     root,
@@ -932,12 +934,20 @@ function setupLivePanel(hud) {
   if (!hud.liveToggle || !hud.liveBody) return;
 
   if (hud.liveNameInput) hud.liveNameInput.value = liveDisplayName;
+  if (hud.liveNameFeedback && liveDisplayName) {
+    hud.liveNameFeedback.textContent = `Saved as ${liveDisplayName}.`;
+  }
 
   const saveDisplayName = () => {
     liveDisplayName = sanitizeLiveDisplayName(hud.liveNameInput?.value ?? '');
     if (hud.liveNameInput) hud.liveNameInput.value = liveDisplayName;
     writeStoredLiveDisplayName(liveDisplayName);
     livePresence?.setDisplayName(liveDisplayName);
+    if (hud.liveNameFeedback) {
+      hud.liveNameFeedback.textContent = liveDisplayName
+        ? `Saved as ${liveDisplayName}.`
+        : 'Display name cleared.';
+    }
     if (hud.liveStatus) hud.liveStatus.textContent = liveDisplayName
       ? `Display name saved as ${liveDisplayName}.`
       : 'Display name cleared.';
