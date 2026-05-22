@@ -45,12 +45,12 @@ body.is-flight canvas.webgl {
 
 .hud {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
+  left: max(16px, calc(env(safe-area-inset-left, 0px) + 16px));
   z-index: 10;
   display: grid;
   gap: 10px;
-  width: min(348px, calc(100vw - 32px));
+  width: min(348px, calc(100vw - max(32px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 32px))));
   padding: 14px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -68,7 +68,7 @@ body.is-flight canvas.webgl {
 }
 
 .hud.is-collapsed {
-  width: min(220px, calc(100vw - 32px));
+  width: min(220px, calc(100vw - max(32px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 32px))));
   padding: 10px 11px;
   border-color: rgba(255, 239, 204, 0.14);
   background: rgba(28, 34, 35, 0.58);
@@ -840,9 +840,9 @@ body.is-flight canvas.webgl {
 
 @media (max-width: 720px) {
   .hud {
-    top: 10px;
-    left: 10px;
-    width: min(318px, calc(100vw - 20px));
+    top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px));
+    left: max(10px, calc(env(safe-area-inset-left, 0px) + 10px));
+    width: min(318px, calc(100vw - max(20px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 20px))));
     padding: 11px;
   }
 
