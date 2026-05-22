@@ -583,32 +583,69 @@ body.is-flight canvas.webgl {
 }
 
 .flight-toggle.is-active .flight-toggle__mark {
-  border-color: rgba(116, 184, 197, 0.48);
-  background: rgba(116, 184, 197, 0.18);
-  color: #dffaff;
+  border-color: rgba(255, 242, 215, 0.42);
+  background: var(--gold);
+  color: #2f2112;
+}
+
+.flight-toggle.is-active .flight-toggle__label {
+  color: var(--text);
 }
 
 .flight-toggle.is-active .flight-toggle__hint {
-  color: #dffaff;
+  color: var(--gold);
 }
 
 .city-card:hover,
 .city-card:focus-visible,
 .city-card.is-active,
 .city-nav__toggle:hover,
-.city-nav__toggle:focus-visible,
-.flight-toggle:hover,
-.flight-toggle:focus-visible,
-.flight-toggle.is-active {
+.city-nav__toggle:focus-visible {
   outline: none;
   background: rgba(255, 218, 142, 0.15);
   border-color: var(--line-strong);
+}
+
+.flight-toggle:not(.is-active):hover,
+.flight-toggle:not(.is-active):focus-visible {
+  outline: none;
+  border-color: rgba(242, 196, 109, 0.68);
+  background: rgba(43, 48, 45, 0.94);
+}
+
+.flight-toggle:not(.is-active):hover .flight-toggle__mark,
+.flight-toggle:not(.is-active):focus-visible .flight-toggle__mark {
+  border-color: rgba(242, 196, 109, 0.52);
+  background: rgba(242, 196, 109, 0.18);
+}
+
+.flight-toggle.is-active {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(38, 48, 46, 0.96);
+  color: var(--text);
+  box-shadow:
+    0 0 0 1px rgba(242, 196, 109, 0.26),
+    0 18px 48px rgba(12, 16, 15, 0.3);
+}
+
+.flight-toggle.is-active:hover,
+.flight-toggle.is-active:focus-visible {
+  border-color: #ffe2a5;
+  background: rgba(48, 58, 54, 0.98);
 }
 
 .flight-toggle:focus-visible {
   box-shadow:
     0 0 0 2px rgba(255, 242, 215, 0.72),
     0 0 0 5px rgba(242, 196, 109, 0.26),
+    0 18px 48px rgba(12, 16, 15, 0.3);
+}
+
+.flight-toggle.is-active:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(255, 242, 215, 0.82),
+    0 0 0 5px rgba(242, 196, 109, 0.36),
     0 18px 48px rgba(12, 16, 15, 0.3);
 }
 
@@ -780,7 +817,7 @@ body.is-flight canvas.webgl {
   }
 }
 
-@media (any-pointer: coarse) {
+@media (hover: none) and (pointer: coarse) {
   body.is-flight .city-nav {
     display: none;
   }
@@ -894,8 +931,8 @@ body.is-flight canvas.webgl {
   }
 
   .flight-toggle__label {
-    font-size: 10px;
-    line-height: 1;
+    font-size: 12px;
+    line-height: 1.05;
   }
 
   .flight-toggle__hint {
@@ -910,6 +947,12 @@ body.is-flight canvas.webgl {
     width: min(148px, 100%);
   }
 
+  .city-card__name {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 720px) and (hover: none) and (pointer: coarse) {
   body.is-flight .mobile-flight-controls {
     --mobile-stick-size: clamp(88px, 26vw, 112px);
     --mobile-knob-size: clamp(40px, 12vw, 52px);
@@ -923,10 +966,6 @@ body.is-flight canvas.webgl {
     gap: 8px;
     align-items: end;
     pointer-events: none;
-  }
-
-  .city-card__name {
-    font-size: 14px;
   }
 }
 

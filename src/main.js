@@ -8,6 +8,8 @@ import './styles.css';
 if (shouldInjectAnalytics()) injectVercelAnalytics();
 THREE.ColorManagement.enabled = false;
 
+const PANEL_AUTO_COLLAPSE_MS = 5000;
+
 function shouldInjectAnalytics() {
   const hostname = window.location.hostname;
   return hostname !== 'localhost' &&
@@ -239,7 +241,8 @@ const flight = {
     moveX: 0,
     moveY: 0,
     lift: 0
-  }
+  },
+  pointerLocked: false
 };
 const FLIGHT_CITY_SYNC_INSET = 18;
 const FLIGHT_CITY_SYNC_DWELL_MS = 550;
@@ -346,10 +349,10 @@ function createHud(metrics, navViews) {
   flightRoot.className = 'flight-dock';
   flightRoot.setAttribute('aria-label', 'Flight controls');
   flightRoot.innerHTML = `
-    <button class="flight-toggle" data-mode="flight" type="button" title="Enter flight mode" aria-label="Turn flight mode on" aria-pressed="false">
+    <button class="flight-toggle" data-mode="flight" type="button" title="Enter flight mode" aria-label="Enter flight mode" aria-pressed="false">
       <span class="flight-toggle__mark" aria-hidden="true">Fly</span>
       <span class="flight-toggle__copy">
-        <span class="flight-toggle__label" data-flight-label>Flight mode</span>
+        <span class="flight-toggle__label" data-flight-label>Enter flight</span>
         <span class="flight-toggle__hint" data-flight-state>Ready</span>
       </span>
     </button>
@@ -423,7 +426,7 @@ function createHud(metrics, navViews) {
 }
 
 function setupHudPanel(hud) {
-  let autoCollapseTimer = window.setTimeout(() => setHudCollapsed(true), 5200);
+  let autoCollapseTimer = null;
 
   const clearAutoCollapse = () => {
     if (!autoCollapseTimer) return;
@@ -431,12 +434,27 @@ function setupHudPanel(hud) {
     autoCollapseTimer = null;
   };
 
+  const scheduleAutoCollapse = () => {
+    clearAutoCollapse();
+    autoCollapseTimer = window.setTimeout(() => {
+      autoCollapseTimer = null;
+      setHudCollapsed(true);
+    }, PANEL_AUTO_COLLAPSE_MS);
+  };
+
   const setHudCollapsed = (collapsed, fromUser = false) => {
+    if (collapsed && hud.root.contains(document.activeElement) && document.activeElement !== hud.toggle) {
+      hud.toggle.focus({ preventScroll: true });
+    }
     hud.root.classList.toggle('is-collapsed', collapsed);
     hud.toggle.setAttribute('aria-expanded', String(!collapsed));
     hud.toggle.setAttribute('title', collapsed ? 'Open atlas panel' : 'Close atlas panel');
-    if (fromUser) clearAutoCollapse();
+    if (collapsed) clearAutoCollapse();
+    else scheduleAutoCollapse();
   };
+
+  hud.setHudCollapsed = setHudCollapsed;
+  setHudCollapsed(false);
 
   hud.toggle.addEventListener('click', () => {
     setHudCollapsed(!hud.root.classList.contains('is-collapsed'), true);
@@ -446,33 +464,35 @@ function setupHudPanel(hud) {
 function setupNavPanel(hud) {
   if (!hud.nav || !hud.navToggle) return;
   let autoCollapseTimer = null;
-  let autoCollapseFrame = null;
 
   const clearAutoCollapse = () => {
-    if (autoCollapseFrame) window.cancelAnimationFrame(autoCollapseFrame);
     if (autoCollapseTimer) window.clearTimeout(autoCollapseTimer);
-    autoCollapseFrame = null;
     autoCollapseTimer = null;
   };
 
+  const scheduleAutoCollapse = () => {
+    clearAutoCollapse();
+    autoCollapseTimer = window.setTimeout(() => {
+      autoCollapseTimer = null;
+      setNavCollapsed(true);
+    }, PANEL_AUTO_COLLAPSE_MS);
+  };
+
   const setNavCollapsed = (collapsed, fromUser = false) => {
+    if (collapsed && hud.nav.contains(document.activeElement) && document.activeElement !== hud.navToggle) {
+      hud.navToggle.focus({ preventScroll: true });
+    }
     hud.nav.classList.toggle('is-collapsed', collapsed);
     hud.navToggle.setAttribute('aria-expanded', String(!collapsed));
     hud.navToggle.setAttribute('title', collapsed ? 'Open destinations' : 'Collapse destinations');
-    if (fromUser) clearAutoCollapse();
+    if (collapsed) clearAutoCollapse();
+    else scheduleAutoCollapse();
   };
 
   let compactLayout = window.innerWidth <= 720;
 
   hud.setNavCollapsed = setNavCollapsed;
   setNavCollapsed(false);
-  autoCollapseFrame = window.requestAnimationFrame(() => {
-    autoCollapseFrame = null;
-    autoCollapseTimer = window.setTimeout(() => {
-      autoCollapseTimer = null;
-      setNavCollapsed(true);
-    }, 5000);
-  });
 
   hud.navToggle.addEventListener('click', () => {
     setNavCollapsed(!hud.nav.classList.contains('is-collapsed'), true);
@@ -482,7 +502,7 @@ function setupNavPanel(hud) {
     const nextCompactLayout = window.innerWidth <= 720;
     if (nextCompactLayout === compactLayout) return;
     compactLayout = nextCompactLayout;
-    if (!autoCollapseTimer && compactLayout) setNavCollapsed(true);
+    if (compactLayout) setNavCollapsed(true);
   });
 }
 
@@ -732,26 +752,17 @@ function landmarkCameraFor(cityView, target, targetKey = '') {
 }
 
 function setFlightMode(enabled, requestLock = false) {
-  if (flight.active === enabled) return;
-
+  const changed = flight.active !== enabled;
   flight.active = enabled;
+  controls.enabled = !enabled;
+  syncFlightModeUi(enabled);
+  if (!changed) return;
+
   flight.dragging = false;
   flight.lookPointerId = null;
+  flight.pointerLocked = false;
   resetFlightCitySync();
-  controls.enabled = !enabled;
-  document.body.classList.toggle('is-flight', enabled);
-  hud.mobileControls?.setAttribute('aria-hidden', String(!enabled));
-
-  const button = document.querySelector('[data-mode="flight"]');
-  if (!button) return;
-  button.classList.toggle('is-active', enabled);
-  button.setAttribute('aria-pressed', String(enabled));
-  button.setAttribute('aria-label', enabled ? 'Exit flight mode' : 'Turn flight mode on');
-  button.setAttribute('title', enabled ? 'Exit flight mode' : 'Enter flight mode');
-  const label = button.querySelector('[data-flight-label]');
-  if (label) label.textContent = enabled ? 'Exit flight' : 'Flight mode';
-  const state = button.querySelector('[data-flight-state]');
-  if (state) state.textContent = enabled ? 'Active' : 'Ready';
+  if (!enabled) interruptFlightInput();
 
   if (enabled) {
     syncFlightAnglesFromCamera();
@@ -761,14 +772,33 @@ function setFlightMode(enabled, requestLock = false) {
       canvas.requestPointerLock?.();
     }
   } else {
-    flight.keys.clear();
-    resetMobileFlightInput();
     if (document.pointerLockElement === canvas) document.exitPointerLock?.();
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).addScaledVector(forward, 34);
     desiredPosition.copy(camera.position);
     desiredTarget.copy(controls.target);
   }
+}
+
+function syncFlightModeUi(enabled) {
+  document.body.classList.toggle('is-flight', enabled);
+  hud.mobileControls?.setAttribute('aria-hidden', String(!enabled));
+  const button = document.querySelector('[data-mode="flight"]');
+  if (button) {
+    button.classList.toggle('is-active', enabled);
+    button.setAttribute('aria-pressed', String(enabled));
+    button.setAttribute('aria-label', enabled ? 'Exit flight mode' : 'Enter flight mode');
+    button.setAttribute('title', enabled ? 'Exit flight mode' : 'Enter flight mode');
+    const label = button.querySelector('[data-flight-label]');
+    if (label) label.textContent = enabled ? 'Exit flight' : 'Enter flight';
+    const state = button.querySelector('[data-flight-state]');
+    if (state) state.textContent = enabled ? 'Active' : 'Ready';
+  }
+}
+
+function interruptFlightInput() {
+  flight.keys.clear();
+  resetMobileFlightInput();
 }
 
 function syncFlightAnglesFromCamera() {
@@ -778,7 +808,9 @@ function syncFlightAnglesFromCamera() {
 }
 
 function shouldRequestPointerLock() {
-  return !window.matchMedia?.('(any-pointer: coarse)').matches;
+  const hasFinePointer = window.matchMedia?.('(any-pointer: fine)').matches ?? true;
+  const canHover = window.matchMedia?.('(hover: hover)').matches ?? true;
+  return hasFinePointer && canHover;
 }
 
 function updateFlightLook(movementX, movementY) {
@@ -988,7 +1020,14 @@ window.visualViewport?.addEventListener('resize', () => {
 });
 
 window.addEventListener('keydown', (event) => {
-  if (!flight.active || event.repeat || isTextInput(event.target)) return;
+  if (!flight.active || isTextInput(event.target)) return;
+  if (event.code === 'Escape') {
+    event.preventDefault();
+    setFlightMode(false);
+    return;
+  }
+
+  if (event.repeat) return;
   flight.keys.add(event.code);
   if (isFlightKey(event.code)) event.preventDefault();
 });
@@ -998,24 +1037,31 @@ window.addEventListener('keyup', (event) => {
 });
 
 window.addEventListener('blur', () => {
-  flight.keys.clear();
-  resetMobileFlightInput();
+  if (flight.active) setFlightMode(false);
+  else interruptFlightInput();
 });
 
 window.addEventListener('pagehide', () => {
-  flight.keys.clear();
-  resetMobileFlightInput();
+  if (flight.active) setFlightMode(false);
+  else interruptFlightInput();
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    flight.keys.clear();
-    resetMobileFlightInput();
+    if (flight.active) setFlightMode(false);
+    else interruptFlightInput();
   }
 });
 
 document.addEventListener('pointerlockchange', () => {
-  if (flight.active && document.pointerLockElement !== canvas) {
+  const hadCanvasLock = flight.pointerLocked;
+  const hasCanvasLock = document.pointerLockElement === canvas;
+  flight.pointerLocked = hasCanvasLock;
+  if (!hasCanvasLock) {
+    if (flight.active && hadCanvasLock) {
+      setFlightMode(false);
+      return;
+    }
     flight.dragging = false;
     flight.lookPointerId = null;
   }
