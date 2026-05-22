@@ -79,6 +79,8 @@ export function createLivePresence({
     update,
     setVisitorsVisible,
     setDisplayName,
+    getVisitorTargetPose,
+    pickVisitorAt,
     dispose
   };
 
@@ -168,6 +170,15 @@ export function createLivePresence({
       const snapshot = readSnapshot(performance.now());
       if (snapshot) void enterOrUpdatePresence(false, snapshot);
     }
+  }
+
+  function getVisitorTargetPose(visitorKeyOrClientId, now = performance.now()) {
+    const participant = resolveTargetableParticipant(visitorKeyOrClientId, now);
+    return participant ? layer.getTargetPose(participant.key, now, participant) : null;
+  }
+
+  function pickVisitorAt(clientX, clientY, domElement, now = performance.now()) {
+    return layer.pickVisitorAt(clientX, clientY, domElement, now);
   }
 
   function dispose() {
@@ -402,9 +413,10 @@ export function createLivePresence({
   }
 
   function refreshParticipants() {
+    const now = performance.now();
     const groupedVisitors = new Map();
     for (const participant of participants.values()) {
-      const visitor = participantListView(participant);
+      const visitor = participantListView(participant, now);
       const groupKey = participant.clientId || participant.displayId || participant.key;
       const current = groupedVisitors.get(groupKey);
       if (!current || isPreferredRosterVisitor(visitor, current)) groupedVisitors.set(groupKey, visitor);
@@ -425,10 +437,13 @@ export function createLivePresence({
     emitState();
   }
 
-  function participantListView(participant) {
+  function participantListView(participant, now = performance.now()) {
     const displayId = participant.displayId ?? displayIdFromClientId(participant.clientId);
     return {
       key: participant.clientId || participant.key,
+      targetKey: participant.key,
+      clientId: participant.clientId,
+      connectionId: participant.connectionId,
       displayId,
       name: participant.name ?? (displayId ? `Visitor #${displayId}` : 'Visitor'),
       color: participant.color,
@@ -436,15 +451,42 @@ export function createLivePresence({
       cityName: participant.cityName || formatCityName(participant.cityId),
       mode: participant.mode || 'orbit',
       moving: Boolean(participant.moving),
+      meetAvailable: isParticipantTargetable(participant, now),
       lastSeen: Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0, participant.createdAt || 0)
     };
   }
 
+  function resolveTargetableParticipant(visitorKeyOrClientId, now = performance.now()) {
+    if (!visitorKeyOrClientId) return null;
+
+    const exact = participants.get(visitorKeyOrClientId);
+    if (exact && isParticipantTargetable(exact, now)) return exact;
+
+    let best = null;
+    for (const participant of participants.values()) {
+      if (participant.clientId !== visitorKeyOrClientId) continue;
+      if (!isParticipantTargetable(participant, now)) continue;
+      const lastSeen = Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0, participant.createdAt || 0);
+      const bestLastSeen = best
+        ? Math.max(best.lastMovementAt || 0, best.lastPresenceAt || 0, best.createdAt || 0)
+        : -1;
+      if (!best || lastSeen > bestLastSeen) best = participant;
+    }
+    return best;
+  }
+
+  function isParticipantTargetable(participant, now = performance.now()) {
+    const lastSeen = Math.max(participant?.lastMovementAt || 0, participant?.lastPresenceAt || 0, participant?.createdAt || 0);
+    return Boolean(participant?.key && now - lastSeen <= STALE_REMOVE_MS && layer.hasTargetPose(participant.key, now));
+  }
+
   function isPreferredRosterVisitor(next, current) {
+    if (next.meetAvailable !== current.meetAvailable) return next.meetAvailable;
+    if (next.lastSeen !== current.lastSeen) return next.lastSeen > current.lastSeen;
     const nextHasCustomName = !isFallbackVisitorName(next.name, next.displayId);
     const currentHasCustomName = !isFallbackVisitorName(current.name, current.displayId);
     if (nextHasCustomName !== currentHasCustomName) return nextHasCustomName;
-    return next.lastSeen >= current.lastSeen;
+    return next.key.localeCompare(current.key) < 0;
   }
 
   function compareRosterVisitors(a, b) {
@@ -462,7 +504,9 @@ export function createLivePresence({
       visitor.color,
       visitor.cityId,
       visitor.cityName,
-      visitor.mode
+      visitor.mode,
+      visitor.targetKey,
+      visitor.meetAvailable
     ].join('~')).join('|')}`;
   }
 
@@ -771,6 +815,9 @@ class RemoteExplorersLayer {
     this.arrowMesh.count = 0;
     this.beaconMesh.count = 0;
     this.group.add(this.beaconMesh, this.bodyMesh, this.arrowMesh);
+    this.visibleRecords = [];
+    this.raycaster = new THREE.Raycaster();
+    this.pickPointer = new THREE.Vector2();
 
     this.tmpPosition = new THREE.Vector3();
     this.tmpNextPosition = new THREE.Vector3();
@@ -793,7 +840,11 @@ class RemoteExplorersLayer {
       renderQuaternion: new THREE.Quaternion(),
       color: new THREE.Color(participant.color ?? '#f2c46d')
     };
+    record.clientId = participant.clientId;
+    record.connectionId = participant.connectionId;
+    record.displayId = participant.displayId;
     record.name = participant.name;
+    record.cityId = participant.cityId;
     record.cityName = participant.cityName;
     record.mode = participant.mode;
     record.color.set(participant.color ?? '#f2c46d');
@@ -814,6 +865,7 @@ class RemoteExplorersLayer {
 
   clear() {
     this.records.clear();
+    this.visibleRecords = [];
     this.bodyMesh.count = 0;
     this.arrowMesh.count = 0;
     this.beaconMesh.count = 0;
@@ -831,6 +883,7 @@ class RemoteExplorersLayer {
 
   update(now, _delta, participants) {
     if (!this.group.visible) {
+      this.visibleRecords = [];
       this.hideLabels();
       return;
     }
@@ -867,15 +920,67 @@ class RemoteExplorersLayer {
       index += 1;
     }
 
+    this.visibleRecords = visibleRecords;
     this.bodyMesh.count = index;
     this.arrowMesh.count = index;
     this.beaconMesh.count = index;
     this.bodyMesh.instanceMatrix.needsUpdate = true;
     this.arrowMesh.instanceMatrix.needsUpdate = true;
     this.beaconMesh.instanceMatrix.needsUpdate = true;
+    this.bodyMesh.computeBoundingSphere();
+    this.arrowMesh.computeBoundingSphere();
     if (this.bodyMesh.instanceColor) this.bodyMesh.instanceColor.needsUpdate = true;
     if (this.arrowMesh.instanceColor) this.arrowMesh.instanceColor.needsUpdate = true;
     this.updateLabels(visibleRecords);
+  }
+
+  hasTargetPose(recordKey, now = performance.now()) {
+    const record = this.records.get(recordKey);
+    if (!record || record.samples.length === 0) return false;
+    return now - (record.lastSeen || 0) <= STALE_REMOVE_MS;
+  }
+
+  getTargetPose(recordKey, now = performance.now(), participant = null) {
+    const record = this.records.get(recordKey);
+    if (!record || record.samples.length === 0 || now - (record.lastSeen || 0) > STALE_REMOVE_MS) return null;
+
+    this.sampleRecord(record, now);
+    const quaternion = record.renderQuaternion.clone();
+    return {
+      key: record.key,
+      clientId: record.clientId ?? participant?.clientId ?? null,
+      connectionId: record.connectionId ?? participant?.connectionId ?? null,
+      displayId: record.displayId ?? participant?.displayId ?? null,
+      name: record.name ?? participant?.name ?? 'Visitor',
+      cityId: record.cityId ?? participant?.cityId ?? null,
+      cityName: record.cityName ?? participant?.cityName ?? null,
+      mode: record.mode ?? participant?.mode ?? 'orbit',
+      position: record.renderPosition.clone(),
+      quaternion,
+      forward: getForward(quaternion, new THREE.Vector3()),
+      lastSeen: record.lastSeen || 0,
+      stale: now - (record.lastSeen || 0) > STALE_FADE_MS
+    };
+  }
+
+  pickVisitorAt(clientX, clientY, domElement, now = performance.now()) {
+    if (!this.group.visible || !domElement || this.visibleRecords.length === 0) return null;
+    const rect = domElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+
+    this.pickPointer.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    this.raycaster.setFromCamera(this.pickPointer, this.camera);
+    const hits = this.raycaster.intersectObjects([this.bodyMesh, this.arrowMesh], false);
+    for (const hit of hits) {
+      if (!Number.isInteger(hit.instanceId)) continue;
+      const record = this.visibleRecords[hit.instanceId];
+      const pose = record ? this.getTargetPose(record.key, now) : null;
+      if (pose) return pose;
+    }
+    return null;
   }
 
   sampleRecord(record, now) {

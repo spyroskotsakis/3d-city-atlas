@@ -12,9 +12,17 @@ THREE.ColorManagement.enabled = false;
 const PANEL_AUTO_COLLAPSE_MS = 5000;
 const LIVE_DISPLAY_NAME_STORAGE_KEY = 'atlas.liveDisplayName';
 const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
+const LIVE_MEET_DISTANCE = 18;
+const LIVE_MEET_MIN_HORIZONTAL_DISTANCE = 10;
+const LIVE_MEET_HEIGHT_OFFSET = 0.8;
+const LIVE_PICK_MAX_DRAG_PX = 6;
+const LIVE_PICK_MAX_CLICK_MS = 650;
 
 let liveDisplayName = readStoredLiveDisplayName();
 let liveVisitorsRenderKey = '';
+let liveVisitorRowSequence = 0;
+let activeMeetingKey = null;
+let livePickPointer = null;
 const liveVisitorRows = new Map();
 
 function shouldInjectAnalytics() {
@@ -390,10 +398,99 @@ document.querySelector('[data-mode="flight"]').addEventListener('click', () => {
   setFlightMode(!flight.active, true);
 });
 
-function flyTo(position, target) {
+function flyTo(position, target, options = {}) {
   setFlightMode(false);
   desiredPosition = position.clone();
   desiredTarget = target.clone();
+  if (options.instant) {
+    camera.position.copy(desiredPosition);
+    controls.target.copy(desiredTarget);
+    controls.update();
+  }
+}
+
+function meetLiveVisitor(visitorKeyOrClientId, fallbackName = 'visitor') {
+  const pose = livePresence?.getVisitorTargetPose(visitorKeyOrClientId);
+  if (!pose) {
+    activeMeetingKey = null;
+    announceLiveStatus(`${fallbackName} is unavailable.`);
+    hud.liveToggle?.focus({ preventScroll: true });
+    syncLiveVisitorMeetButtons();
+    return false;
+  }
+
+  meetLiveVisitorPose(pose);
+  return true;
+}
+
+function meetLiveVisitorPose(pose) {
+  const nextView = pose.cityId && getCityView(pose.cityId);
+  if (nextView) setActiveView(pose.cityId, { revealInNav: false });
+  livePresence?.setVisitorsVisible(true);
+
+  const { position, target } = liveVisitorCameraFor(pose);
+  activeMeetingKey = pose.key;
+  announceLiveStatus(`Moving to meet ${pose.name ?? 'visitor'}.`);
+  flyTo(position, target, { instant: prefersReducedMotion() });
+  syncLiveVisitorMeetButtons();
+
+  if (window.innerWidth <= 720) hud.setLiveExpanded?.(false);
+}
+
+function liveVisitorCameraFor(pose) {
+  const target = pose.position.clone();
+  const front = pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
+  front.y = 0;
+
+  if (front.lengthSq() < 0.0001) {
+    front.subVectors(camera.position, target).setY(0);
+  }
+  if (front.lengthSq() < 0.0001) front.set(0, 0, 1);
+  front.normalize();
+
+  const position = bestLiveVisitorCameraPosition(target, front);
+  const groundY = world.heightAt(position.x, position.z);
+  position.y = Math.max(groundY + 3.2, Math.min(640, target.y + LIVE_MEET_HEIGHT_OFFSET));
+  target.y += 0.6;
+
+  return { position, target };
+}
+
+function bestLiveVisitorCameraPosition(target, front) {
+  const angles = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI, Math.PI * 0.75, -Math.PI * 0.75];
+  const axis = new THREE.Vector3(0, 1, 0);
+  let best = null;
+
+  for (const angle of angles) {
+    const direction = front.clone().applyAxisAngle(axis, angle).normalize();
+    const raw = target.clone().addScaledVector(direction, LIVE_MEET_DISTANCE);
+    const position = clampLiveMeetPosition(raw);
+    const horizontalDistance = Math.hypot(position.x - target.x, position.z - target.z);
+    const wasClamped = Math.abs(position.x - raw.x) > 0.01 || Math.abs(position.z - raw.z) > 0.01;
+    const score =
+      (horizontalDistance < LIVE_MEET_MIN_HORIZONTAL_DISTANCE ? 1000 : 0) +
+      Math.abs(horizontalDistance - LIVE_MEET_DISTANCE) +
+      (wasClamped ? 30 : 0) +
+      Math.abs(angle) * 0.02;
+
+    if (!best || score < best.score) best = { position, score };
+  }
+
+  return best?.position ?? clampLiveMeetPosition(target.clone().addScaledVector(front, LIVE_MEET_DISTANCE));
+}
+
+function clampLiveMeetPosition(position) {
+  position.x = Math.max(world.bounds.minX, Math.min(world.bounds.maxX, position.x));
+  position.z = Math.max(world.bounds.minZ, Math.min(world.bounds.maxZ, position.z));
+  return position;
+}
+
+function announceLiveStatus(message) {
+  if (hud.liveStatus) hud.liveStatus.textContent = message;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 function createHud(metrics, navViews) {
@@ -1016,6 +1113,14 @@ function updateLivePresenceUi(state) {
 
 function renderLiveVisitors(participants, totalCount = participants.length) {
   if (!hud.liveVisitors) return;
+  if (activeMeetingKey && !livePresence?.getVisitorTargetPose(activeMeetingKey)) {
+    activeMeetingKey = null;
+    announceLiveStatus('Selected visitor is unavailable.');
+    if (document.activeElement instanceof Element && document.activeElement.closest('.live-visitor')) {
+      hud.liveToggle?.focus({ preventScroll: true });
+    }
+  }
+
   const visibleCount = Math.min(participants.length, 8);
   const visibleVisitors = participants.slice(0, visibleCount);
   if (hud.liveVisitorsMeta) {
@@ -1031,9 +1136,14 @@ function renderLiveVisitors(participants, totalCount = participants.length) {
     visitor.name,
     visitor.color,
     visitor.mode,
-    visitor.cityName
+    visitor.cityName,
+    visitor.targetKey,
+    visitor.meetAvailable
   ])]);
-  if (liveVisitorsRenderKey === renderKey) return;
+  if (liveVisitorsRenderKey === renderKey) {
+    syncLiveVisitorMeetButtons();
+    return;
+  }
 
   liveVisitorsRenderKey = renderKey;
   const previousScrollTop = hud.liveVisitors.scrollTop;
@@ -1091,6 +1201,15 @@ function getLiveVisitorRow(key) {
   row.className = 'live-visitor';
   row.dataset.liveVisitorKey = key;
 
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'live-visitor__button';
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    meetLiveVisitor(button.dataset.liveVisitorTargetKey || row.dataset.liveVisitorKey, button.dataset.liveVisitorName || 'Visitor');
+  });
+
   const swatch = document.createElement('span');
   swatch.className = 'live-visitor__swatch';
   swatch.setAttribute('aria-hidden', 'true');
@@ -1100,8 +1219,15 @@ function getLiveVisitorRow(key) {
 
   const name = document.createElement('strong');
   const meta = document.createElement('span');
+  meta.id = `live-visitor-meta-${++liveVisitorRowSequence}`;
   copy.append(name, meta);
-  row.append(swatch, copy);
+
+  const action = document.createElement('span');
+  action.className = 'live-visitor__action';
+
+  button.setAttribute('aria-describedby', meta.id);
+  button.append(swatch, copy, action);
+  row.append(button);
   liveVisitorRows.set(key, row);
   return row;
 }
@@ -1110,15 +1236,46 @@ function updateLiveVisitorRow(row, visitor) {
   const safeColor = /^#[0-9a-f]{6}$/i.test(visitor.color) ? visitor.color : '#f2c46d';
   const nextName = visitor.name ?? (visitor.displayId ? `Visitor #${visitor.displayId}` : 'Visitor');
   const nextMeta = `${visitor.mode === 'flight' ? 'Flying' : 'Exploring'} ${visitor.cityName ?? 'across the atlas'}`;
+  const targetKey = visitor.targetKey ?? visitor.key;
+  const isMeeting = Boolean(activeMeetingKey && targetKey === activeMeetingKey);
   const swatch = row.querySelector('.live-visitor__swatch');
+  const button = row.querySelector('.live-visitor__button');
   const name = row.querySelector('strong');
   const meta = row.querySelector('.live-visitor__copy span');
+  const action = row.querySelector('.live-visitor__action');
 
   if (swatch?.style.getPropertyValue('--visitor-color') !== safeColor) {
     swatch?.style.setProperty('--visitor-color', safeColor);
   }
+  row.dataset.liveVisitorTargetKey = targetKey;
+  row.classList.toggle('is-meeting', isMeeting);
+  if (button) {
+    button.dataset.liveVisitorTargetKey = targetKey;
+    button.dataset.liveVisitorName = nextName;
+    button.disabled = !visitor.meetAvailable;
+    button.setAttribute('aria-label', visitor.meetAvailable
+      ? `Meet ${nextName} face to face`
+      : `${nextName} is unavailable to meet`);
+    button.setAttribute('title', visitor.meetAvailable ? `Meet ${nextName} face to face` : `${nextName} is unavailable`);
+  }
   if (name && name.textContent !== nextName) name.textContent = nextName;
   if (meta && meta.textContent !== nextMeta) meta.textContent = nextMeta;
+  if (action) {
+    const nextAction = visitor.meetAvailable ? (isMeeting ? 'Meeting' : 'Meet') : 'Unavailable';
+    if (action.textContent !== nextAction) action.textContent = nextAction;
+  }
+}
+
+function syncLiveVisitorMeetButtons() {
+  for (const row of liveVisitorRows.values()) {
+    const button = row.querySelector?.('.live-visitor__button');
+    const action = row.querySelector?.('.live-visitor__action');
+    if (!button || !action) continue;
+    const isMeeting = Boolean(activeMeetingKey && button.dataset.liveVisitorTargetKey === activeMeetingKey);
+    row.classList.toggle('is-meeting', isMeeting);
+    const nextAction = button.disabled ? 'Unavailable' : (isMeeting ? 'Meeting' : 'Meet');
+    if (action.textContent !== nextAction) action.textContent = nextAction;
+  }
 }
 
 function landmarkCameraFor(cityView, target, targetKey = '') {
@@ -1404,12 +1561,13 @@ window.visualViewport?.addEventListener('resize', () => {
 });
 
 window.addEventListener('keydown', (event) => {
-  if (!flight.active || isTextInput(event.target)) return;
+  if (!flight.active) return;
   if (event.code === 'Escape') {
     event.preventDefault();
     setFlightMode(false);
     return;
   }
+  if (shouldIgnoreFlightKeyTarget(event.target)) return;
 
   if (event.repeat) return;
   flight.keys.add(event.code);
@@ -1452,6 +1610,9 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 canvas.addEventListener('pointerdown', (event) => {
+  livePickPointer = event.button === 0
+    ? { id: event.pointerId, x: event.clientX, y: event.clientY, t: performance.now(), cancelled: false }
+    : null;
   if (!flight.active) return;
   if (event.pointerType === 'mouse' && event.button !== 0) return;
   if (flight.lookPointerId !== null) return;
@@ -1461,6 +1622,38 @@ canvas.addEventListener('pointerdown', (event) => {
   flight.lookLastX = event.clientX;
   flight.lookLastY = event.clientY;
   capturePointer(canvas, event.pointerId);
+});
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!livePickPointer || event.pointerId !== livePickPointer.id) return;
+  if (Math.hypot(event.clientX - livePickPointer.x, event.clientY - livePickPointer.y) > LIVE_PICK_MAX_DRAG_PX) {
+    livePickPointer.cancelled = true;
+  }
+});
+
+canvas.addEventListener('pointerup', (event) => {
+  if (!livePickPointer || event.pointerId !== livePickPointer.id) return;
+  if (
+    Math.hypot(event.clientX - livePickPointer.x, event.clientY - livePickPointer.y) > LIVE_PICK_MAX_DRAG_PX ||
+    performance.now() - livePickPointer.t > LIVE_PICK_MAX_CLICK_MS
+  ) {
+    livePickPointer.cancelled = true;
+  }
+});
+
+canvas.addEventListener('pointercancel', (event) => {
+  if (livePickPointer?.id === event.pointerId) livePickPointer = null;
+});
+
+canvas.addEventListener('click', (event) => {
+  if (flight.active || event.button !== 0 || event.defaultPrevented) return;
+  const pointer = livePickPointer;
+  livePickPointer = null;
+  if (!pointer || pointer.cancelled || performance.now() - pointer.t > LIVE_PICK_MAX_CLICK_MS) return;
+  const pose = livePresence?.pickVisitorAt(event.clientX, event.clientY, canvas);
+  if (!pose) return;
+  event.preventDefault();
+  meetLiveVisitorPose(pose);
 });
 
 function endFlightLook(event) {
@@ -1530,4 +1723,9 @@ function isFlightKey(code) {
 
 function isTextInput(target) {
   return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
+}
+
+function shouldIgnoreFlightKeyTarget(target) {
+  if (isTextInput(target)) return true;
+  return target instanceof Element && Boolean(target.closest('button, input, textarea, select, .hud, .city-nav, .explore-dock, .mobile-flight-controls'));
 }
