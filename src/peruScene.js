@@ -9,6 +9,10 @@ const PEDESTRIAN_COUNT = 280;
 const TRAFFIC_COUNT = 34;
 const LLAMA_COUNT = 28;
 const BOAT_COUNT = 14;
+const PEDESTRIAN_SHIRT_COLORS = [0xb96038, 0x2f73c8, 0xf0c84b, 0x7d3041, 0x2f7d6f, 0x5c4d9b];
+const PEDESTRIAN_HAT_COLOR = 0xc7a05a;
+const LLAMA_COAT_COLOR = 0xb99b68;
+const LLAMA_LEG_COLOR = 0x6f5c46;
 const tempColor = new THREE.Color();
 
 const MATERIAL_KEYS = [
@@ -543,7 +547,7 @@ function buildPedestrians({ animated, rng }) {
       lane: (rng() - 0.5) * route.width,
       phase: rng() * Math.PI * 2,
       scale: 0.9 + rng() * 0.28,
-      shirt: [0xb96038, 0x2f73c8, 0xf0c84b, 0x7d3041, 0xffffff][i % 5]
+      shirt: PEDESTRIAN_SHIRT_COLORS[i % PEDESTRIAN_SHIRT_COLORS.length]
     });
   }
 
@@ -552,7 +556,7 @@ function buildPedestrians({ animated, rng }) {
   const parts = {
     body: makeInstancedPart(pedestrians.length, 'peru-pedestrian-body', 0xb96038, true),
     head: makeInstancedPart(pedestrians.length, 'peru-pedestrian-head', 0xc88d61),
-    hat: makeInstancedPart(pedestrians.length, 'peru-pedestrian-hat', 0xf0dfb2),
+    hat: makeInstancedPart(pedestrians.length, 'peru-pedestrian-hat', PEDESTRIAN_HAT_COLOR),
     hair: makeInstancedPart(pedestrians.length, 'peru-pedestrian-hair', 0x3d2f28),
     leftLeg: makeInstancedPart(pedestrians.length, 'peru-pedestrian-left-leg', 0x2f3642),
     rightLeg: makeInstancedPart(pedestrians.length, 'peru-pedestrian-right-leg', 0x2f3642),
@@ -626,11 +630,11 @@ function buildLlamas({ animated, rng }) {
   const group = new THREE.Group();
   group.name = 'peru-llamas';
   const parts = {
-    body: makeInstancedPart(llamas.length, 'peru-llama-body', 0xd8cfb7),
-    neck: makeInstancedPart(llamas.length, 'peru-llama-neck', 0xd8cfb7),
-    head: makeInstancedPart(llamas.length, 'peru-llama-head', 0xd8cfb7),
-    legA: makeInstancedPart(llamas.length, 'peru-llama-legs-a', 0x8f7f68),
-    legB: makeInstancedPart(llamas.length, 'peru-llama-legs-b', 0x8f7f68)
+    body: makeInstancedPart(llamas.length, 'peru-llama-body', LLAMA_COAT_COLOR),
+    neck: makeInstancedPart(llamas.length, 'peru-llama-neck', LLAMA_COAT_COLOR),
+    head: makeInstancedPart(llamas.length, 'peru-llama-head', LLAMA_COAT_COLOR),
+    legA: makeInstancedPart(llamas.length, 'peru-llama-legs-a', LLAMA_LEG_COLOR),
+    legB: makeInstancedPart(llamas.length, 'peru-llama-legs-b', LLAMA_LEG_COLOR)
   };
   Object.values(parts).forEach((mesh) => group.add(mesh));
 

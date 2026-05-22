@@ -12,10 +12,11 @@ THREE.ColorManagement.enabled = false;
 const PANEL_AUTO_COLLAPSE_MS = 5000;
 const LIVE_DISPLAY_NAME_STORAGE_KEY = 'atlas.liveDisplayName';
 const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
-const LIVE_MEET_DISTANCE = 26;
-const LIVE_MEET_MAX_DISTANCE = 42;
+const LIVE_MEET_DISTANCE = 30;
+const LIVE_MEET_MAX_DISTANCE = 46;
 const LIVE_MEET_MIN_HORIZONTAL_DISTANCE = 16;
 const LIVE_AVATAR_EYE_OFFSET = 3.2;
+const LIVE_MEET_FRAME_OFFSET = 1.4;
 const LIVE_PICK_MAX_DRAG_PX = 6;
 const LIVE_PICK_MAX_CLICK_MS = 650;
 
@@ -446,16 +447,19 @@ function meetLiveVisitorPose(pose) {
 }
 
 function liveVisitorCameraFor(pose) {
-  const target = (pose.eyePosition ?? pose.position).clone();
+  const targetEye = (pose.eyePosition ?? pose.position).clone();
+  const targetBody = (pose.bodyPosition ?? targetEye.clone().setY(targetEye.y - LIVE_AVATAR_EYE_OFFSET)).clone();
+  const frameTarget = targetBody.clone().setY(targetBody.y + LIVE_MEET_FRAME_OFFSET);
   const front = liveMeetDirectionFor(pose);
-  const position = frontPreservingMeetPosition(target, front);
+  const position = frontPreservingMeetPosition(targetEye, front);
 
-  return { position, target };
+  return { position, target: frameTarget };
 }
 
 function liveMeetDirectionFor(pose) {
   const viewForward = pose.viewForward?.clone?.() ?? pose.forward?.clone?.() ?? new THREE.Vector3(0, 0, 1);
   if (viewForward.lengthSq() > 0.0001 && Math.hypot(viewForward.x, viewForward.z) >= 0.28) {
+    viewForward.y = 0;
     return viewForward.normalize();
   }
 
