@@ -254,6 +254,15 @@ function resizeRendererToCanvas() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
   renderer.setSize(size.width, size.height, false);
 }
+
+function pickStartupView(navViews) {
+  if (!Array.isArray(navViews) || navViews.length === 0) return null;
+  const randomValue = window.crypto?.getRandomValues
+    ? window.crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296
+    : Math.random();
+  return navViews[Math.floor(randomValue * navViews.length)] ?? navViews[0];
+}
+
 controls.enablePan = true;
 controls.minDistance = 4;
 controls.maxDistance = 3800;
@@ -277,6 +286,12 @@ scene.add(fill);
 const materials = createMaterialLibrary(renderer);
 const world = createWorldScene(materials);
 scene.add(world.group);
+const startupView = pickStartupView(world.navViews);
+if (startupView) {
+  camera.position.copy(startupView.position);
+  controls.target.copy(startupView.target);
+  controls.update();
+}
 
 const hud = createHud(world.metrics, world.navViews);
 setupHudPanel(hud);
@@ -379,8 +394,8 @@ window.__ROME_METRICS__ = {
   labels: world.labels.length
 };
 
-let activeViewId = world.navViews[0]?.id ?? null;
-setActiveView(activeViewId);
+let activeViewId = startupView?.id ?? world.navViews[0]?.id ?? null;
+setActiveView(activeViewId, { revealInNav: false });
 
 const livePresence = createLivePresence({
   scene,
