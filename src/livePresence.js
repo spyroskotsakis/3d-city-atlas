@@ -15,6 +15,7 @@ const INTERPOLATION_DELAY_MOBILE_MS = 190;
 const RETRY_MIN_MS = 4000;
 const RETRY_MAX_MS = 30000;
 const USER_NAME_MAX_LENGTH = 24;
+const LEAVE_TOMBSTONE_MS = 10000;
 const CONNECTION_LABELS = {
   initialized: 'Joining live world',
   connecting: 'Joining live world',
@@ -52,6 +53,7 @@ export function createLivePresence({
   let lastPresenceAt = 0;
   let lastPresenceKey = '';
   let lastSnapshot = null;
+  let lastRosterSignature = '';
   let publishInFlight = false;
   let currentMovementChannelName = null;
   let retryTimer = null;
@@ -60,6 +62,7 @@ export function createLivePresence({
   const movementChannels = new Map();
   const channelHandlers = new Map();
   const participants = new Map();
+  const recentLeaves = new Map();
   const state = {
     status: 'solo',
     statusLabel: CONNECTION_LABELS.solo,
@@ -278,25 +281,31 @@ export function createLivePresence({
   function handlePresenceMessage(message, options = {}) {
     if (message.clientId === identity?.clientId && message.connectionId === client?.connection.id) return;
 
+    const key = actorKey(message);
     if (message.action === 'leave' || message.action === 3) {
-      participants.delete(actorKey(message));
-      layer.remove(actorKey(message));
+      markActorLeft(key, performance.now());
+      participants.delete(key);
+      layer.remove(key);
       refreshParticipants();
       return;
     }
 
     const data = normalizePresenceData(message.data, message.clientId);
     if (!data) return;
-    upsertParticipant(actorKey(message), {
+    recentLeaves.delete(key);
+    const existing = participants.get(key);
+    const stalePresence = existing?.seq > data.seq;
+    upsertParticipant(key, {
       clientId: message.clientId,
       connectionId: message.connectionId,
       displayId: data.displayId,
-      name: data.name,
+      name: preferredVisitorName(existing, data),
       color: sanitizeColor(data.color),
-      cityId: data.cityId,
-      cityName: data.cityName,
-      mode: data.mode,
-      pose: data.pose,
+      cityId: stalePresence ? existing.cityId : data.cityId,
+      cityName: stalePresence ? existing.cityName : data.cityName,
+      mode: stalePresence ? existing.mode : data.mode,
+      pose: stalePresence ? null : data.pose,
+      seq: Math.max(existing?.seq ?? -1, data.seq),
       receivedAt: performance.now(),
       lastPresenceAt: performance.now(),
       presenceActive: true
@@ -332,6 +341,7 @@ export function createLivePresence({
       clientId: message.clientId,
       connectionId: message.connectionId ?? data.cid
     });
+    if (isRecentlyLeft(key, performance.now())) return;
     const existing = participants.get(key);
     if (existing?.seq >= data.seq) return;
 
@@ -339,7 +349,7 @@ export function createLivePresence({
       clientId: message.clientId,
       connectionId: message.connectionId ?? data.cid,
       displayId: data.displayId ?? existing?.displayId,
-      name: data.name ?? existing?.name ?? (data.displayId ? `Visitor #${data.displayId}` : 'Visitor'),
+      name: preferredVisitorName(existing, data),
       color: existing?.color ?? sanitizeColor(data.color),
       cityId: data.cityId,
       cityName: data.cityName,
@@ -372,29 +382,66 @@ export function createLivePresence({
   }
 
   function refreshParticipants() {
-    const list = [...participants.values()]
-      .sort(compareParticipants)
-      .slice(0, 12)
-      .map((participant) => ({
-        key: participant.key,
-        displayId: participant.displayId,
-        name: participant.name,
-        color: participant.color,
-        cityId: participant.cityId,
-        cityName: participant.cityName || formatCityName(participant.cityId),
-        mode: participant.mode || 'orbit',
-        moving: Boolean(participant.moving)
-      }));
-    state.remoteCount = participants.size;
+    const groupedVisitors = new Map();
+    for (const participant of participants.values()) {
+      const visitor = participantListView(participant);
+      const groupKey = participant.clientId || participant.displayId || participant.key;
+      const current = groupedVisitors.get(groupKey);
+      if (!current || isPreferredRosterVisitor(visitor, current)) groupedVisitors.set(groupKey, visitor);
+    }
+
+    const list = [...groupedVisitors.values()]
+      .sort(compareRosterVisitors)
+      .slice(0, 12);
+    const nextRemoteCount = groupedVisitors.size;
+    const nextSignature = rosterSignature(list, nextRemoteCount);
+    if (nextSignature === lastRosterSignature && state.remoteCount === nextRemoteCount) return;
+
+    lastRosterSignature = nextSignature;
+    state.remoteCount = nextRemoteCount;
     state.participants = list;
     emitState();
   }
 
-  function compareParticipants(a, b) {
-    const aId = a.displayId ?? displayIdFromClientId(a.clientId) ?? '99999';
-    const bId = b.displayId ?? displayIdFromClientId(b.clientId) ?? '99999';
+  function participantListView(participant) {
+    const displayId = participant.displayId ?? displayIdFromClientId(participant.clientId);
+    return {
+      key: participant.clientId || participant.key,
+      displayId,
+      name: participant.name ?? (displayId ? `Visitor #${displayId}` : 'Visitor'),
+      color: participant.color,
+      cityId: participant.cityId,
+      cityName: participant.cityName || formatCityName(participant.cityId),
+      mode: participant.mode || 'orbit',
+      moving: Boolean(participant.moving),
+      lastSeen: Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0, participant.createdAt || 0)
+    };
+  }
+
+  function isPreferredRosterVisitor(next, current) {
+    const nextHasCustomName = !isFallbackVisitorName(next.name, next.displayId);
+    const currentHasCustomName = !isFallbackVisitorName(current.name, current.displayId);
+    if (nextHasCustomName !== currentHasCustomName) return nextHasCustomName;
+    return next.lastSeen >= current.lastSeen;
+  }
+
+  function compareRosterVisitors(a, b) {
+    const aId = a.displayId ?? '99999';
+    const bId = b.displayId ?? '99999';
     if (aId !== bId) return aId.localeCompare(bId);
     return a.key.localeCompare(b.key);
+  }
+
+  function rosterSignature(list, totalCount) {
+    return `${totalCount}|${list.map((visitor) => [
+      visitor.key,
+      visitor.displayId,
+      visitor.name,
+      visitor.color,
+      visitor.cityId,
+      visitor.cityName,
+      visitor.mode
+    ].join('~')).join('|')}`;
   }
 
   function updatePresenceCount(count) {
@@ -509,9 +556,10 @@ export function createLivePresence({
   }
 
   function movementPayload(snapshot, now) {
+    const nextSeq = ++seq;
     return {
       v: 1,
-      seq: ++seq,
+      seq: nextSeq,
       cid: client.connection.id,
       displayId: localDisplayId(),
       userName: snapshot.userName,
@@ -531,6 +579,7 @@ export function createLivePresence({
   function presencePayload(snapshot) {
     return {
       v: 1,
+      seq,
       displayId: localDisplayId(),
       userName: snapshot.userName,
       name: formatVisitorName(snapshot.userName, localDisplayId()),
@@ -601,22 +650,47 @@ export function createLivePresence({
 
   function enterSoloMode() {
     state.onlineCount = 0;
+    state.remoteCount = 0;
+    state.participants = [];
+    lastRosterSignature = '';
     participants.clear();
     layer.clear();
     setStatus('solo');
   }
 
   function removeStaleParticipants(now) {
+    pruneRecentLeaves(now);
     let changed = false;
     for (const [key, participant] of participants) {
       const lastSeen = Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0);
       if (now - lastSeen > STALE_REMOVE_MS) {
+        markActorLeft(key, now);
         participants.delete(key);
         layer.remove(key);
         changed = true;
       }
     }
     if (changed) refreshParticipants();
+  }
+
+  function markActorLeft(key, now) {
+    recentLeaves.set(key, now);
+  }
+
+  function isRecentlyLeft(key, now) {
+    const leftAt = recentLeaves.get(key);
+    if (!leftAt) return false;
+    if (now - leftAt > LEAVE_TOMBSTONE_MS) {
+      recentLeaves.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  function pruneRecentLeaves(now) {
+    for (const [key, leftAt] of recentLeaves) {
+      if (now - leftAt > LEAVE_TOMBSTONE_MS) recentLeaves.delete(key);
+    }
   }
 
   function emitState() {
@@ -864,9 +938,10 @@ function normalizePresenceData(data, clientId) {
   if (!data || data.v !== 1 || !data.pose) return null;
   const movement = normalizePose(data.pose);
   if (!movement) return null;
-  const displayId = sanitizeDisplayId(data.displayId) || displayIdFromClientId(clientId);
+  const displayId = displayIdFromClientId(clientId) || sanitizeDisplayId(data.displayId);
   const userName = sanitizeUserName(data.userName);
   return {
+    seq: Number.isFinite(data.seq) ? data.seq : 0,
     displayId,
     name: formatVisitorName(userName, displayId, data.name),
     color: sanitizeColor(data.color),
@@ -881,7 +956,7 @@ function normalizeMovementData(data, clientId) {
   if (!data || data.v !== 1 || !Array.isArray(data.p) || !Array.isArray(data.q)) return null;
   const pose = normalizePose(data);
   if (!pose) return null;
-  const displayId = sanitizeDisplayId(data.displayId) || displayIdFromClientId(clientId);
+  const displayId = displayIdFromClientId(clientId) || sanitizeDisplayId(data.displayId);
   const userName = sanitizeUserName(data.userName);
   return {
     cid: typeof data.cid === 'string' ? data.cid : null,
@@ -907,6 +982,20 @@ function formatVisitorName(userName, displayId, fallbackName = '') {
   if (safeId) return `Visitor #${safeId}`;
   const fallback = sanitizeFallbackName(fallbackName);
   return fallback || 'Visitor';
+}
+
+function preferredVisitorName(existing, incoming) {
+  const displayId = incoming.displayId ?? existing?.displayId;
+  if (incoming.name && !isFallbackVisitorName(incoming.name, displayId)) return incoming.name;
+  if (existing?.name && !isFallbackVisitorName(existing.name, displayId)) return existing.name;
+  return incoming.name ?? existing?.name ?? (displayId ? `Visitor #${displayId}` : 'Visitor');
+}
+
+function isFallbackVisitorName(name, displayId) {
+  if (typeof name !== 'string' || !name.trim()) return true;
+  const safeId = sanitizeDisplayId(displayId);
+  const trimmed = name.trim();
+  return trimmed === 'Visitor' || (safeId ? trimmed === `Visitor #${safeId}` : false);
 }
 
 function sanitizeUserName(value) {

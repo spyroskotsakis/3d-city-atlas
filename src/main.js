@@ -14,6 +14,8 @@ const LIVE_DISPLAY_NAME_STORAGE_KEY = 'atlas.liveDisplayName';
 const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
 
 let liveDisplayName = readStoredLiveDisplayName();
+let liveVisitorsRenderKey = '';
+const liveVisitorRows = new Map();
 
 function shouldInjectAnalytics() {
   const hostname = window.location.hostname;
@@ -997,8 +999,8 @@ function updateLivePresenceUi(state) {
 
 function renderLiveVisitors(participants, totalCount = participants.length) {
   if (!hud.liveVisitors) return;
-  hud.liveVisitors.replaceChildren();
   const visibleCount = Math.min(participants.length, 8);
+  const visibleVisitors = participants.slice(0, visibleCount);
   if (hud.liveVisitorsMeta) {
     hud.liveVisitorsMeta.textContent = totalCount > visibleCount
       ? `Showing ${visibleCount} of ${totalCount} live visitors.`
@@ -1006,31 +1008,100 @@ function renderLiveVisitors(participants, totalCount = participants.length) {
         ? `${totalCount} live visitor${totalCount === 1 ? '' : 's'} shown.`
         : 'No live visitors yet.';
   }
+  const renderKey = JSON.stringify([totalCount, visibleVisitors.map((visitor) => [
+    visitor.key,
+    visitor.displayId,
+    visitor.name,
+    visitor.color,
+    visitor.mode,
+    visitor.cityName
+  ])]);
+  if (liveVisitorsRenderKey === renderKey) return;
+
+  liveVisitorsRenderKey = renderKey;
+  const previousScrollTop = hud.liveVisitors.scrollTop;
+  const bottomOffset = hud.liveVisitors.scrollHeight - hud.liveVisitors.scrollTop - hud.liveVisitors.clientHeight;
+  const wasPinnedToBottom = bottomOffset < 8;
+  const activeElement = document.activeElement;
+  const activeRow = activeElement instanceof Element ? activeElement.closest?.('.live-visitor') : null;
+
   if (!participants.length) {
-    const empty = document.createElement('li');
-    empty.className = 'live-visitors__empty';
-    empty.textContent = 'No live visitors yet.';
-    hud.liveVisitors.append(empty);
+    liveVisitorRows.clear();
+    hud.liveVisitors.replaceChildren(getLiveEmptyRow());
     return;
   }
 
-  for (const visitor of participants.slice(0, visibleCount)) {
-    const row = document.createElement('li');
-    row.className = 'live-visitor';
-    const swatch = document.createElement('span');
-    swatch.className = 'live-visitor__swatch';
-    swatch.setAttribute('aria-hidden', 'true');
-    swatch.style.setProperty('--visitor-color', /^#[0-9a-f]{6}$/i.test(visitor.color) ? visitor.color : '#f2c46d');
-    const copy = document.createElement('span');
-    copy.className = 'live-visitor__copy';
-    const name = document.createElement('strong');
-    name.textContent = visitor.name ?? (visitor.displayId ? `Visitor #${visitor.displayId}` : 'Visitor');
-    const meta = document.createElement('span');
-    meta.textContent = `${visitor.mode === 'flight' ? 'Flying' : 'Exploring'} ${visitor.cityName ?? 'across the atlas'}`;
-    copy.append(name, meta);
-    row.append(swatch, copy);
-    hud.liveVisitors.append(row);
+  const desiredKeys = new Set();
+  visibleVisitors.forEach((visitor, index) => {
+    const key = visitor.key ?? visitor.displayId ?? `visitor-${index}`;
+    desiredKeys.add(key);
+    const row = getLiveVisitorRow(key);
+    updateLiveVisitorRow(row, visitor);
+    const currentAtIndex = hud.liveVisitors.children[index];
+    if (currentAtIndex !== row) hud.liveVisitors.insertBefore(row, currentAtIndex ?? null);
+  });
+
+  for (const [key, row] of liveVisitorRows) {
+    if (desiredKeys.has(key)) continue;
+    if (activeRow === row) hud.liveToggle?.focus({ preventScroll: true });
+    row.remove();
+    liveVisitorRows.delete(key);
   }
+
+  if (wasPinnedToBottom) {
+    hud.liveVisitors.scrollTop = hud.liveVisitors.scrollHeight;
+  } else {
+    hud.liveVisitors.scrollTop = Math.min(previousScrollTop, hud.liveVisitors.scrollHeight);
+  }
+}
+
+function getLiveEmptyRow() {
+  let row = liveVisitorRows.get('__empty__');
+  if (!row) {
+    row = document.createElement('li');
+    row.className = 'live-visitors__empty';
+    row.textContent = 'No live visitors yet.';
+    liveVisitorRows.set('__empty__', row);
+  }
+  return row;
+}
+
+function getLiveVisitorRow(key) {
+  let row = liveVisitorRows.get(key);
+  if (row) return row;
+
+  row = document.createElement('li');
+  row.className = 'live-visitor';
+  row.dataset.liveVisitorKey = key;
+
+  const swatch = document.createElement('span');
+  swatch.className = 'live-visitor__swatch';
+  swatch.setAttribute('aria-hidden', 'true');
+
+  const copy = document.createElement('span');
+  copy.className = 'live-visitor__copy';
+
+  const name = document.createElement('strong');
+  const meta = document.createElement('span');
+  copy.append(name, meta);
+  row.append(swatch, copy);
+  liveVisitorRows.set(key, row);
+  return row;
+}
+
+function updateLiveVisitorRow(row, visitor) {
+  const safeColor = /^#[0-9a-f]{6}$/i.test(visitor.color) ? visitor.color : '#f2c46d';
+  const nextName = visitor.name ?? (visitor.displayId ? `Visitor #${visitor.displayId}` : 'Visitor');
+  const nextMeta = `${visitor.mode === 'flight' ? 'Flying' : 'Exploring'} ${visitor.cityName ?? 'across the atlas'}`;
+  const swatch = row.querySelector('.live-visitor__swatch');
+  const name = row.querySelector('strong');
+  const meta = row.querySelector('.live-visitor__copy span');
+
+  if (swatch?.style.getPropertyValue('--visitor-color') !== safeColor) {
+    swatch?.style.setProperty('--visitor-color', safeColor);
+  }
+  if (name && name.textContent !== nextName) name.textContent = nextName;
+  if (meta && meta.textContent !== nextMeta) meta.textContent = nextMeta;
 }
 
 function landmarkCameraFor(cityView, target, targetKey = '') {
