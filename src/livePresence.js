@@ -17,9 +17,13 @@ const RETRY_MAX_MS = 30000;
 const USER_NAME_MAX_LENGTH = 24;
 const LEAVE_TOMBSTONE_MS = 10000;
 const REMOTE_EYE_OFFSET = 3.2;
-const REMOTE_DIRECTION_MARKER_FORWARD_OFFSET = 4.8;
-const REMOTE_DIRECTION_MARKER_Y_OFFSET = -4.5;
-const REMOTE_DIRECTION_MARKER_SCALE = 0.42;
+const REMOTE_DIRECTION_MARKER_FORWARD_OFFSET = -3.2;
+const REMOTE_DIRECTION_MARKER_Y_OFFSET = -5.8;
+const REMOTE_DIRECTION_MARKER_SCALE = 0.28;
+const REMOTE_DIRECTION_MARKER_HIDE_DISTANCE = 80;
+const REMOTE_DIRECTION_MARKER_FADE_RANGE = 80;
+const REMOTE_BEACON_HIDE_DISTANCE = 90;
+const REMOTE_BEACON_FADE_RANGE = 90;
 const CONNECTION_LABELS = {
   initialized: 'Joining live world',
   connecting: 'Joining live world',
@@ -947,14 +951,22 @@ class RemoteExplorersLayer {
       this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, scale);
       this.bodyMesh.setMatrixAt(index, this.tmpMatrix);
 
+      const markerVisibility = Math.max(
+        0,
+        Math.min(1, (this.camera.position.distanceTo(record.renderPosition) - REMOTE_DIRECTION_MARKER_HIDE_DISTANCE) / REMOTE_DIRECTION_MARKER_FADE_RANGE)
+      );
+      const beaconVisibility = Math.max(
+        0,
+        Math.min(1, (this.camera.position.distanceTo(record.renderPosition) - REMOTE_BEACON_HIDE_DISTANCE) / REMOTE_BEACON_FADE_RANGE)
+      );
       this.tmpPosition.copy(record.renderPosition).addScaledVector(getForward(this.tmpQuaternion, this.tmpNextPosition), REMOTE_DIRECTION_MARKER_FORWARD_OFFSET);
       this.tmpPosition.y += REMOTE_DIRECTION_MARKER_Y_OFFSET;
-      this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, this.tmpScale.setScalar(fadeScale * REMOTE_DIRECTION_MARKER_SCALE));
+      this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, this.tmpScale.setScalar(fadeScale * REMOTE_DIRECTION_MARKER_SCALE * markerVisibility));
       this.arrowMesh.setColorAt(index, this.tmpColor.copy(record.color).lerp(this.arrowMixColor, 0.45));
       this.arrowMesh.setMatrixAt(index, this.tmpMatrix);
 
       this.tmpPosition.copy(record.renderPosition).y -= 11;
-      this.tmpMatrix.compose(this.tmpPosition, this.identityQuaternion, this.tmpScale.set(1, fadeScale, 1));
+      this.tmpMatrix.compose(this.tmpPosition, this.identityQuaternion, this.tmpScale.set(1, fadeScale * beaconVisibility, 1));
       this.beaconMesh.setMatrixAt(index, this.tmpMatrix);
 
       visibleRecords.push(record);
