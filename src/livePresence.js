@@ -14,6 +14,7 @@ const INTERPOLATION_DELAY_DESKTOP_MS = 140;
 const INTERPOLATION_DELAY_MOBILE_MS = 190;
 const RETRY_MIN_MS = 4000;
 const RETRY_MAX_MS = 30000;
+const USER_NAME_MAX_LENGTH = 24;
 const CONNECTION_LABELS = {
   initialized: 'Joining live world',
   connecting: 'Joining live world',
@@ -43,6 +44,7 @@ export function createLivePresence({
   let presenceChannel = null;
   let channels = null;
   let identity = null;
+  let localUserName = '';
   let started = false;
   let visible = !document.hidden;
   let seq = 0;
@@ -64,6 +66,7 @@ export function createLivePresence({
     onlineCount: 0,
     remoteCount: 0,
     visitorsVisible: true,
+    identity: null,
     participants: []
   };
 
@@ -72,6 +75,7 @@ export function createLivePresence({
     start,
     update,
     setVisitorsVisible,
+    setDisplayName,
     dispose
   };
 
@@ -102,7 +106,7 @@ export function createLivePresence({
     }
 
     channels = firstAuth.channels;
-    identity = firstAuth.client;
+    setIdentity(firstAuth.client);
     let cachedAuth = firstAuth;
 
     try {
@@ -112,7 +116,7 @@ export function createLivePresence({
             const auth = cachedAuth ?? await fetchAuth();
             cachedAuth = null;
             channels = auth.channels;
-            identity = auth.client;
+            setIdentity(auth.client);
             callback(null, auth.tokenRequest);
           } catch (error) {
             callback(error);
@@ -152,6 +156,17 @@ export function createLivePresence({
     emitState();
   }
 
+  function setDisplayName(nextUserName) {
+    localUserName = sanitizeUserName(nextUserName);
+    updateIdentityState();
+    lastPresenceKey = '';
+    forceNextMovement();
+    if (client?.connection.state === 'connected' && presenceChannel) {
+      const snapshot = readSnapshot(performance.now());
+      if (snapshot) void enterOrUpdatePresence(false, snapshot);
+    }
+  }
+
   function dispose() {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('pagehide', handlePageHide);
@@ -179,6 +194,27 @@ export function createLivePresence({
       throw new Error('Live auth response was incomplete');
     }
     return auth;
+  }
+
+  function setIdentity(nextIdentity) {
+    identity = nextIdentity;
+    updateIdentityState();
+  }
+
+  function updateIdentityState() {
+    const displayId = localDisplayId();
+    state.identity = displayId
+      ? {
+          displayId,
+          userName: localUserName,
+          name: formatVisitorName(localUserName, displayId)
+        }
+      : null;
+    emitState();
+  }
+
+  function localDisplayId() {
+    return sanitizeDisplayId(identity?.displayId) || displayIdFromClientId(identity?.clientId);
   }
 
   async function attachChannels() {
@@ -249,11 +285,12 @@ export function createLivePresence({
       return;
     }
 
-    const data = normalizePresenceData(message.data);
+    const data = normalizePresenceData(message.data, message.clientId);
     if (!data) return;
     upsertParticipant(actorKey(message), {
       clientId: message.clientId,
       connectionId: message.connectionId,
+      displayId: data.displayId,
       name: data.name,
       color: sanitizeColor(data.color),
       cityId: data.cityId,
@@ -288,7 +325,7 @@ export function createLivePresence({
 
   function handleMovementMessage(message) {
     if (message.clientId === identity?.clientId && (message.connectionId ?? message.data?.cid) === client?.connection.id) return;
-    const data = normalizeMovementData(message.data);
+    const data = normalizeMovementData(message.data, message.clientId);
     if (!data) return;
 
     const key = actorKey({
@@ -301,7 +338,8 @@ export function createLivePresence({
     upsertParticipant(key, {
       clientId: message.clientId,
       connectionId: message.connectionId ?? data.cid,
-      name: existing?.name ?? data.name ?? 'Explorer',
+      displayId: data.displayId ?? existing?.displayId,
+      name: data.name ?? existing?.name ?? (data.displayId ? `Visitor #${data.displayId}` : 'Visitor'),
       color: existing?.color ?? sanitizeColor(data.color),
       cityId: data.cityId,
       cityName: data.cityName,
@@ -335,10 +373,11 @@ export function createLivePresence({
 
   function refreshParticipants() {
     const list = [...participants.values()]
-      .sort((a, b) => (b.lastMovementAt || b.lastPresenceAt || 0) - (a.lastMovementAt || a.lastPresenceAt || 0))
+      .sort(compareParticipants)
       .slice(0, 12)
       .map((participant) => ({
         key: participant.key,
+        displayId: participant.displayId,
         name: participant.name,
         color: participant.color,
         cityId: participant.cityId,
@@ -349,6 +388,13 @@ export function createLivePresence({
     state.remoteCount = participants.size;
     state.participants = list;
     emitState();
+  }
+
+  function compareParticipants(a, b) {
+    const aId = a.displayId ?? displayIdFromClientId(a.clientId) ?? '99999';
+    const bId = b.displayId ?? displayIdFromClientId(b.clientId) ?? '99999';
+    if (aId !== bId) return aId.localeCompare(bId);
+    return a.key.localeCompare(b.key);
   }
 
   function updatePresenceCount(count) {
@@ -384,7 +430,7 @@ export function createLivePresence({
       lastSentAt = now;
       lastSnapshot = snapshot;
 
-      const presenceKey = `${snapshot.cityId}:${snapshot.mode}:${snapshot.moving}`;
+      const presenceKey = `${snapshot.cityId}:${snapshot.mode}:${snapshot.moving}:${snapshot.userName}`;
       if (shouldUpdatePresence || presenceKey !== lastPresenceKey || now - lastPresenceAt > PRESENCE_HEARTBEAT_MS) {
         await enterOrUpdatePresence(false, snapshot);
         lastPresenceAt = now;
@@ -421,6 +467,7 @@ export function createLivePresence({
         cityName: raw.cityName || formatCityName(raw.cityId),
         mode: raw.mode === 'flight' ? 'flight' : 'orbit',
         moving: Boolean(raw.moving),
+        userName: sanitizeUserName(raw.userName),
         fps: Number(raw.fps) || 60,
         p: [
           round(position.x, 1),
@@ -441,7 +488,7 @@ export function createLivePresence({
 
   function shouldSendImmediately(snapshot) {
     if (!lastSnapshot) return true;
-    if (snapshot.cityId !== lastSnapshot.cityId || snapshot.mode !== lastSnapshot.mode || snapshot.moving !== lastSnapshot.moving) return true;
+    if (snapshot.cityId !== lastSnapshot.cityId || snapshot.mode !== lastSnapshot.mode || snapshot.moving !== lastSnapshot.moving || snapshot.userName !== lastSnapshot.userName) return true;
     const positionEpsilon = isMobilePointer ? MOBILE_POSITION_EPSILON : POSITION_EPSILON;
     const rotationEpsilon = isMobilePointer ? MOBILE_ROTATION_EPSILON : ROTATION_EPSILON;
     const dx = snapshot.p[0] - lastSnapshot.p[0];
@@ -466,6 +513,10 @@ export function createLivePresence({
       v: 1,
       seq: ++seq,
       cid: client.connection.id,
+      displayId: localDisplayId(),
+      userName: snapshot.userName,
+      name: formatVisitorName(snapshot.userName, localDisplayId()),
+      color: identity?.color ?? '#f2c46d',
       cityId: snapshot.cityId,
       cityName: snapshot.cityName,
       mode: snapshot.mode,
@@ -480,7 +531,9 @@ export function createLivePresence({
   function presencePayload(snapshot) {
     return {
       v: 1,
-      name: identity?.name ?? 'Explorer',
+      displayId: localDisplayId(),
+      userName: snapshot.userName,
+      name: formatVisitorName(snapshot.userName, localDisplayId()),
       color: identity?.color ?? '#f2c46d',
       cityId: snapshot.cityId,
       cityName: snapshot.cityName,
@@ -775,7 +828,7 @@ class RemoteExplorersLayer {
       const screenY = (-this.projected.y * 0.5 + 0.5) * height;
       if (this.projected.z >= 1 || screenX < 24 || screenX > width - 24 || screenY < 24 || screenY > height - 24) return;
       label.hidden = false;
-      label.textContent = `${record.name ?? 'Explorer'} · ${record.mode === 'flight' ? 'Flying' : 'Exploring'} ${record.cityName ?? 'nearby'}`;
+      label.textContent = `${record.name ?? 'Visitor'} · ${record.mode === 'flight' ? 'Flying' : 'Exploring'} ${record.cityName ?? 'nearby'}`;
       label.style.left = `${screenX}px`;
       label.style.top = `${screenY}px`;
     });
@@ -807,12 +860,15 @@ function actorKey(message) {
   return `${message.clientId ?? 'unknown'}:${message.connectionId ?? 'unknown'}`;
 }
 
-function normalizePresenceData(data) {
+function normalizePresenceData(data, clientId) {
   if (!data || data.v !== 1 || !data.pose) return null;
   const movement = normalizePose(data.pose);
   if (!movement) return null;
+  const displayId = sanitizeDisplayId(data.displayId) || displayIdFromClientId(clientId);
+  const userName = sanitizeUserName(data.userName);
   return {
-    name: typeof data.name === 'string' ? data.name.slice(0, 32) : 'Explorer',
+    displayId,
+    name: formatVisitorName(userName, displayId, data.name),
     color: sanitizeColor(data.color),
     cityId: cleanCity(data.cityId),
     cityName: typeof data.cityName === 'string' ? data.cityName.slice(0, 32) : formatCityName(data.cityId),
@@ -821,13 +877,18 @@ function normalizePresenceData(data) {
   };
 }
 
-function normalizeMovementData(data) {
+function normalizeMovementData(data, clientId) {
   if (!data || data.v !== 1 || !Array.isArray(data.p) || !Array.isArray(data.q)) return null;
   const pose = normalizePose(data);
   if (!pose) return null;
+  const displayId = sanitizeDisplayId(data.displayId) || displayIdFromClientId(clientId);
+  const userName = sanitizeUserName(data.userName);
   return {
     cid: typeof data.cid === 'string' ? data.cid : null,
     seq: Number.isFinite(data.seq) ? data.seq : 0,
+    displayId,
+    name: formatVisitorName(userName, displayId, data.name),
+    color: sanitizeColor(data.color),
     cityId: cleanCity(data.cityId),
     cityName: typeof data.cityName === 'string' ? data.cityName.slice(0, 32) : formatCityName(data.cityId),
     mode: data.mode === 'flight' ? 'flight' : 'orbit',
@@ -836,6 +897,56 @@ function normalizeMovementData(data) {
     speed: Number.isFinite(data.speed) ? data.speed : 0,
     moving: Boolean(data.moving)
   };
+}
+
+function formatVisitorName(userName, displayId, fallbackName = '') {
+  const safeName = sanitizeUserName(userName);
+  const safeId = sanitizeDisplayId(displayId);
+  if (safeName && safeId) return `${safeName} #${safeId}`;
+  if (safeName) return safeName;
+  if (safeId) return `Visitor #${safeId}`;
+  const fallback = sanitizeFallbackName(fallbackName);
+  return fallback || 'Visitor';
+}
+
+function sanitizeUserName(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[<>]/g, '')
+    .replace(/[^\S\r\n]+/g, ' ')
+    .trim()
+    .slice(0, USER_NAME_MAX_LENGTH);
+}
+
+function sanitizeFallbackName(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[<>]/g, '')
+    .replace(/[^\S\r\n]+/g, ' ')
+    .trim()
+    .slice(0, 40);
+}
+
+function sanitizeDisplayId(value) {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const digits = String(value).replace(/\D/g, '').slice(0, 5);
+  return digits.length === 5 ? digits : null;
+}
+
+function displayIdFromClientId(clientId) {
+  if (typeof clientId !== 'string' || !clientId) return null;
+  return String(hashString(clientId) % 100000).padStart(5, '0');
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 function sanitizeColor(value) {

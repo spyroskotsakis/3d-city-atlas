@@ -10,6 +10,10 @@ if (shouldInjectAnalytics()) injectVercelAnalytics();
 THREE.ColorManagement.enabled = false;
 
 const PANEL_AUTO_COLLAPSE_MS = 5000;
+const LIVE_DISPLAY_NAME_STORAGE_KEY = 'atlas.liveDisplayName';
+const LIVE_DISPLAY_NAME_MAX_LENGTH = 24;
+
+let liveDisplayName = readStoredLiveDisplayName();
 
 function shouldInjectAnalytics() {
   const hostname = window.location.hostname;
@@ -26,6 +30,34 @@ function shouldStartLivePresence() {
   if (liveFlag === 'false') return false;
   if (liveFlag === 'true') return true;
   return import.meta.env.PROD;
+}
+
+function sanitizeLiveDisplayName(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[<>]/g, '')
+    .replace(/[^\S\r\n]+/g, ' ')
+    .trim()
+    .slice(0, LIVE_DISPLAY_NAME_MAX_LENGTH);
+}
+
+function readStoredLiveDisplayName() {
+  try {
+    return sanitizeLiveDisplayName(window.localStorage?.getItem(LIVE_DISPLAY_NAME_STORAGE_KEY) ?? '');
+  } catch {
+    return '';
+  }
+}
+
+function writeStoredLiveDisplayName(value) {
+  try {
+    const sanitized = sanitizeLiveDisplayName(value);
+    if (sanitized) window.localStorage?.setItem(LIVE_DISPLAY_NAME_STORAGE_KEY, sanitized);
+    else window.localStorage?.removeItem(LIVE_DISPLAY_NAME_STORAGE_KEY);
+  } catch {
+    // Storage can be blocked in private or restricted browsing contexts.
+  }
 }
 
 const CITY_NAV_DETAILS = {
@@ -314,6 +346,7 @@ const livePresence = createLivePresence({
   onStateChange: updateLivePresenceUi,
   isReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 });
+livePresence.setDisplayName(liveDisplayName);
 if (shouldStartLivePresence()) {
   void livePresence.start();
 } else {
@@ -360,28 +393,54 @@ function createHud(metrics, navViews) {
     <div class="hud__live-pill" data-live-pill>Solo mode</div>
     <div class="hud__body">
       <p class="hud__summary">${metrics.cities} handcrafted city centres in one flyable offline WebGL world.</p>
-      <div class="metrics">
-        <div class="metric"><b data-fps>--</b><span>FPS</span></div>
-        <div class="metric"><b>${metrics.instances.toLocaleString()}</b><span>3D blocks</span></div>
-        <div class="metric"><b>${metrics.pedestrians + (metrics.cyclists ?? 0) + (metrics.spyrosTourists ?? 0)}</b><span>people</span></div>
-        <div class="metric"><b>${metrics.cities}</b><span>cities</span></div>
-        <div class="metric metric--live"><b data-live-count>0</b><span>online</span></div>
-      </div>
+      <dl class="metrics">
+        <div class="metric metric--fps">
+          <dd data-fps>--</dd>
+          <dt>FPS</dt>
+        </div>
+        <div class="metric metric--blocks" aria-label="${metrics.instances.toLocaleString()} 3D blocks rendered">
+          <dd title="${metrics.instances.toLocaleString()} 3D blocks rendered">${metrics.instances.toLocaleString()}</dd>
+          <dt>Blocks</dt>
+        </div>
+        <div class="metric metric--people">
+          <dd>${metrics.pedestrians + (metrics.cyclists ?? 0) + (metrics.spyrosTourists ?? 0)}</dd>
+          <dt>People</dt>
+        </div>
+        <div class="metric metric--cities">
+          <dd>${metrics.cities}</dd>
+          <dt>Cities</dt>
+        </div>
+        <div class="metric metric--live">
+          <dd data-live-count>0</dd>
+          <dt>Online</dt>
+        </div>
+      </dl>
       <section class="live-panel" aria-label="Live visitors">
         <button class="live-panel__toggle" data-live-toggle type="button" aria-expanded="false" aria-controls="live-panel-body" title="Open live visitors">
           <span class="live-panel__dot" data-live-dot aria-hidden="true"></span>
           <span class="live-panel__copy">
-            <span data-live-label>Solo mode</span>
+            <span data-live-label>Live visitors</span>
             <strong data-live-summary>No visitors online</strong>
           </span>
         </button>
         <div class="live-panel__body" id="live-panel-body" data-live-body hidden>
+          <form class="live-name-form" data-live-name-form aria-label="Live visitor profile">
+            <div class="live-name-form__id">
+              <span>Visitor ID</span>
+              <strong id="live-self-id" data-live-self-id>-----</strong>
+            </div>
+            <label class="sr-only" for="live-display-name">Display name</label>
+            <div class="live-name-form__controls">
+              <input id="live-display-name" data-live-name-input type="text" maxlength="${LIVE_DISPLAY_NAME_MAX_LENGTH}" autocomplete="nickname" placeholder="Your name" aria-describedby="live-name-help live-self-id">
+              <button class="live-panel__action live-name-form__save" data-live-name-save type="submit">Save</button>
+            </div>
+            <p class="sr-only" id="live-name-help">Optional name shown next to your visitor ID.</p>
+          </form>
           <div class="live-panel__actions">
             <button class="live-panel__action" data-live-visibility type="button" aria-pressed="true">Visitors visible</button>
           </div>
-          <div class="live-visitors" data-live-visitors>
-            <p>No live visitors yet.</p>
-          </div>
+          <p class="sr-only" data-live-visitors-meta>No live visitors yet.</p>
+          <ul class="live-visitors" data-live-visitors></ul>
         </div>
         <div class="sr-only" data-live-status role="status" aria-live="polite" aria-atomic="true">Solo mode</div>
       </section>
@@ -476,7 +535,12 @@ function createHud(metrics, navViews) {
     liveToggle: root.querySelector('[data-live-toggle]'),
     liveBody: root.querySelector('[data-live-body]'),
     liveVisitors: root.querySelector('[data-live-visitors]'),
+    liveVisitorsMeta: root.querySelector('[data-live-visitors-meta]'),
     liveVisibility: root.querySelector('[data-live-visibility]'),
+    liveNameForm: root.querySelector('[data-live-name-form]'),
+    liveNameInput: root.querySelector('[data-live-name-input]'),
+    liveNameSave: root.querySelector('[data-live-name-save]'),
+    liveSelfId: root.querySelector('[data-live-self-id]'),
     root,
     exploreDock: exploreRoot,
     nav: controlsRoot,
@@ -579,6 +643,18 @@ function setupNavPanel(hud) {
 function setupLivePanel(hud) {
   if (!hud.liveToggle || !hud.liveBody) return;
 
+  if (hud.liveNameInput) hud.liveNameInput.value = liveDisplayName;
+
+  const saveDisplayName = () => {
+    liveDisplayName = sanitizeLiveDisplayName(hud.liveNameInput?.value ?? '');
+    if (hud.liveNameInput) hud.liveNameInput.value = liveDisplayName;
+    writeStoredLiveDisplayName(liveDisplayName);
+    livePresence?.setDisplayName(liveDisplayName);
+    if (hud.liveStatus) hud.liveStatus.textContent = liveDisplayName
+      ? `Display name saved as ${liveDisplayName}.`
+      : 'Display name cleared.';
+  };
+
   const setLiveExpanded = (expanded) => {
     if (!expanded && hud.liveBody.contains(document.activeElement)) {
       hud.liveToggle.focus({ preventScroll: true });
@@ -599,9 +675,19 @@ function setupLivePanel(hud) {
   });
   hud.liveBody.addEventListener('keydown', (event) => {
     if (event.code !== 'Escape') return;
+    if (isTextInput(event.target)) {
+      event.preventDefault();
+      event.target.blur();
+      return;
+    }
     event.preventDefault();
     setLiveExpanded(false);
   });
+  hud.liveNameForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveDisplayName();
+  });
+  hud.liveNameInput?.addEventListener('change', saveDisplayName);
   hud.liveVisibility?.addEventListener('click', () => {
     const nextVisible = hud.liveVisibility.getAttribute('aria-pressed') !== 'true';
     livePresence?.setVisitorsVisible(nextVisible);
@@ -864,6 +950,7 @@ function getLivePresenceSnapshot() {
     cityName: cityView?.label ?? 'Across the atlas',
     mode,
     moving,
+    userName: liveDisplayName,
     fps: fpsState.fps,
     position: camera.position,
     quaternion: camera.quaternion
@@ -873,7 +960,7 @@ function getLivePresenceSnapshot() {
 function updateLivePresenceUi(state) {
   if (!state || !hud.liveToggle) return;
 
-  hud.root.dataset.liveStatus = state.status;
+  hud.root.dataset.liveConnection = state.status;
   const onlineText = state.status === 'connected' ? String(state.onlineCount) : '0';
   const remoteText = state.remoteCount === 1 ? '1 visitor nearby' : `${state.remoteCount} visitors nearby`;
   const summary = state.status === 'connected'
@@ -893,31 +980,42 @@ function updateLivePresenceUi(state) {
   if (hud.liveSummary) hud.liveSummary.textContent = summary;
   if (hud.liveStatus) hud.liveStatus.textContent = summary;
   if (hud.liveDot) hud.liveDot.dataset.status = state.status;
+  if (hud.liveSelfId) hud.liveSelfId.textContent = state.identity?.displayId ? `#${state.identity.displayId}` : '-----';
   if (hud.liveVisibility) {
     hud.liveVisibility.setAttribute('aria-pressed', String(state.visitorsVisible));
     hud.liveVisibility.textContent = state.visitorsVisible ? 'Visitors visible' : 'Visitors hidden';
   }
-  renderLiveVisitors(state.participants ?? []);
+  renderLiveVisitors(state.participants ?? [], state.remoteCount ?? 0);
 
   window.__ROME_METRICS__.live = {
     status: state.status,
     online: state.onlineCount,
-    remote: state.remoteCount
+    remote: state.remoteCount,
+    visitorId: state.identity?.displayId ?? null
   };
 }
 
-function renderLiveVisitors(participants) {
+function renderLiveVisitors(participants, totalCount = participants.length) {
   if (!hud.liveVisitors) return;
   hud.liveVisitors.replaceChildren();
+  const visibleCount = Math.min(participants.length, 8);
+  if (hud.liveVisitorsMeta) {
+    hud.liveVisitorsMeta.textContent = totalCount > visibleCount
+      ? `Showing ${visibleCount} of ${totalCount} live visitors.`
+      : totalCount
+        ? `${totalCount} live visitor${totalCount === 1 ? '' : 's'} shown.`
+        : 'No live visitors yet.';
+  }
   if (!participants.length) {
-    const empty = document.createElement('p');
+    const empty = document.createElement('li');
+    empty.className = 'live-visitors__empty';
     empty.textContent = 'No live visitors yet.';
     hud.liveVisitors.append(empty);
     return;
   }
 
-  for (const visitor of participants.slice(0, 8)) {
-    const row = document.createElement('div');
+  for (const visitor of participants.slice(0, visibleCount)) {
+    const row = document.createElement('li');
     row.className = 'live-visitor';
     const swatch = document.createElement('span');
     swatch.className = 'live-visitor__swatch';
@@ -926,7 +1024,7 @@ function renderLiveVisitors(participants) {
     const copy = document.createElement('span');
     copy.className = 'live-visitor__copy';
     const name = document.createElement('strong');
-    name.textContent = visitor.name ?? 'Explorer';
+    name.textContent = visitor.name ?? (visitor.displayId ? `Visitor #${visitor.displayId}` : 'Visitor');
     const meta = document.createElement('span');
     meta.textContent = `${visitor.mode === 'flight' ? 'Flying' : 'Exploring'} ${visitor.cityName ?? 'across the atlas'}`;
     copy.append(name, meta);

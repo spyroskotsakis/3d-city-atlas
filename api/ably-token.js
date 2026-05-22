@@ -95,9 +95,11 @@ function sanitizeClientId(value) {
 
 function buildIdentity(clientId) {
   const seed = hashString(clientId);
+  const displayId = String(seed % 100000).padStart(5, '0');
   return {
     clientId,
-    name: `Explorer ${String(seed % 97 + 1).padStart(2, '0')}`,
+    displayId,
+    name: `Visitor #${displayId}`,
     color: ['#f2c46d', '#74b8c5', '#7f9a72', '#d8cfb7', '#d7b56f', '#51a6b6'][seed % 6]
   };
 }
