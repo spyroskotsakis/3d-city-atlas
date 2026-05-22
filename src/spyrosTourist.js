@@ -95,7 +95,7 @@ export function buildSpyrosTourists({ modules, focusTargets }) {
     bubbleDotA: makeMesh(tourists.length, 'spyros-thought-bubble-dot-a', 0xfff4dc),
     bubbleDotB: makeMesh(tourists.length, 'spyros-thought-bubble-dot-b', 0xfff4dc),
     bubblePanel: makeMesh(tourists.length, 'spyros-thought-bubble-panel', 0xfff4dc),
-    letters: makeMesh(tourists.length * countLetterBlocks('SPYROS'), 'spyros-shirt-name-spyros', 0x1b2e3a)
+    letters: makeMesh(tourists.length * countLetterBlocks('SPYROS'), 'spyros-shirt-name-spyros', 0xd62828)
   };
 
   Object.values(parts).forEach((mesh) => group.add(mesh));
