@@ -195,6 +195,7 @@ const app = document.querySelector('#app');
 const canvas = document.createElement('canvas');
 canvas.className = 'webgl';
 app.append(canvas);
+const initialRenderSize = getRenderSize();
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -203,7 +204,7 @@ const renderer = new THREE.WebGLRenderer({
   alpha: false
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(initialRenderSize.width, initialRenderSize.height, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.toneMappingExposure = 1;
@@ -212,12 +213,28 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9ec8d3);
 scene.fog = new THREE.FogExp2(0xb9d2d5, 0.001);
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5200);
+const camera = new THREE.PerspectiveCamera(55, initialRenderSize.width / initialRenderSize.height, 0.1, 5200);
 camera.position.set(132, 222, 162);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.075;
+
+function getRenderSize() {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    width: Math.max(1, Math.round(rect.width || window.innerWidth)),
+    height: Math.max(1, Math.round(rect.height || window.innerHeight))
+  };
+}
+
+function resizeRendererToCanvas() {
+  const size = getRenderSize();
+  camera.aspect = size.width / size.height;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+  renderer.setSize(size.width, size.height, false);
+}
 controls.enablePan = true;
 controls.minDistance = 4;
 controls.maxDistance = 3800;
@@ -1283,8 +1300,7 @@ function clampInputAxis(value) {
 }
 
 function updateLabels() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const { width, height } = getRenderSize();
   const cameraPosition = camera.position;
   const hudRect = hud.root.getBoundingClientRect();
   const controlsRect = hud.exploreDock.getBoundingClientRect();
@@ -1378,14 +1394,12 @@ function animate(now) {
 renderer.setAnimationLoop(animate);
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  resizeRendererToCanvas();
   resetMobileFlightInput();
 });
 
 window.visualViewport?.addEventListener('resize', () => {
+  resizeRendererToCanvas();
   resetMobileFlightInput();
 });
 

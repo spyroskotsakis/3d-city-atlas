@@ -226,8 +226,7 @@ export function createLivePresence({
     presenceChannel = client.channels.get(channels.presence);
     await presenceChannel.presence.subscribe(handlePresenceMessage);
     const members = await presenceChannel.presence.get();
-    for (const member of members) handlePresenceMessage(member, { skipCountRefresh: true });
-    updatePresenceCount(members.length);
+    reconcilePresenceMembers(members);
     await syncMovementSubscriptions(lastSnapshot?.cityId ?? readSnapshot(performance.now())?.cityId ?? 'between');
   }
 
@@ -326,10 +325,31 @@ export function createLivePresence({
     if (!presenceChannel) return;
     try {
       const members = await presenceChannel.presence.get();
-      updatePresenceCount(members.length);
+      reconcilePresenceMembers(members);
     } catch {
-      updatePresenceCount(Math.max(1, participants.size + 1));
+      syncVisibleOnlineCount(true);
     }
+  }
+
+  function reconcilePresenceMembers(rawMembers) {
+    const members = Array.isArray(rawMembers) ? rawMembers : rawMembers?.items ?? [];
+    const activeKeys = new Set(members.map((member) => actorKey(member)));
+    let changed = false;
+
+    for (const member of members) {
+      handlePresenceMessage(member, { skipCountRefresh: true });
+    }
+
+    for (const [key] of participants) {
+      if (activeKeys.has(key)) continue;
+      markActorLeft(key, performance.now());
+      participants.delete(key);
+      layer.remove(key);
+      changed = true;
+    }
+
+    if (changed) refreshParticipants();
+    else syncVisibleOnlineCount(true);
   }
 
   function handleMovementMessage(message) {
@@ -394,11 +414,13 @@ export function createLivePresence({
       .sort(compareRosterVisitors)
       .slice(0, 12);
     const nextRemoteCount = groupedVisitors.size;
+    const nextOnlineCount = visibleOnlineCount(nextRemoteCount);
     const nextSignature = rosterSignature(list, nextRemoteCount);
-    if (nextSignature === lastRosterSignature && state.remoteCount === nextRemoteCount) return;
+    if (nextSignature === lastRosterSignature && state.remoteCount === nextRemoteCount && state.onlineCount === nextOnlineCount) return;
 
     lastRosterSignature = nextSignature;
     state.remoteCount = nextRemoteCount;
+    state.onlineCount = nextOnlineCount;
     state.participants = list;
     emitState();
   }
@@ -444,9 +466,15 @@ export function createLivePresence({
     ].join('~')).join('|')}`;
   }
 
-  function updatePresenceCount(count) {
-    state.onlineCount = Math.max(count, participants.size + (client?.connection.state === 'connected' ? 1 : 0));
-    emitState();
+  function visibleOnlineCount(remoteCount = state.remoteCount) {
+    return state.status === 'connected' ? remoteCount + 1 : 0;
+  }
+
+  function syncVisibleOnlineCount(shouldEmit = false) {
+    const nextOnlineCount = visibleOnlineCount();
+    if (state.onlineCount === nextOnlineCount) return;
+    state.onlineCount = nextOnlineCount;
+    if (shouldEmit) emitState();
   }
 
   function publishMovementIfNeeded(now) {
@@ -644,7 +672,7 @@ export function createLivePresence({
           ? 'disconnected'
           : 'solo';
     state.statusLabel = CONNECTION_LABELS[nextStatus] ?? CONNECTION_LABELS.solo;
-    if (state.status === 'solo') updatePresenceCount(participants.size);
+    syncVisibleOnlineCount(false);
     emitState();
   }
 
