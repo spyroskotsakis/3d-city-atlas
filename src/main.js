@@ -84,7 +84,7 @@ function writeStoredLiveDisplayName(value) {
 const CITY_NAV_DETAILS = {
   rome: { focus: 'Colosseum', tone: 'marble' },
   venice: { focus: 'Grand Canal', tone: 'lagoon' },
-  athens: { focus: 'Acropolis', tone: 'stone' },
+  athens: { focus: 'Acropolis and Attica', tone: 'stone' },
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
   angkor: { focus: 'Angkor Wat', tone: 'jungle' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
@@ -112,10 +112,18 @@ const CITY_LANDMARKS = {
     { label: 'Lagoon Islands', targetKey: 'lagoon' }
   ],
   athens: [
+    { label: 'Acropolis', targetKey: 'acropolis' },
     { label: 'Parthenon', targetKey: 'parthenon' },
     { label: 'Ancient Agora', targetKey: 'agora' },
     { label: 'Syntagma', targetKey: 'syntagma' },
-    { label: 'Lycabettus', targetKey: 'lycabettus' }
+    { label: 'Piraeus Port', targetKey: 'piraeus' },
+    { label: 'Palia Penteli', targetKey: 'paliaPenteli' },
+    { label: 'Drafi', targetKey: 'drafi' },
+    { label: 'Mount Penteli', targetKey: 'penteli' },
+    { label: 'Mount Parnitha', targetKey: 'parnitha' },
+    { label: 'Hymettus Ridge', targetKey: 'hymettus' },
+    { label: 'Lycabettus', targetKey: 'lycabettus' },
+    { label: 'Attica Aerial', targetKey: 'atticaAerial' }
   ],
   egypt: [
     { label: 'Great Pyramid', targetKey: 'greatPyramid' },
@@ -1383,6 +1391,7 @@ function landmarkCameraFor(cityView, target, targetKey = '') {
       .add(direction.normalize().multiplyScalar(34))
       .setY(Math.max(target.y + 14, Math.min(120, target.y + 24)));
   }
+  if (targetKey === 'atticaAerial') return cityView.position.clone();
 
   const distance = Math.max(82, Math.min(168, direction.length() * 0.72));
   return target
