@@ -37,20 +37,23 @@ let livePickPointer = null;
 const liveVisitorRows = new Map();
 
 function shouldInjectAnalytics() {
-  const hostname = window.location.hostname;
-  return hostname !== 'localhost' &&
-    hostname !== '127.0.0.1' &&
-    hostname !== '0.0.0.0' &&
-    !hostname.startsWith('192.168.') &&
-    !hostname.startsWith('10.') &&
-    !hostname.startsWith('172.16.');
+  return !isLocalHostname();
 }
 
 function shouldStartLivePresence() {
   const liveFlag = import.meta.env.VITE_LIVE_PRESENCE;
   if (liveFlag === 'false') return false;
   if (liveFlag === 'true') return true;
-  return import.meta.env.PROD;
+  return import.meta.env.PROD && !isLocalHostname();
+}
+
+function isLocalHostname(hostname = window.location.hostname) {
+  return hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('172.16.');
 }
 
 function sanitizeLiveDisplayName(value) {
@@ -94,7 +97,8 @@ const CITY_NAV_DETAILS = {
   munich: { focus: 'Marienplatz', tone: 'copper' },
   berlin: { focus: 'Brandenburg', tone: 'neon' },
   vienna: { focus: 'Stephansdom', tone: 'imperial' },
-  'new-york': { focus: 'Midtown', tone: 'steel' },
+  'new-york': { focus: 'Five Boroughs', tone: 'steel' },
+  'grand-canyon': { focus: 'Arizona, USA', tone: 'desert' },
   brazil: { focus: 'Rio de Janeiro', tone: 'tropical' },
   peru: { focus: 'Machu Picchu', tone: 'andes' }
 };
@@ -201,8 +205,31 @@ const CITY_LANDMARKS = {
   'new-york': [
     { label: 'Empire State', targetKey: 'empire' },
     { label: 'Times Square', targetKey: 'timesSquare' },
-    { label: 'Central Park South', targetKey: 'centralPark' },
-    { label: 'Downtown Skyline', targetKey: 'downtown' }
+    { label: 'Grand Central', targetKey: 'grandCentral' },
+    { label: 'Central Park', targetKey: 'centralPark' },
+    { label: 'Hudson Yards', targetKey: 'hudsonYards' },
+    { label: 'High Line', targetKey: 'highLine' },
+    { label: 'Greenwich Village', targetKey: 'greenwich' },
+    { label: 'Lower Manhattan', targetKey: 'downtown' },
+    { label: 'Brooklyn Bridge', targetKey: 'brooklynBridge' },
+    { label: 'Williamsburg', targetKey: 'williamsburg' },
+    { label: 'Queens Market', targetKey: 'queensMarket' },
+    { label: 'Yankee Stadium', targetKey: 'yankeeStadium' },
+    { label: 'Harbor Ferry', targetKey: 'harbor' },
+    { label: 'NYC Aerial', targetKey: 'aerial' }
+  ],
+  'grand-canyon': [
+    { label: 'South Rim', targetKey: 'overlook' },
+    { label: 'Mather Point', targetKey: 'mather' },
+    { label: 'Yavapai Point', targetKey: 'yavapai' },
+    { label: 'Desert View', targetKey: 'watchtower' },
+    { label: 'Colorado River', targetKey: 'coloradoRiver' },
+    { label: 'Bright Angel', targetKey: 'brightAngel' },
+    { label: 'South Kaibab', targetKey: 'southKaibab' },
+    { label: 'Canyon Buttes', targetKey: 'buttes' },
+    { label: 'North Rim', targetKey: 'northRim' },
+    { label: 'Visitor Center', targetKey: 'visitorCenter' },
+    { label: 'Canyon Aerial', targetKey: 'aerial' }
   ],
   brazil: [
     { label: 'Christ the Redeemer', targetKey: 'christ' },
@@ -283,7 +310,8 @@ function normalizeCityId(value) {
     .replace(/^#/, '')
     .replace(/^\/+/, '')
     .split(/[?&]/)[0]
-    .replace(/\s+/g, '-');
+    .replace(/\s+/g, '-')
+    .replace(/^the-/, '');
 }
 
 let shouldClearStartupCityParam = false;
@@ -455,6 +483,7 @@ window.__ROME_METRICS__ = {
 
 let activeViewId = startupView?.id ?? world.navViews[0]?.id ?? null;
 setActiveView(activeViewId, { revealInNav: false });
+world.setRenderCenter?.(camera.position.x, camera.position.z, activeViewId);
 clearStartupCityUrl();
 setupCityShare(hud);
 
@@ -1845,6 +1874,7 @@ function animate(now) {
     materials.water.map.offset.y = (elapsed * 0.008) % 1;
   }
 
+  world.setRenderCenter?.(camera.position.x, camera.position.z, activeViewId);
   world.update(elapsed);
   livePresence.update(now, delta);
   renderer.render(scene, camera);

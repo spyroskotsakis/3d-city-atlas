@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Great Wall, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Great Wall, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Grand Canyon, Brazil, and Peru. Each destination sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between destinations.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded fifteen-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded sixteen-destination world.
 
 ## Cities
 
@@ -72,7 +72,11 @@ Vienna is centered on Stephansdom with a patterned roof, tall Gothic spire, deta
 
 ### New York
 
-New York is centered on dense Midtown Manhattan and the Empire State Building with Art Deco massing, stepped crown, spire, observation decks, and street-level activity. It includes Hudson and East River edges, Manhattan grid roads, Times Square, Chrysler Building, Grand Central Terminal, Rockefeller Center, One Vanderbilt, Flatiron Building, Bryant Park, Central Park South, Madison Square Garden, New York Public Library, Lower Manhattan skyline elements, Brooklyn Bridge, yellow taxis, steam vents, billboards, subway entrances, vendors, trees, and crowds.
+New York is centered on dense Midtown Manhattan and the Empire State Building with Art Deco massing, stepped crown, spire, observation decks, and street-level activity. It now expands across a wider five-borough metro scene with Times Square, Grand Central, Chrysler Building, Rockefeller Center, Hudson Yards, the High Line, Central Park, the Met, Lincoln Center, Greenwich Village, SoHo, Chinatown, Wall Street, One World Trade Center, 9/11 memorial pools, Battery Park, Brooklyn Bridge, Williamsburg, Bushwick warehouses, Prospect Park, Coney Island, Long Island City, Queens night markets, Flushing Meadows, Yankee Stadium, Bronx parks, Staten Island ferry, Jersey City waterfront, elevated trains, ferries, bridges, nightlife venues, murals, food carts, yellow taxis, street crowds, and waterfront movement.
+
+### Grand Canyon
+
+The Grand Canyon is centered on a dramatic South Rim-style overlook with layered canyon walls, stepped sandstone and shale strata, buttes, mesas, side canyons, switchback trails, guardrails, visitor paths, Mather Point, Yavapai Point, Desert View Watchtower, Bright Angel and South Kaibab-inspired trails, the distant Colorado River with rafts and rapids, North Rim forest edges, Colorado Plateau vegetation, visitor-center hints, shuttles, cars, benches, signs, and warm desert light.
 
 ### Brazil
 
@@ -86,7 +90,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Great Wall`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Brazil`, `Peru`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Great Wall`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Grand Canyon`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -132,6 +136,7 @@ src/
   berlinScene.js    Procedural Berlin module
   viennaScene.js    Procedural Vienna module
   newYorkScene.js   Procedural New York module
+  grandCanyonScene.js Procedural Grand Canyon module
   brazilScene.js    Procedural Brazil / Rio de Janeiro module
   peruScene.js      Procedural Peru / Machu Picchu and Cusco module
   styles.css        HUD, controls, labels, responsive layout
@@ -179,6 +184,7 @@ The current connectors are:
 - Paris to London
 - London to Berlin
 - Paris to New York, modelled as a longer triple route
+- New York to Grand Canyon
 - New York to Brazil
 - Brazil to Peru
 

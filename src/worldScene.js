@@ -5,6 +5,7 @@ import { createBarcelonaScene, barcelonaTerrainHeightAt } from './barcelonaScene
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
 import { createBrazilScene, brazilTerrainHeightAt } from './brazilScene.js';
 import { createEgyptScene, egyptTerrainHeightAt } from './egyptScene.js';
+import { createGrandCanyonScene, grandCanyonTerrainHeightAt } from './grandCanyonScene.js';
 import { createGreatWallScene, greatWallTerrainHeightAt } from './greatWallScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
 import { createMunichScene, munichTerrainHeightAt } from './munichScene.js';
@@ -189,15 +190,29 @@ const CITY_SPECS = [
   {
     id: 'new-york',
     name: 'New York',
-    origin: new THREE.Vector3(1710, 0, -330),
-    bounds: 226,
+    origin: new THREE.Vector3(2100, 0, -600),
+    bounds: 392,
     create: createNewYorkScene,
     heightAt: newYorkTerrainHeightAt,
     view: {
       label: 'New York',
-      title: 'New York Midtown view',
-      position: new THREE.Vector3(112, 168, 132),
+      title: 'New York five boroughs view',
+      position: new THREE.Vector3(86, 145, 98),
       targetKey: 'empire'
+    }
+  },
+  {
+    id: 'grand-canyon',
+    name: 'Grand Canyon',
+    origin: new THREE.Vector3(2920, 0, -860),
+    bounds: 360,
+    create: createGrandCanyonScene,
+    heightAt: grandCanyonTerrainHeightAt,
+    view: {
+      label: 'Grand Canyon',
+      title: 'Grand Canyon South Rim view',
+      position: new THREE.Vector3(-190, 210, 210),
+      targetKey: 'overlook'
     }
   },
   {
@@ -210,7 +225,7 @@ const CITY_SPECS = [
     view: {
       label: 'Brazil',
       title: 'Brazil Rio de Janeiro view',
-      position: new THREE.Vector3(132, 166, 148),
+      position: new THREE.Vector3(132, 166, -220),
       targetKey: 'christ'
     }
   },
@@ -405,11 +420,11 @@ const CONNECTOR_SPECS = [
     title: 'Paris to New York route segment',
     fromCity: 'paris',
     toCity: 'new-york',
-    start: new THREE.Vector3(750, 0, -118),
-    end: new THREE.Vector3(990, 0, -150),
+    start: new THREE.Vector3(750, 0, -150),
+    end: new THREE.Vector3(1040, 0, -150),
     terrain: 'nyTerrain',
     width: 16,
-    curve: 5.0,
+    curve: 0,
     cameraLift: 66,
     cameraBack: 72,
     showInNav: false
@@ -420,8 +435,8 @@ const CONNECTOR_SPECS = [
     title: 'Long Paris to New York connector route',
     fromCity: 'paris',
     toCity: 'new-york',
-    start: new THREE.Vector3(990, 0, -150),
-    end: new THREE.Vector3(1240, 0, -150),
+    start: new THREE.Vector3(1040, 0, -150),
+    end: new THREE.Vector3(1320, 0, -150),
     terrain: 'nyTerrain',
     width: 16,
     curve: 0,
@@ -434,14 +449,28 @@ const CONNECTOR_SPECS = [
     title: 'Paris to New York route segment',
     fromCity: 'paris',
     toCity: 'new-york',
-    start: new THREE.Vector3(1240, 0, -150),
-    end: new THREE.Vector3(1496, 0, -150),
+    start: new THREE.Vector3(1320, 0, -150),
+    end: new THREE.Vector3(1708, 0, -240),
     terrain: 'nyTerrain',
     width: 16,
-    curve: -5.0,
+    curve: -6.0,
     cameraLift: 66,
     cameraBack: 72,
     showInNav: false
+  },
+  {
+    id: 'new-york-grand-canyon-road',
+    label: 'NY-GC Road',
+    title: 'New York to Grand Canyon connector road',
+    fromCity: 'new-york',
+    toCity: 'grand-canyon',
+    start: new THREE.Vector3(2486, 0, -760),
+    end: new THREE.Vector3(2600, 0, -760),
+    terrain: 'grandCanyonRim',
+    width: 18,
+    curve: -8.0,
+    cameraLift: 82,
+    cameraBack: 88
   },
   {
     id: 'new-york-brazil-road',
@@ -449,11 +478,11 @@ const CONNECTOR_SPECS = [
     title: 'New York to Brazil connector road',
     fromCity: 'new-york',
     toCity: 'brazil',
-    start: new THREE.Vector3(1850, 0, -134),
+    start: new THREE.Vector3(2220, 0, -216),
     end: new THREE.Vector3(2076, 0, 28),
     terrain: 'brazilTerrain',
     width: 18,
-    curve: -12.0,
+    curve: -10.0,
     cameraLift: 76,
     cameraBack: 82
   },
@@ -476,10 +505,12 @@ const CONNECTOR_SPECS = [
 const CONNECTOR_LOCATOR_STEPS = 32;
 const CONNECTOR_LOCATOR_PAD = 24;
 const CONNECTOR_ENDPOINT_PROGRESS = 0.18;
+const CITY_RENDER_MARGIN = 320;
+const CONNECTOR_RENDER_MARGIN = 360;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-paris-barcelona-london-munich-berlin-vienna-new-york-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
@@ -584,6 +615,23 @@ export function createWorldScene(materials) {
     navViews,
     cityViews,
     routeViews,
+    setRenderCenter(x, z, activeCityId = null) {
+      const visibleCities = new Set();
+      for (const module of modules) {
+        const distanceSq = distanceToCityBoundsSq(module, x, z);
+        const visible = module.id === activeCityId || distanceSq <= CITY_RENDER_MARGIN * CITY_RENDER_MARGIN;
+        module.city.group.visible = visible;
+        if (visible) visibleCities.add(module.id);
+      }
+
+      for (const connector of connectors) {
+        const visible =
+          visibleCities.has(connector.fromCity) ||
+          visibleCities.has(connector.toCity) ||
+          distanceToConnectorSq(connector, x, z) <= CONNECTOR_RENDER_MARGIN * CONNECTOR_RENDER_MARGIN;
+        connector.group.visible = visible;
+      }
+    },
     // Reuses the default result object so flight polling stays allocation-free.
     locateCity(x, z, target = cityLocatorResult) {
       return locateCityFromBounds(cityLocators, connectorLocators, x, z, target);
@@ -605,9 +653,28 @@ export function createWorldScene(materials) {
     },
     update(elapsed) {
       spyrosTourists.update(elapsed);
-      for (const module of modules) module.city.update(elapsed);
+      for (const module of modules) {
+        if (module.city.group.visible) module.city.update(elapsed);
+      }
     }
   };
+}
+
+function distanceToCityBoundsSq(module, x, z) {
+  const dx = Math.max(Math.abs(x - module.origin.x) - module.bounds, 0);
+  const dz = Math.max(Math.abs(z - module.origin.z) - module.bounds, 0);
+  return dx * dx + dz * dz;
+}
+
+function distanceToConnectorSq(connector, x, z) {
+  let best = Infinity;
+  for (let i = 0; i <= CONNECTOR_LOCATOR_STEPS; i += 1) {
+    const frame = connectorFrame(connector, i / CONNECTOR_LOCATOR_STEPS);
+    const dx = frame.center.x - x;
+    const dz = frame.center.z - z;
+    best = Math.min(best, dx * dx + dz * dz);
+  }
+  return best;
 }
 
 function buildCityView(module, focusTargets) {
