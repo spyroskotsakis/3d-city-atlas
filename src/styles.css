@@ -442,6 +442,14 @@ body.is-flight canvas.webgl {
   color: rgba(255, 244, 221, 0.42);
 }
 
+.live-name-form__hint {
+  margin: -1px 0 0;
+  color: rgba(255, 244, 221, 0.64);
+  font-size: 10px;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
 .live-name-form__feedback {
   min-height: 14px;
   margin: 0;

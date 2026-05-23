@@ -8,14 +8,19 @@ const MOBILE_POSITION_EPSILON = 2.1;
 const ROTATION_EPSILON = 0.026;
 const MOBILE_ROTATION_EPSILON = 0.045;
 const PRESENCE_HEARTBEAT_MS = 9000;
+const HIDDEN_LEAVE_GRACE_MS = 3000;
 const STALE_FADE_MS = 7000;
 const STALE_REMOVE_MS = 24000;
+const PRESENCE_PAYLOAD_MAX_AGE_MS = STALE_REMOVE_MS;
 const INTERPOLATION_DELAY_DESKTOP_MS = 140;
 const INTERPOLATION_DELAY_MOBILE_MS = 190;
 const RETRY_MIN_MS = 4000;
 const RETRY_MAX_MS = 30000;
 const USER_NAME_MAX_LENGTH = 24;
 const LEAVE_TOMBSTONE_MS = 10000;
+const LIVE_MESSAGE_BUDGET_PER_CITY_PER_SECOND = 420;
+const LIVE_MOVEMENT_MIN_HZ = 1 / 180;
+const LIVE_MOVEMENT_RESERVE_PER_SECOND = 40;
 const REMOTE_EYE_OFFSET = 3.2;
 const REMOTE_DIRECTION_MARKER_FORWARD_OFFSET = -3.2;
 const REMOTE_DIRECTION_MARKER_Y_OFFSET = -5.8;
@@ -67,10 +72,15 @@ export function createLivePresence({
   let currentMovementChannelName = null;
   let retryTimer = null;
   let retryDelay = RETRY_MIN_MS;
-  let presenceCountRefreshTimer = null;
+  let hiddenLeaveTimer = null;
+  let closedForPageHide = false;
+  let pageLeaving = false;
+  let liveSessionId = 0;
   const movementChannels = new Map();
   const channelHandlers = new Map();
   const participants = new Map();
+  const activePresenceKeys = new Set();
+  const visibleParticipants = new Map();
   const recentLeaves = new Map();
   const state = {
     status: 'solo',
@@ -94,18 +104,21 @@ export function createLivePresence({
     dispose
   };
 
-  window.addEventListener('online', () => {
-    setStatus(client ? client.connection.state : 'connecting');
-    scheduleRetry(true);
-  });
-  window.addEventListener('offline', () => setStatus('solo'));
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
   document.addEventListener('visibilitychange', handleVisibilityChange);
   window.addEventListener('pagehide', handlePageHide);
+  window.addEventListener('pageshow', handlePageShow);
 
   return api;
 
   async function start() {
     if (started || client) return;
+    if (pageLeaving || document.hidden || navigator.onLine === false) {
+      setStatus('solo');
+      return;
+    }
+    const sessionId = ++liveSessionId;
     started = true;
     setStatus('connecting');
 
@@ -114,9 +127,17 @@ export function createLivePresence({
       firstAuth = await fetchAuth();
       AblyModule = await import('ably');
     } catch {
-      enterSoloMode();
-      started = false;
+      if (isLiveSession(sessionId)) {
+        enterSoloMode();
+        started = false;
+      }
       scheduleRetry();
+      return;
+    }
+
+    if (!isLiveSession(sessionId) || pageLeaving || document.hidden || navigator.onLine === false) {
+      started = false;
+      setStatus('solo');
       return;
     }
 
@@ -125,10 +146,18 @@ export function createLivePresence({
     let cachedAuth = firstAuth;
 
     try {
-      client = new AblyModule.Realtime({
+      const nextClient = new AblyModule.Realtime({
         authCallback: async (_params, callback) => {
           try {
+            if (!isLiveSession(sessionId)) {
+              callback(new Error('Live session was cancelled'));
+              return;
+            }
             const auth = cachedAuth ?? await fetchAuth();
+            if (!isLiveSession(sessionId)) {
+              callback(new Error('Live session was cancelled'));
+              return;
+            }
             cachedAuth = null;
             channels = auth.channels;
             setIdentity(auth.client);
@@ -140,27 +169,35 @@ export function createLivePresence({
         autoConnect: true,
         queueMessages: false,
         closeOnUnload: true,
+        transportParams: { remainPresentFor: 1000 },
         logLevel: 1
       });
 
-      client.connection.on((change) => {
+      client = nextClient;
+      nextClient.connection.on((change) => {
+        if (!isLiveSession(sessionId, nextClient)) return;
         setStatus(change.current);
         if (change.current === 'connected') {
-          void handleConnected();
+          void handleConnected(sessionId, nextClient);
         }
         if (change.current === 'failed' || change.current === 'suspended') {
           layer.markDisconnected();
         }
       });
+      if (!isLiveSession(sessionId, nextClient) || pageLeaving || document.hidden || navigator.onLine === false) {
+        leavePresenceAndClose({ reconnectOnPageShow: document.hidden });
+      }
     } catch {
-      enterSoloMode();
-      started = false;
-      scheduleRetry();
+      if (isLiveSession(sessionId)) {
+        enterSoloMode();
+        started = false;
+        scheduleRetry();
+      }
     }
   }
 
   function update(now, delta) {
-    layer.update(now, delta, participants);
+    layer.update(now, delta, visibleParticipants);
     removeStaleParticipants(now);
     publishMovementIfNeeded(now);
   }
@@ -199,14 +236,12 @@ export function createLivePresence({
   function dispose() {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('pagehide', handlePageHide);
+    window.removeEventListener('pageshow', handlePageShow);
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
     if (retryTimer) window.clearTimeout(retryTimer);
-    if (presenceCountRefreshTimer) window.clearTimeout(presenceCountRefreshTimer);
-    try {
-      presenceChannel?.presence.leave();
-      client?.close();
-    } catch {
-      // Best-effort shutdown only.
-    }
+    clearHiddenLeaveTimer();
+    leavePresenceAndClose();
     layer.dispose();
   }
 
@@ -246,42 +281,77 @@ export function createLivePresence({
     return sanitizeDisplayId(identity?.displayId) || displayIdFromClientId(identity?.clientId);
   }
 
-  async function attachChannels() {
-    if (!client || !channels || presenceChannel) return;
+  async function attachChannels(sessionId, sessionClient) {
+    if (!isLiveSession(sessionId, sessionClient) || !channels || presenceChannel) return;
 
-    presenceChannel = client.channels.get(channels.presence);
-    await presenceChannel.presence.subscribe(handlePresenceMessage);
-    const members = await presenceChannel.presence.get();
-    reconcilePresenceMembers(members);
-    await syncMovementSubscriptions(lastSnapshot?.cityId ?? readSnapshot(performance.now())?.cityId ?? 'between');
+    const nextPresenceChannel = sessionClient.channels.get(channels.presence);
+    let subscribed = false;
+    try {
+      await nextPresenceChannel.presence.subscribe(handlePresenceMessage);
+      subscribed = true;
+      if (!isLiveSession(sessionId, sessionClient)) throw new Error('Live session was cancelled');
+      const members = await nextPresenceChannel.presence.get();
+      if (!isLiveSession(sessionId, sessionClient)) throw new Error('Live session was cancelled');
+      await syncMovementSubscriptions(lastSnapshot?.cityId ?? readSnapshot(performance.now())?.cityId ?? 'between', sessionId, sessionClient);
+      if (!isLiveSession(sessionId, sessionClient)) throw new Error('Live session was cancelled');
+      presenceChannel = nextPresenceChannel;
+      reconcilePresenceMembers(members);
+    } catch (error) {
+      if (subscribed) {
+        try {
+          await nextPresenceChannel.presence.unsubscribe(handlePresenceMessage);
+        } catch {
+          // Best-effort cleanup for a failed attach.
+        }
+      }
+      if (presenceChannel === nextPresenceChannel) presenceChannel = null;
+      if (isLiveSession(sessionId, sessionClient)) await unsubscribeMovementChannels();
+      throw error;
+    }
   }
 
-  async function handleConnected() {
+  async function handleConnected(sessionId, sessionClient) {
+    if (!isLiveSession(sessionId, sessionClient)) return;
+    if (pageLeaving || document.hidden || navigator.onLine === false) {
+      leavePresenceAndClose({ reconnectOnPageShow: document.hidden });
+      return;
+    }
     try {
-      await attachChannels();
+      await attachChannels(sessionId, sessionClient);
+      if (!isLiveSession(sessionId, sessionClient)) return;
       await enterOrUpdatePresence(true);
       forceNextMovement();
       retryDelay = RETRY_MIN_MS;
       await updatePresenceCountFromChannel();
     } catch {
-      setStatus('disconnected');
+      if (isLiveSession(sessionId, sessionClient)) setStatus('disconnected');
     }
   }
 
-  async function subscribeMovementChannel(cityId) {
+  async function subscribeMovementChannel(cityId, sessionId = liveSessionId, sessionClient = client) {
+    if (!isLiveSession(sessionId, sessionClient) || !channels) return;
     const channelName = movementChannelName(cityId);
     if (movementChannels.has(channelName)) return;
-    const channel = client.channels.get(channelName);
+    const channel = sessionClient.channels.get(channelName);
     const handler = (message) => handleMovementMessage(message);
+    await channel.subscribe(MOVEMENT_EVENT, handler);
+    if (!isLiveSession(sessionId, sessionClient)) {
+      try {
+        await channel.unsubscribe(MOVEMENT_EVENT, handler);
+      } catch {
+        // Best-effort cleanup for a cancelled subscription.
+      }
+      return;
+    }
     movementChannels.set(channelName, channel);
     channelHandlers.set(channelName, handler);
-    await channel.subscribe(MOVEMENT_EVENT, handler);
   }
 
-  async function syncMovementSubscriptions(cityId) {
-    if (!client || !channels) return;
+  async function syncMovementSubscriptions(cityId, sessionId = liveSessionId, sessionClient = client) {
+    if (!isLiveSession(sessionId, sessionClient) || !channels) return;
     const desired = new Set(['between', cityId || 'between']);
-    for (const desiredCityId of desired) await subscribeMovementChannel(desiredCityId);
+    for (const desiredCityId of desired) await subscribeMovementChannel(desiredCityId, sessionId, sessionClient);
+    if (!isLiveSession(sessionId, sessionClient)) return;
 
     for (const [channelName, channel] of movementChannels) {
       if (desired.has(cityIdFromMovementChannel(channelName))) continue;
@@ -290,6 +360,20 @@ export function createLivePresence({
       channelHandlers.delete(channelName);
       movementChannels.delete(channelName);
     }
+  }
+
+  async function unsubscribeMovementChannels() {
+    for (const [channelName, channel] of movementChannels) {
+      const handler = channelHandlers.get(channelName);
+      if (!handler) continue;
+      try {
+        await channel.unsubscribe(MOVEMENT_EVENT, handler);
+      } catch {
+        // Best-effort cleanup only.
+      }
+    }
+    channelHandlers.clear();
+    movementChannels.clear();
   }
 
   function movementChannelName(cityId) {
@@ -303,20 +387,27 @@ export function createLivePresence({
     return channelName.slice(prefix.length, -':movement'.length);
   }
 
-  function handlePresenceMessage(message, options = {}) {
-    if (message.clientId === identity?.clientId && message.connectionId === client?.connection.id) return;
-
+  function handlePresenceMessage(message) {
     const key = actorKey(message);
+    if (isLocalClient(message.clientId)) {
+      removeParticipant(key, performance.now(), false);
+      return false;
+    }
+
     if (message.action === 'leave' || message.action === 3) {
-      markActorLeft(key, performance.now());
-      participants.delete(key);
-      layer.remove(key);
-      refreshParticipants();
-      return;
+      activePresenceKeys.delete(key);
+      removeParticipant(key, performance.now());
+      return false;
+    }
+
+    if (isExpiredPresenceMessage(message)) {
+      activePresenceKeys.delete(key);
+      return false;
     }
 
     const data = normalizePresenceData(message.data, message.clientId);
-    if (!data) return;
+    if (!data) return false;
+    activePresenceKeys.add(key);
     recentLeaves.delete(key);
     const existing = participants.get(key);
     const stalePresence = existing?.seq > data.seq;
@@ -333,18 +424,11 @@ export function createLivePresence({
       seq: Math.max(existing?.seq ?? -1, data.seq),
       receivedAt: performance.now(),
       lastPresenceAt: performance.now(),
+      missingSince: 0,
       presenceActive: true
     });
 
-    if (!options.skipCountRefresh) schedulePresenceCountRefresh();
-  }
-
-  function schedulePresenceCountRefresh() {
-    if (presenceCountRefreshTimer) return;
-    presenceCountRefreshTimer = window.setTimeout(() => {
-      presenceCountRefreshTimer = null;
-      void updatePresenceCountFromChannel();
-    }, 900);
+    return true;
   }
 
   async function updatePresenceCountFromChannel() {
@@ -359,19 +443,33 @@ export function createLivePresence({
 
   function reconcilePresenceMembers(rawMembers) {
     const members = Array.isArray(rawMembers) ? rawMembers : rawMembers?.items ?? [];
-    const activeKeys = new Set(members.map((member) => actorKey(member)));
+    const activeKeys = new Set();
+    const now = performance.now();
     let changed = false;
 
     for (const member of members) {
-      handlePresenceMessage(member, { skipCountRefresh: true });
+      if (handlePresenceMessage(member)) activeKeys.add(actorKey(member));
     }
 
-    for (const [key] of participants) {
-      if (activeKeys.has(key)) continue;
-      markActorLeft(key, performance.now());
-      participants.delete(key);
-      layer.remove(key);
-      changed = true;
+    for (const key of activeKeys) activePresenceKeys.add(key);
+
+    for (const [key, participant] of participants) {
+      if (activeKeys.has(key)) {
+        if (participant.missingSince) {
+          participant.missingSince = 0;
+          changed = true;
+        }
+        continue;
+      }
+      if (!participant.missingSince) {
+        participant.missingSince = now;
+        changed = true;
+        continue;
+      }
+      if (now - participant.missingSince > STALE_REMOVE_MS) {
+        removeParticipant(key, now);
+        changed = true;
+      }
     }
 
     if (changed) refreshParticipants();
@@ -379,21 +477,24 @@ export function createLivePresence({
   }
 
   function handleMovementMessage(message) {
-    if (message.clientId === identity?.clientId && (message.connectionId ?? message.data?.cid) === client?.connection.id) return;
     const data = normalizeMovementData(message.data, message.clientId);
     if (!data) return;
+    const connectionId = message.connectionId ?? data.cid;
+    if (!message.clientId || !connectionId || isLocalClient(message.clientId)) return;
+    if (isExpiredMessage(message, data.sentAt)) return;
 
     const key = actorKey({
       clientId: message.clientId,
-      connectionId: message.connectionId ?? data.cid
+      connectionId
     });
+    if (!activePresenceKeys.has(key)) return;
     if (isRecentlyLeft(key, performance.now())) return;
     const existing = participants.get(key);
     if (existing?.seq >= data.seq) return;
 
     upsertParticipant(key, {
       clientId: message.clientId,
-      connectionId: message.connectionId ?? data.cid,
+      connectionId,
       displayId: data.displayId ?? existing?.displayId,
       name: preferredVisitorName(existing, data),
       color: existing?.color ?? sanitizeColor(data.color),
@@ -405,7 +506,8 @@ export function createLivePresence({
       speed: data.speed,
       moving: data.moving,
       receivedAt: performance.now(),
-      lastMovementAt: performance.now()
+      lastMovementAt: performance.now(),
+      missingSince: 0
     });
   }
 
@@ -426,18 +528,28 @@ export function createLivePresence({
 
   function refreshParticipants() {
     const now = performance.now();
-    const groupedVisitors = new Map();
+    const groupedParticipants = selectVisibleParticipants(now);
+    const previousVisibleKeys = new Set(visibleParticipants.keys());
+    visibleParticipants.clear();
+    for (const participant of groupedParticipants.values()) {
+      visibleParticipants.set(participant.key, participant);
+      previousVisibleKeys.delete(participant.key);
+    }
+    for (const key of previousVisibleKeys) layer.remove(key);
+
     for (const participant of participants.values()) {
-      const visitor = participantListView(participant, now);
-      const groupKey = participant.clientId || participant.displayId || participant.key;
-      const current = groupedVisitors.get(groupKey);
-      if (!current || isPreferredRosterVisitor(visitor, current)) groupedVisitors.set(groupKey, visitor);
+      if (visibleParticipants.has(participant.key)) continue;
+      layer.remove(participant.key);
     }
 
-    const list = [...groupedVisitors.values()]
+    const list = [...groupedParticipants.values()]
+      .map((participant) => {
+        const visitor = participantListView(participant, now);
+        return { ...visitor, key: participant.clientId || participant.displayId || participant.key };
+      })
       .sort(compareRosterVisitors)
       .slice(0, 12);
-    const nextRemoteCount = groupedVisitors.size;
+    const nextRemoteCount = groupedParticipants.size;
     const nextOnlineCount = visibleOnlineCount(nextRemoteCount);
     const nextSignature = rosterSignature(list, nextRemoteCount);
     if (nextSignature === lastRosterSignature && state.remoteCount === nextRemoteCount && state.onlineCount === nextOnlineCount) return;
@@ -449,10 +561,20 @@ export function createLivePresence({
     emitState();
   }
 
+  function selectVisibleParticipants(now = performance.now()) {
+    const grouped = new Map();
+    for (const participant of participants.values()) {
+      const groupKey = participant.clientId || participant.displayId || participant.key;
+      const current = grouped.get(groupKey);
+      if (!current || isPreferredParticipant(participant, current, now)) grouped.set(groupKey, participant);
+    }
+    return grouped;
+  }
+
   function participantListView(participant, now = performance.now()) {
     const displayId = participant.displayId ?? displayIdFromClientId(participant.clientId);
     return {
-      key: participant.clientId || participant.key,
+      key: participant.key,
       targetKey: participant.key,
       clientId: participant.clientId,
       connectionId: participant.connectionId,
@@ -466,6 +588,22 @@ export function createLivePresence({
       meetAvailable: isParticipantTargetable(participant, now),
       lastSeen: Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0, participant.createdAt || 0)
     };
+  }
+
+  function isPreferredParticipant(next, current, now = performance.now()) {
+    const nextTargetable = isParticipantTargetable(next, now);
+    const currentTargetable = isParticipantTargetable(current, now);
+    if (nextTargetable !== currentTargetable) return nextTargetable;
+    const nextHasCustomName = !isFallbackVisitorName(next.name, next.displayId);
+    const currentHasCustomName = !isFallbackVisitorName(current.name, current.displayId);
+    if (nextHasCustomName !== currentHasCustomName) return nextHasCustomName;
+    const nextSeen = Math.max(next.lastMovementAt || 0, next.lastPresenceAt || 0, next.createdAt || 0);
+    const currentSeen = Math.max(current.lastMovementAt || 0, current.lastPresenceAt || 0, current.createdAt || 0);
+    if (nextSeen !== currentSeen) return nextSeen > currentSeen;
+    if (next.connectionId && current.connectionId && next.connectionId !== current.connectionId) {
+      return next.connectionId.localeCompare(current.connectionId) < 0;
+    }
+    return next.key.localeCompare(current.key) < 0;
   }
 
   function resolveTargetableParticipant(visitorKeyOrClientId, now = performance.now()) {
@@ -490,15 +628,6 @@ export function createLivePresence({
   function isParticipantTargetable(participant, now = performance.now()) {
     const lastSeen = Math.max(participant?.lastMovementAt || 0, participant?.lastPresenceAt || 0, participant?.createdAt || 0);
     return Boolean(participant?.key && now - lastSeen <= STALE_REMOVE_MS && layer.hasTargetPose(participant.key, now));
-  }
-
-  function isPreferredRosterVisitor(next, current) {
-    if (next.meetAvailable !== current.meetAvailable) return next.meetAvailable;
-    if (next.lastSeen !== current.lastSeen) return next.lastSeen > current.lastSeen;
-    const nextHasCustomName = !isFallbackVisitorName(next.name, next.displayId);
-    const currentHasCustomName = !isFallbackVisitorName(current.name, current.displayId);
-    if (nextHasCustomName !== currentHasCustomName) return nextHasCustomName;
-    return next.key.localeCompare(current.key) < 0;
   }
 
   function compareRosterVisitors(a, b) {
@@ -539,9 +668,10 @@ export function createLivePresence({
     if (!snapshot) return;
 
     const immediate = shouldSendImmediately(snapshot);
-    const minInterval = 1000 / targetPublishHz();
-    const heartbeatDue = now - lastSentAt > PRESENCE_HEARTBEAT_MS;
-    if (!immediate && !heartbeatDue && now - lastSentAt < minInterval) return;
+    const minInterval = 1000 / targetPublishHz(snapshot.cityId);
+    const heartbeatDue = now - lastSentAt > targetHeartbeatMs(snapshot.cityId);
+    if (!immediate && !heartbeatDue) return;
+    if (!heartbeatDue && now - lastSentAt < minInterval) return;
 
     publishInFlight = true;
     void publishSnapshot(snapshot, now, immediate || heartbeatDue).finally(() => {
@@ -550,14 +680,18 @@ export function createLivePresence({
   }
 
   async function publishSnapshot(snapshot, now, shouldUpdatePresence) {
+    const sessionId = liveSessionId;
+    const sessionClient = client;
     try {
       const channelName = movementChannelName(snapshot.cityId);
       currentMovementChannelName = channelName;
-      await syncMovementSubscriptions(snapshot.cityId);
-      const channel = movementChannels.get(channelName) ?? client.channels.get(channelName);
+      await syncMovementSubscriptions(snapshot.cityId, sessionId, sessionClient);
+      if (!isLiveSession(sessionId, sessionClient)) return;
+      const channel = movementChannels.get(channelName) ?? sessionClient.channels.get(channelName);
       movementChannels.set(channelName, channel);
       const payload = movementPayload(snapshot, now);
       await channel.publish(MOVEMENT_EVENT, payload);
+      if (!isLiveSession(sessionId, sessionClient)) return;
       lastSentAt = now;
       lastSnapshot = snapshot;
 
@@ -650,11 +784,26 @@ export function createLivePresence({
     return Math.hypot(dx, dy, dz) >= positionEpsilon || dq >= rotationEpsilon || dvq >= rotationEpsilon;
   }
 
-  function targetPublishHz() {
-    const base = isMobilePointer ? 4 : 6;
-    if (lastSnapshot?.fps && lastSnapshot.fps < 45) return 3;
-    const cityLoad = Math.max(1, [...participants.values()].filter((item) => item.cityId === lastSnapshot?.cityId).length + 1);
-    return Math.max(2, Math.min(base, Math.floor(35 / cityLoad)));
+  function targetPublishHz(cityId = lastSnapshot?.cityId) {
+    const base = lastSnapshot?.fps && lastSnapshot.fps < 45 ? 2 : (isMobilePointer ? 4 : 6);
+    const cityLoad = liveCityLoad(cityId);
+    const heartbeatCost = cityLoad ** 2 / (targetHeartbeatMs(cityId) / 1000);
+    const movementBudget = Math.max(
+      LIVE_MOVEMENT_RESERVE_PER_SECOND,
+      LIVE_MESSAGE_BUDGET_PER_CITY_PER_SECOND - heartbeatCost
+    );
+    const budgetHz = movementBudget / (cityLoad ** 2);
+    return Math.max(LIVE_MOVEMENT_MIN_HZ, Math.min(base, budgetHz));
+  }
+
+  function targetHeartbeatMs(cityId = lastSnapshot?.cityId) {
+    const cityLoad = liveCityLoad(cityId);
+    const budgetedMs = (cityLoad ** 2 * 1000) / LIVE_MESSAGE_BUDGET_PER_CITY_PER_SECOND;
+    return Math.max(PRESENCE_HEARTBEAT_MS, Math.min(STALE_REMOVE_MS, budgetedMs));
+  }
+
+  function liveCityLoad(cityId = lastSnapshot?.cityId) {
+    return Math.max(1, [...visibleParticipants.values()].filter((item) => item.cityId === cityId).length + 1);
   }
 
   function movementPayload(snapshot, now) {
@@ -716,9 +865,21 @@ export function createLivePresence({
   }
 
   function handleVisibilityChange() {
+    if (!document.hidden) pageLeaving = false;
     visible = !document.hidden;
     if (!visible) {
       publishFinalSnapshot();
+      scheduleHiddenLeave();
+      return;
+    }
+    clearHiddenLeaveTimer();
+    if (closedForPageHide) {
+      closedForPageHide = false;
+      if (navigator.onLine !== false) void start();
+      return;
+    }
+    if (!client && !started && navigator.onLine !== false) {
+      void start();
       return;
     }
     forceNextMovement();
@@ -727,7 +888,29 @@ export function createLivePresence({
 
   function handlePageHide() {
     visible = false;
-    publishFinalSnapshot();
+    pageLeaving = true;
+    clearHiddenLeaveTimer();
+    leavePresenceAndClose({ reconnectOnPageShow: true, immediate: true });
+  }
+
+  function handlePageShow() {
+    pageLeaving = false;
+    visible = !document.hidden;
+    if (!closedForPageHide) return;
+    closedForPageHide = false;
+    if (navigator.onLine !== false) void start();
+  }
+
+  function handleOnline() {
+    pageLeaving = false;
+    if (!client && !started && !document.hidden && navigator.onLine !== false) void start();
+    setStatus(client ? client.connection.state : 'connecting');
+    scheduleRetry(true);
+  }
+
+  function handleOffline() {
+    leavePresenceAndClose();
+    setStatus('solo');
   }
 
   function scheduleRetry(immediate = false) {
@@ -759,7 +942,9 @@ export function createLivePresence({
     state.remoteCount = 0;
     state.participants = [];
     lastRosterSignature = '';
+    activePresenceKeys.clear();
     participants.clear();
+    visibleParticipants.clear();
     layer.clear();
     setStatus('solo');
   }
@@ -770,13 +955,114 @@ export function createLivePresence({
     for (const [key, participant] of participants) {
       const lastSeen = Math.max(participant.lastMovementAt || 0, participant.lastPresenceAt || 0);
       if (now - lastSeen > STALE_REMOVE_MS) {
-        markActorLeft(key, now);
-        participants.delete(key);
-        layer.remove(key);
+        removeParticipant(key, now);
         changed = true;
       }
     }
     if (changed) refreshParticipants();
+  }
+
+  function removeParticipant(key, now = performance.now(), markLeave = true) {
+    if (!key) return false;
+    const existed = participants.delete(key);
+    activePresenceKeys.delete(key);
+    if (markLeave) markActorLeft(key, now);
+    if (existed) {
+      layer.remove(key);
+      refreshParticipants();
+    }
+    return existed;
+  }
+
+  function leavePresenceAndClose({ reconnectOnPageShow = false, immediate = false } = {}) {
+    liveSessionId += 1;
+    const channelToLeave = presenceChannel;
+    const clientToClose = client;
+    closedForPageHide = reconnectOnPageShow;
+    if (!channelToLeave && !clientToClose) {
+      resetRealtimeState();
+      return;
+    }
+
+    resetRealtimeState();
+
+    if (immediate) {
+      try {
+        if (channelToLeave) void Promise.resolve(channelToLeave.presence.leave()).catch(() => {});
+        clientToClose?.close();
+      } catch {
+        // Best-effort shutdown only.
+      }
+      return;
+    }
+
+    void leaveThenClose(channelToLeave, clientToClose);
+  }
+
+  async function leaveThenClose(channelToLeave, clientToClose) {
+    try {
+      if (channelToLeave) {
+        await Promise.race([
+          Promise.resolve(channelToLeave.presence.leave()),
+          new Promise((resolve) => window.setTimeout(resolve, 900))
+        ]);
+      }
+    } catch {
+      // Best-effort shutdown only.
+    } finally {
+      try {
+        clientToClose?.close();
+      } catch {
+        // Best-effort shutdown only.
+      }
+    }
+  }
+
+  function resetRealtimeState() {
+    if (retryTimer) {
+      window.clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    clearHiddenLeaveTimer();
+    movementChannels.clear();
+    channelHandlers.clear();
+    presenceChannel = null;
+    channels = null;
+    client = null;
+    started = false;
+    publishInFlight = false;
+    currentMovementChannelName = null;
+    lastSentAt = 0;
+    lastPresenceAt = 0;
+    lastPresenceKey = '';
+    lastSnapshot = null;
+    enterSoloMode();
+  }
+
+  function isLocalClient(clientId) {
+    return Boolean(identity?.clientId && clientId === identity.clientId);
+  }
+
+  function isLiveSession(sessionId, sessionClient = client) {
+    return liveSessionId === sessionId && (!sessionClient || client === sessionClient);
+  }
+
+  function isExpiredPresenceMessage(message) {
+    return isExpiredMessage(message, message?.data?.t);
+  }
+
+  function scheduleHiddenLeave() {
+    clearHiddenLeaveTimer();
+    hiddenLeaveTimer = window.setTimeout(() => {
+      hiddenLeaveTimer = null;
+      if (document.hidden) leavePresenceAndClose({ reconnectOnPageShow: true });
+    }, HIDDEN_LEAVE_GRACE_MS);
+  }
+
+  function clearHiddenLeaveTimer() {
+    if (!hiddenLeaveTimer) return;
+    window.clearTimeout(hiddenLeaveTimer);
+    hiddenLeaveTimer = null;
   }
 
   function markActorLeft(key, now) {
@@ -1180,8 +1466,19 @@ function normalizeMovementData(data, clientId) {
     mode: data.mode === 'flight' ? 'flight' : 'orbit',
     pose,
     speed: Number.isFinite(data.speed) ? data.speed : 0,
-    moving: Boolean(data.moving)
+    moving: Boolean(data.moving),
+    sentAt: Number.isFinite(data.t) ? data.t : null
   };
+}
+
+function isExpiredMessage(message, fallbackTimestamp) {
+  const timestamp = Number.isFinite(message?.timestamp) ? message.timestamp : fallbackTimestamp;
+  return isExpiredTimestamp(timestamp);
+}
+
+function isExpiredTimestamp(timestamp) {
+  if (!Number.isFinite(timestamp)) return false;
+  return Date.now() - timestamp > PRESENCE_PAYLOAD_MAX_AGE_MS;
 }
 
 function formatVisitorName(userName, displayId, fallbackName = '') {

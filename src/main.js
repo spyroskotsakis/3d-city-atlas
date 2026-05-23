@@ -672,8 +672,8 @@ function createHud(metrics, navViews) {
               <input id="live-display-name" data-live-name-input type="text" maxlength="${LIVE_DISPLAY_NAME_MAX_LENGTH}" autocomplete="off" placeholder="Your name" aria-describedby="live-name-help live-self-id">
               <button class="live-panel__action live-name-form__save" data-live-name-save type="submit">Save</button>
             </div>
+            <p class="live-name-form__hint" id="live-name-help">Public in live world.</p>
             <p class="live-name-form__feedback" data-live-name-feedback aria-live="polite"></p>
-            <p class="sr-only" id="live-name-help">Optional name shown next to your visitor ID.</p>
           </form>
           <div class="live-panel__actions">
             <button class="live-panel__action" data-live-visibility type="button" aria-pressed="true">Visitors visible</button>
