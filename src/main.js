@@ -91,6 +91,7 @@ const CITY_NAV_DETAILS = {
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
   angkor: { focus: 'Angkor Wat', tone: 'jungle' },
   'great-wall': { focus: 'China', tone: 'stone' },
+  'mount-everest': { focus: 'Nepal / China', tone: 'ice' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
   barcelona: { focus: 'Sagrada Familia', tone: 'mosaic' },
   london: { focus: 'Greater London', tone: 'river' },
@@ -156,6 +157,21 @@ const CITY_LANDMARKS = {
     { label: 'Mountain Village', targetKey: 'village' },
     { label: 'Valley Terraces', targetKey: 'terraces' },
     { label: 'Great Wall Aerial', targetKey: 'aerial' }
+  ],
+  'mount-everest': [
+    { label: 'Everest Summit', targetKey: 'summit' },
+    { label: 'South Base Camp', targetKey: 'southBaseCamp' },
+    { label: 'Khumbu Icefall', targetKey: 'khumbuIcefall' },
+    { label: 'Camp II', targetKey: 'campTwo' },
+    { label: 'South Col', targetKey: 'southCol' },
+    { label: 'North Base Camp', targetKey: 'northBaseCamp' },
+    { label: 'North Col', targetKey: 'northCol' },
+    { label: 'Namche Bazaar', targetKey: 'namche' },
+    { label: 'Tengboche', targetKey: 'tengboche' },
+    { label: 'Lukla Airstrip', targetKey: 'lukla' },
+    { label: 'Khumbu Glacier', targetKey: 'khumbuGlacier' },
+    { label: 'Tibet Side', targetKey: 'tibet' },
+    { label: 'Everest Aerial', targetKey: 'aerial' }
   ],
   paris: [
     { label: 'Eiffel Tower', targetKey: 'eiffel' },
@@ -264,6 +280,12 @@ const CITY_LANDMARKS = {
   ]
 };
 
+const CITY_ID_ALIASES = {
+  everest: 'mount-everest',
+  'mt-everest': 'mount-everest',
+  himalayas: 'mount-everest'
+};
+
 for (const [cityId, landmarks] of Object.entries(CITY_LANDMARKS)) {
   landmarks.unshift({ label: 'Find Spyros', targetKey: 'spyros' });
 }
@@ -314,7 +336,7 @@ function resizeRendererToCanvas() {
 }
 
 function normalizeCityId(value) {
-  return String(value ?? '')
+  const normalized = String(value ?? '')
     .trim()
     .toLowerCase()
     .replace(/^#/, '')
@@ -322,6 +344,7 @@ function normalizeCityId(value) {
     .split(/[?&]/)[0]
     .replace(/\s+/g, '-')
     .replace(/^the-/, '');
+  return CITY_ID_ALIASES[normalized] ?? normalized;
 }
 
 let shouldClearStartupCityParam = false;

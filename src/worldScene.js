@@ -5,6 +5,7 @@ import { createBarcelonaScene, barcelonaTerrainHeightAt } from './barcelonaScene
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
 import { createBrazilScene, brazilTerrainHeightAt } from './brazilScene.js';
 import { createEgyptScene, egyptTerrainHeightAt } from './egyptScene.js';
+import { createEverestScene, everestTerrainHeightAt } from './everestScene.js';
 import { createGrandCanyonScene, grandCanyonTerrainHeightAt } from './grandCanyonScene.js';
 import { createGreatWallScene, greatWallTerrainHeightAt } from './greatWallScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
@@ -101,6 +102,20 @@ const CITY_SPECS = [
       title: 'Great Wall mountain ridge view',
       position: new THREE.Vector3(170, 210, 185),
       targetKey: 'greatWall'
+    }
+  },
+  {
+    id: 'mount-everest',
+    name: 'Mount Everest',
+    origin: new THREE.Vector3(-120, 0, 3240),
+    bounds: 380,
+    create: createEverestScene,
+    heightAt: everestTerrainHeightAt,
+    view: {
+      label: 'Mount Everest',
+      title: 'Mount Everest Himalayas view',
+      position: new THREE.Vector3(210, 285, 230),
+      targetKey: 'summit'
     }
   },
   {
@@ -317,6 +332,20 @@ const CONNECTOR_SPECS = [
     cameraBack: 68
   },
   {
+    id: 'great-wall-everest-road',
+    label: 'GW-E Road',
+    title: 'Great Wall to Mount Everest connector road',
+    fromCity: 'great-wall',
+    toCity: 'mount-everest',
+    start: new THREE.Vector3(-120, 0, 2580),
+    end: new THREE.Vector3(-120, 0, 2860),
+    terrain: 'everestMoraine',
+    width: 18,
+    curve: 6.0,
+    cameraLift: 92,
+    cameraBack: 96
+  },
+  {
     id: 'rome-paris-road',
     label: 'R-P Road',
     title: 'Rome to Paris connector road',
@@ -510,7 +539,7 @@ const CONNECTOR_RENDER_MARGIN = 360;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-mount-everest-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
