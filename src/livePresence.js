@@ -27,6 +27,8 @@ const REMOTE_DIRECTION_MARKER_Y_OFFSET = -5.8;
 const REMOTE_DIRECTION_MARKER_SCALE = 0.28;
 const REMOTE_DIRECTION_MARKER_HIDE_DISTANCE = 80;
 const REMOTE_DIRECTION_MARKER_FADE_RANGE = 80;
+const REMOTE_VISOR_FORWARD_OFFSET = 2.15;
+const REMOTE_VISOR_Y_OFFSET = 2.85;
 const REMOTE_BEACON_HIDE_DISTANCE = 90;
 const REMOTE_BEACON_FADE_RANGE = 90;
 const CONNECTION_LABELS = {
@@ -1113,10 +1115,12 @@ class RemoteExplorersLayer {
     });
 
     const bodyGeometry = new THREE.CapsuleGeometry(2.1, 5.4, 4, 8);
+    const visorGeometry = new THREE.BoxGeometry(1.46, 0.72, 0.2);
     const arrowGeometry = new THREE.ConeGeometry(2.1, 5.4, 5);
     arrowGeometry.rotateX(-Math.PI / 2);
     const beaconGeometry = new THREE.CylinderGeometry(0.12, 0.12, 24, 6);
     const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xf2c46d });
+    const visorMaterial = new THREE.MeshBasicMaterial({ color: 0x244c52 });
     const arrowMaterial = new THREE.MeshLambertMaterial({ color: 0x74b8c5 });
     const beaconMaterial = new THREE.MeshBasicMaterial({
       color: 0xffe2a7,
@@ -1126,15 +1130,18 @@ class RemoteExplorersLayer {
     });
 
     this.bodyMesh = new THREE.InstancedMesh(bodyGeometry, bodyMaterial, MAX_REMOTE_EXPLORERS);
+    this.visorMesh = new THREE.InstancedMesh(visorGeometry, visorMaterial, MAX_REMOTE_EXPLORERS);
     this.arrowMesh = new THREE.InstancedMesh(arrowGeometry, arrowMaterial, MAX_REMOTE_EXPLORERS);
     this.beaconMesh = new THREE.InstancedMesh(beaconGeometry, beaconMaterial, MAX_REMOTE_EXPLORERS);
     this.bodyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.visorMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.arrowMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.beaconMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.bodyMesh.count = 0;
+    this.visorMesh.count = 0;
     this.arrowMesh.count = 0;
     this.beaconMesh.count = 0;
-    this.group.add(this.beaconMesh, this.bodyMesh, this.arrowMesh);
+    this.group.add(this.beaconMesh, this.bodyMesh, this.visorMesh, this.arrowMesh);
     this.visibleRecords = [];
     this.raycaster = new THREE.Raycaster();
     this.pickPointer = new THREE.Vector2();
@@ -1198,6 +1205,7 @@ class RemoteExplorersLayer {
     this.records.clear();
     this.visibleRecords = [];
     this.bodyMesh.count = 0;
+    this.visorMesh.count = 0;
     this.arrowMesh.count = 0;
     this.beaconMesh.count = 0;
     this.hideLabels();
@@ -1238,6 +1246,14 @@ class RemoteExplorersLayer {
       this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, scale);
       this.bodyMesh.setMatrixAt(index, this.tmpMatrix);
 
+      const bodyForward = getForward(this.tmpQuaternion, this.tmpNextPosition);
+      this.tmpPosition
+        .copy(record.renderPosition)
+        .addScaledVector(bodyForward, REMOTE_VISOR_FORWARD_OFFSET);
+      this.tmpPosition.y += REMOTE_VISOR_Y_OFFSET * fadeScale;
+      this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, scale);
+      this.visorMesh.setMatrixAt(index, this.tmpMatrix);
+
       const markerVisibility = Math.max(
         0,
         Math.min(1, (this.camera.position.distanceTo(record.renderPosition) - REMOTE_DIRECTION_MARKER_HIDE_DISTANCE) / REMOTE_DIRECTION_MARKER_FADE_RANGE)
@@ -1246,7 +1262,7 @@ class RemoteExplorersLayer {
         0,
         Math.min(1, (this.camera.position.distanceTo(record.renderPosition) - REMOTE_BEACON_HIDE_DISTANCE) / REMOTE_BEACON_FADE_RANGE)
       );
-      this.tmpPosition.copy(record.renderPosition).addScaledVector(getForward(this.tmpQuaternion, this.tmpNextPosition), REMOTE_DIRECTION_MARKER_FORWARD_OFFSET);
+      this.tmpPosition.copy(record.renderPosition).addScaledVector(bodyForward, REMOTE_DIRECTION_MARKER_FORWARD_OFFSET);
       this.tmpPosition.y += REMOTE_DIRECTION_MARKER_Y_OFFSET;
       this.tmpMatrix.compose(this.tmpPosition, this.tmpQuaternion, this.tmpScale.setScalar(fadeScale * REMOTE_DIRECTION_MARKER_SCALE * markerVisibility));
       this.arrowMesh.setColorAt(index, this.tmpColor.copy(record.color).lerp(this.arrowMixColor, 0.45));
@@ -1262,12 +1278,15 @@ class RemoteExplorersLayer {
 
     this.visibleRecords = visibleRecords;
     this.bodyMesh.count = index;
+    this.visorMesh.count = index;
     this.arrowMesh.count = index;
     this.beaconMesh.count = index;
     this.bodyMesh.instanceMatrix.needsUpdate = true;
+    this.visorMesh.instanceMatrix.needsUpdate = true;
     this.arrowMesh.instanceMatrix.needsUpdate = true;
     this.beaconMesh.instanceMatrix.needsUpdate = true;
     this.bodyMesh.computeBoundingSphere();
+    this.visorMesh.computeBoundingSphere();
     this.arrowMesh.computeBoundingSphere();
     if (this.bodyMesh.instanceColor) this.bodyMesh.instanceColor.needsUpdate = true;
     if (this.arrowMesh.instanceColor) this.arrowMesh.instanceColor.needsUpdate = true;
@@ -1319,7 +1338,7 @@ class RemoteExplorersLayer {
       -((clientY - rect.top) / rect.height) * 2 + 1
     );
     this.raycaster.setFromCamera(this.pickPointer, this.camera);
-    const hits = this.raycaster.intersectObjects([this.bodyMesh, this.arrowMesh], false);
+    const hits = this.raycaster.intersectObjects([this.bodyMesh, this.visorMesh, this.arrowMesh], false);
     for (const hit of hits) {
       if (!Number.isInteger(hit.instanceId)) continue;
       const record = this.visibleRecords[hit.instanceId];
@@ -1409,9 +1428,11 @@ class RemoteExplorersLayer {
     this.labelLayer.remove();
     this.group.removeFromParent();
     this.bodyMesh.geometry.dispose();
+    this.visorMesh.geometry.dispose();
     this.arrowMesh.geometry.dispose();
     this.beaconMesh.geometry.dispose();
     this.bodyMesh.material.dispose();
+    this.visorMesh.material.dispose();
     this.arrowMesh.material.dispose();
     this.beaconMesh.material.dispose();
   }
