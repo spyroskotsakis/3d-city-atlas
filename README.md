@@ -54,7 +54,7 @@ Barcelona is centered on the Sagrada Familia with spires, sculptural facades, mo
 
 ### London
 
-London is centered on the Palace of Westminster and Big Ben / Elizabeth Tower. It includes the Thames, embankments, bridges, Westminster Abbey, London Eye, Trafalgar Square, Buckingham Palace, St Paul's Cathedral, Tower Bridge, Tower of London, The Shard, Somerset House, Covent Garden, Piccadilly Circus, red buses, black cabs, pubs, markets, parks, and animated crowds.
+London is centered on the Palace of Westminster and Big Ben / Elizabeth Tower, with the scene expanded to a wider Greater London footprint. It includes the Thames, embankments, piers, riverboats, Westminster Abbey, London Eye, Trafalgar Square, Buckingham Palace, St Paul's Cathedral, Tower Bridge, Tower of London, The Shard, Somerset House, Covent Garden, Piccadilly Circus, British Museum, King's Cross / St Pancras, Camden Market, Regent's Canal, Hyde Park, Regent's Park, Hampstead Heath, Notting Hill, Kensington museums, Shoreditch and Hoxton warehouses, Hackney and Dalston nightlife, Borough Market, Tate Modern, Globe Theatre, Battersea Power Station, Brixton, Peckham, Canary Wharf, Docklands, Greenwich, Wembley, Underground entrances, Overground and DLR-style trains, red buses, black cabs, pubs, markets, parks, neon nightlife, and animated crowds.
 
 ### Munich
 

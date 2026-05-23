@@ -134,14 +134,14 @@ const CITY_SPECS = [
   {
     id: 'london',
     name: 'London',
-    origin: new THREE.Vector3(520, 0, -520),
-    bounds: 214,
+    origin: new THREE.Vector3(640, 0, -1080),
+    bounds: 320,
     create: createLondonScene,
     heightAt: londonTerrainHeightAt,
     view: {
       label: 'London',
-      title: 'London Westminster view',
-      position: new THREE.Vector3(112, 128, 122),
+      title: 'London Westminster and boroughs view',
+      position: new THREE.Vector3(150, 168, 164),
       targetKey: 'bigBen'
     }
   },
@@ -392,11 +392,11 @@ const CONNECTOR_SPECS = [
     title: 'Paris to London connector road',
     fromCity: 'paris',
     toCity: 'london',
-    start: new THREE.Vector3(532, 0, -238),
-    end: new THREE.Vector3(520, 0, -306),
+    start: new THREE.Vector3(620, 0, -238),
+    end: new THREE.Vector3(640, 0, -760),
     terrain: 'londonTerrain',
     width: 18,
-    curve: 3.5,
+    curve: -8.0,
     cameraLift: 58,
     cameraBack: 54
   },
@@ -406,11 +406,11 @@ const CONNECTOR_SPECS = [
     title: 'London to Berlin connector road',
     fromCity: 'london',
     toCity: 'berlin',
-    start: new THREE.Vector3(734, 0, -520),
-    end: new THREE.Vector3(856, 0, -520),
+    start: new THREE.Vector3(910, 0, -760),
+    end: new THREE.Vector3(910, 0, -634),
     terrain: 'berlinTerrain',
     width: 18,
-    curve: 4.0,
+    curve: 2.5,
     cameraLift: 60,
     cameraBack: 58
   },

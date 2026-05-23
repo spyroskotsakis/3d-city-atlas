@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { Planner } from './planner.js';
 import { VoxelBatcher } from './voxelBatcher.js';
 
-const WORLD_BOUNDS = 212;
-const TERRAIN_CELL = 4;
+const WORLD_BOUNDS = 320;
+const TERRAIN_CELL = 6.4;
 const TILE = 3.55;
-const PEDESTRIAN_COUNT = 210;
-const BUS_COUNT = 14;
-const CAB_COUNT = 24;
+const PEDESTRIAN_COUNT = 330;
+const BUS_COUNT = 24;
+const CAB_COUNT = 42;
+const TRAIN_COUNT = 14;
+const RIVER_BOAT_COUNT = 14;
 const tempColor = new THREE.Color();
 
 const MATERIAL_KEYS = [
@@ -28,7 +30,11 @@ const MATERIAL_KEYS = [
   'shadow',
   'neon',
   'crowd',
-  'skin'
+  'skin',
+  'marble',
+  'graffiti',
+  'neonPink',
+  'neonCyan'
 ];
 
 const LANDMARKS = [
@@ -45,7 +51,26 @@ const LANDMARKS = [
   ['Somerset House', 26, -30, 54, 30],
   ['Covent Garden', 10, -82, 48, 34],
   ['Piccadilly Circus', -76, -108, 42, 32],
-  ['Canary Wharf', 172, 72, 52, 38]
+  ['Leadenhall Market', 94, -78, 40, 28],
+  ['Bank of England', 116, -58, 38, 30],
+  ['Canary Wharf', 226, 78, 62, 46],
+  ['Greenwich', 268, 166, 70, 48],
+  ['British Museum', -18, -156, 54, 38],
+  ["King's Cross / St Pancras", 48, -214, 70, 40],
+  ['Camden Market', -66, -246, 74, 48],
+  ['Regent Park', -94, -190, 82, 58],
+  ['Hyde Park', -186, -124, 116, 74],
+  ['Notting Hill', -244, -150, 70, 46],
+  ['Kensington Museums', -216, -62, 76, 44],
+  ['Shoreditch / Hoxton', 156, -130, 74, 50],
+  ['Hackney / Dalston', 204, -198, 82, 52],
+  ['Borough Market', 58, 78, 58, 42],
+  ['Tate Modern / Globe', 36, 48, 64, 34],
+  ['Battersea Power Station', -188, 86, 80, 44],
+  ['Brixton', -92, 226, 82, 52],
+  ['Peckham', 46, 228, 76, 50],
+  ['Wembley Stadium', -268, -248, 78, 56],
+  ['Hampstead Heath', -150, -286, 86, 54]
 ];
 
 function createRng(seed = 0x4c4f4e44) {
@@ -151,11 +176,15 @@ export function createLondonScene(materials) {
   buildWestEnd({ addTop, addTiledRect, addLabel, rng });
   buildBuckingham({ addTop, addTiledRect, addLabel });
   buildCityAndEast({ addTop, addTiledRect, addLabel });
+  buildWiderLondon({ addTop, addTiledRect, addLabel, rng });
+  buildTransitAndNightlife({ planner, addTop, addTiledRect, addLabel, rng });
   const blocks = buildUrbanBlocks({ planner, batch, addTop, rng });
   buildStreetDetails({ planner, addTop, rng });
   const pedestrians = buildPedestrians({ animated, rng });
   const buses = buildBuses({ animated, rng });
   const cabs = buildCabs({ animated, rng });
+  const trains = buildTrains({ animated, rng });
+  const boats = buildRiverBoats({ animated, rng });
 
   const { group, total } = batch.build();
   group.name = 'procedural-london-voxel-city';
@@ -168,7 +197,25 @@ export function createLondonScene(materials) {
       westminster: new THREE.Vector3(-28, 22, 2),
       bigBen: new THREE.Vector3(-72, 34, -6),
       thames: new THREE.Vector3(12, 8, 34),
+      londonEye: new THREE.Vector3(12, 44, 42),
+      trafalgar: new THREE.Vector3(-34, 16, -78),
+      coventGarden: new THREE.Vector3(10, 12, -82),
+      soho: new THREE.Vector3(-66, 14, -122),
       towerBridge: new THREE.Vector3(142, 22, 18),
+      stPauls: new THREE.Vector3(72, 30, -42),
+      buckingham: new THREE.Vector3(-112, 22, -72),
+      westEnd: new THREE.Vector3(-58, 14, -100),
+      city: new THREE.Vector3(116, 32, -58),
+      southBank: new THREE.Vector3(36, 16, 48),
+      camden: new THREE.Vector3(-66, 16, -246),
+      shoreditch: new THREE.Vector3(156, 18, -130),
+      boroughMarket: new THREE.Vector3(58, 14, 78),
+      nottingHill: new THREE.Vector3(-244, 14, -150),
+      battersea: new THREE.Vector3(-188, 36, 86),
+      canaryWharf: new THREE.Vector3(226, 54, 78),
+      greenwich: new THREE.Vector3(268, 18, 166),
+      hydePark: new THREE.Vector3(-186, 8, -124),
+      southLondon: new THREE.Vector3(-26, 16, 226),
       aerial: new THREE.Vector3(0, 9, -6)
     },
     metrics: {
@@ -176,6 +223,8 @@ export function createLondonScene(materials) {
       pedestrians,
       buses,
       cabs,
+      trams: trains,
+      boats,
       reservations: planner.reservations.length,
       monuments: LANDMARKS.length,
       blocks
@@ -191,10 +240,15 @@ function reserveLandmarks(planner) {
     planner.reserveRect(tag, x, z, width, depth, { force: true, type: 'landmark' });
   });
   [
+    ['Vauxhall Bridge', -196, 36, 58, 16],
     ['Westminster Bridge', -28, 24, 50, 14],
     ['Waterloo Bridge', 24, 8, 48, 14],
+    ['Blackfriars Bridge', 60, 10, 54, 14],
     ['London Bridge', 96, 12, 48, 14],
-    ['Tower Bridge Span', 142, 18, 66, 16]
+    ['Southwark Bridge', 120, 14, 54, 14],
+    ['Tower Bridge Span', 142, 18, 66, 16],
+    ['Docklands Footbridge', 236, 62, 58, 16],
+    ['Greenwich River Crossing', 274, 132, 58, 16]
   ].forEach(([tag, x, z, width, depth]) => planner.reserveRect(tag, x, z, width, depth, { force: true, type: 'bridge' }));
 }
 
@@ -210,7 +264,12 @@ function buildTerrain(batch) {
       const park =
         (x > -146 && x < -70 && z > -104 && z < -42) ||
         (x > -20 && x < 40 && z > -102 && z < -70) ||
-        (x > -62 && x < -20 && z > -36 && z < -10);
+        (x > -62 && x < -20 && z > -36 && z < -10) ||
+        (x > -244 && x < -126 && z > -162 && z < -86) ||
+        (x > -146 && x < -54 && z > -220 && z < -162) ||
+        (x > -194 && x < -104 && z > -314 && z < -258) ||
+        (x > -126 && x < -44 && z > 182 && z < 260) ||
+        (x > 236 && x < 306 && z > 138 && z < 198);
       const bank = Math.abs(z - thamesCenterZ(x)) < thamesWidthAt(x) / 2 + 10;
       batch.add(park || bank ? 'londonGrass' : 'londonTerrain', x, h / 2 - 0.04, z, TERRAIN_CELL * 1.04, h, TERRAIN_CELL * 1.04);
     }
@@ -218,7 +277,7 @@ function buildTerrain(batch) {
 }
 
 function buildThames({ batch, addTop, addTiledRect, addLabel }) {
-  for (let x = -172; x <= 176; x += 10) {
+  for (let x = -284; x <= 300; x += 10) {
     const centerZ = thamesCenterZ(x);
     addTop('concrete', x, centerZ - thamesWidthAt(x) / 2 - 4.8, 9, 0.18, 3.0, null);
     addTop('concrete', x, centerZ + thamesWidthAt(x) / 2 + 4.8, 9, 0.18, 3.0, null);
@@ -229,18 +288,30 @@ function buildThames({ batch, addTop, addTiledRect, addLabel }) {
   }
 
   [
+    [-196, 36, 'Vauxhall Bridge'],
     [-28, 24, 'Westminster Bridge'],
     [24, 8, 'Waterloo Bridge'],
+    [60, 10, 'Blackfriars Bridge'],
     [96, 12, 'London Bridge'],
-    [142, 18, 'Tower Bridge']
+    [120, 14, 'Southwark Bridge'],
+    [142, 18, 'Tower Bridge'],
+    [236, 62, 'Docklands Footbridge'],
+    [274, 132, 'Greenwich River Crossing']
   ].forEach(([x, z, name]) => {
     addTiledRect('concrete', x, z, 54, 12, { color: '#858983', height: 0.18, tile: 3.2 });
     batch.addTop('steel', x, topY(x, z) + 0.5, z - 6.2, 54, 0.9, 0.58);
     batch.addTop('steel', x, topY(x, z) + 0.5, z + 6.2, 54, 0.9, 0.58);
-    addLabel(name, x, topY(x, z) + 5, z);
+    if (name === 'Westminster Bridge' || name === 'Tower Bridge') addLabel(name, x, topY(x, z) + 5, z);
   });
 
   addLabel('River Thames', 42, 5, thamesCenterZ(42));
+
+  for (let x = -224; x <= 286; x += 46) {
+    const z = thamesCenterZ(x);
+    addTop('wood', x, z + thamesWidthAt(x) / 2 + 9, 18, 0.34, 5.4, null);
+    addTop('steel', x, z + thamesWidthAt(x) / 2 + 12.5, 12, 0.42, 1.6, 0x66727a);
+    addTop('wood', x + 4, z + thamesWidthAt(x) / 2 + 14.6, 8, 0.28, 2.2, null);
+  }
 }
 
 function buildStreets({ reserveRoad, addTiledRect, addTop }) {
@@ -255,12 +326,32 @@ function buildStreets({ reserveRoad, addTiledRect, addTop }) {
   reserveRoad('South Bank', 36, 44, 128, 7, -0.08);
   reserveRoad('Westminster approach', -48, -18, 70, 8, 0.05);
   reserveRoad('City approach', 92, -18, 8, 82, 0);
+  reserveRoad('Marylebone Euston Road', -8, -204, 176, 8, 0.02);
+  reserveRoad('Camden High Street', -66, -226, 8, 90, -0.08);
+  reserveRoad('Bishopsgate Shoreditch', 146, -118, 8, 132, -0.04);
+  reserveRoad('Commercial Street', 128, -94, 72, 8, 0.04);
+  reserveRoad('Portobello Road', -244, -154, 8, 82, 0.05);
+  reserveRoad('Kensington High Street', -206, -68, 104, 8, -0.04);
+  reserveRoad('Battersea riverside', -176, 82, 96, 8, 0.1);
+  reserveRoad('Brixton Road', -88, 198, 8, 104, 0.02);
+  reserveRoad('Peckham High Street', 34, 220, 94, 8, -0.05);
+  reserveRoad('Docklands spine', 220, 88, 112, 8, 0.08);
+  reserveRoad('Greenwich approach', 264, 150, 86, 8, 0.15);
+  reserveRoad('Wembley way', -260, -246, 82, 10, 0.05);
 
   addTiledRect('londonGrass', -112, -72, 66, 44, { color: '#61794f', height: 0.14, tile: 3.6 });
   addTiledRect('londonGrass', -42, -22, 36, 22, { color: '#61794f', height: 0.14, tile: 3.6 });
+  addTiledRect('londonGrass', -186, -124, 116, 74, { color: '#61794f', height: 0.14, tile: 3.8 });
+  addTiledRect('londonGrass', -94, -190, 82, 58, { color: '#61794f', height: 0.14, tile: 3.8 });
+  addTiledRect('londonGrass', -150, -286, 86, 54, { color: '#55714e', height: 0.14, tile: 3.8 });
 
   for (let i = 0; i < 12; i += 1) {
     addTop('concrete', -92 + i * 12, -74, 2.0, 0.14, 7.8);
+  }
+
+  for (let x = -232; x <= -142; x += 16) {
+    addTop('vegetation', x, -126, 2.0, 4.4, 2.0);
+    addTop('wood', x, -108, 6.4, 0.7, 1.0, null);
   }
 }
 
@@ -417,10 +508,235 @@ function buildCityAndEast({ addTop, addTiledRect, addLabel }) {
   addLabel('Canary Wharf', canaryX, topY(canaryX, canaryZ) + 50, canaryZ);
 }
 
+function buildWiderLondon({ addTop, addTiledRect, addLabel, rng }) {
+  buildMuseumQuarter({ addTop, addTiledRect, addLabel });
+  buildNorthLondon({ addTop, addTiledRect, addLabel, rng });
+  buildWestLondon({ addTop, addTiledRect, addLabel, rng });
+  buildSouthLondon({ addTop, addTiledRect, addLabel, rng });
+  buildDocklandsAndGreenwich({ addTop, addTiledRect, addLabel, rng });
+}
+
+function buildMuseumQuarter({ addTop, addTiledRect, addLabel }) {
+  const museumX = -18;
+  const museumZ = -156;
+  addTiledRect('cobblestone', museumX, museumZ, 60, 42, { color: '#7d766d', height: 0.13, tile: 3.4 });
+  addTop('limestone', museumX, museumZ, 44, 9, 22, null);
+  addTop('limestone', museumX, museumZ + 12.4, 36, 8, 5, null);
+  for (let i = -4; i <= 4; i += 1) {
+    addTop('limestone', museumX + i * 4.6, museumZ + 15.2, 1.0, 8.6, 1.0, null);
+  }
+  addTop('slate', museumX, museumZ, 46, 2.6, 24, 0x596066, 0, topY(museumX, museumZ) + 9);
+  addLabel('British Museum', museumX, topY(museumX, museumZ) + 18, museumZ);
+
+  const kingX = 48;
+  const kingZ = -214;
+  addTiledRect('concrete', kingX, kingZ, 76, 44, { color: '#858983', height: 0.13, tile: 3.4 });
+  addTop('brick', kingX - 14, kingZ, 42, 13, 18, 0x9f583d);
+  addTop('glass', kingX + 22, kingZ + 2, 24, 16, 18, 0x9cc8c8);
+  addTop('steel', kingX + 2, kingZ + 20, 72, 1.8, 4.4, 0x66727a);
+  for (let i = -3; i <= 3; i += 1) {
+    addTop('steel', kingX + i * 9, kingZ + 24, 1.2, 8.4, 1.2, 0x66727a);
+  }
+  addLabel("King's Cross / St Pancras", kingX, topY(kingX, kingZ) + 24, kingZ);
+}
+
+function buildNorthLondon({ addTop, addTiledRect, addLabel, rng }) {
+  addTiledRect('water', -66, -232, 92, 6, { color: '#4d8fa5', height: 0.18, tile: 3.2 });
+  addTiledRect('cobblestone', -66, -246, 78, 48, { color: '#7d766d', height: 0.13, tile: 3.4 });
+  for (let i = 0; i < 24; i += 1) {
+    const x = -98 + (i % 6) * 12.8;
+    const z = -260 + Math.floor(i / 6) * 10.5;
+    addTop(i % 3 === 0 ? 'brick' : 'wood', x, z, 7.8, 2.0 + rng() * 1.4, 5.2, i % 3 === 0 ? 0x8f4d39 : 0x7a4d30);
+    addTop(i % 2 ? 'neonPink' : 'neonCyan', x, z + 2.9, 5.0, 0.4, 0.28, null, 0, topY(x, z) + 2.4);
+  }
+  addTop('steel', -94, -232, 20, 1.1, 3.2, 0x66727a);
+  addTop('steel', -38, -232, 20, 1.1, 3.2, 0x66727a);
+  addLabel('Camden Market', -66, topY(-66, -246) + 10, -246);
+
+  addTiledRect('londonGrass', -150, -286, 86, 54, { color: '#55714e', height: 0.14, tile: 3.8 });
+  for (let i = 0; i < 28; i += 1) {
+    addTop('vegetation', -186 + rng() * 72, -308 + rng() * 46, 2.0, 5.0 + rng() * 2, 2.0);
+  }
+  addTop('limestone', -132, -278, 14, 7, 12, null);
+  addLabel('Hampstead Heath', -150, topY(-150, -286) + 9, -286);
+
+  addTiledRect('cobblestone', -18, -206, 64, 28, { color: '#77766d', height: 0.13, tile: 3.4 });
+  for (let i = 0; i < 9; i += 1) {
+    addTop('limestone', -42 + i * 6.6, -204, 4.8, 6.5, 10, null);
+  }
+  addLabel('Islington / Angel', -18, topY(-18, -206) + 12, -206);
+}
+
+function buildWestLondon({ addTop, addTiledRect, addLabel, rng }) {
+  addTiledRect('londonGrass', -186, -124, 116, 74, { color: '#61794f', height: 0.14, tile: 3.8 });
+  addTiledRect('londonGrass', -94, -190, 82, 58, { color: '#61794f', height: 0.14, tile: 3.8 });
+  for (const [x, z, label] of [
+    [-186, -124, 'Hyde Park'],
+    [-94, -190, "Regent's Park"]
+  ]) {
+    addTop('water', x + 14, z + 8, 24, 0.18, 8, 0x4d8fa5);
+    for (let i = 0; i < 30; i += 1) {
+      addTop('vegetation', x - 44 + rng() * 88, z - 26 + rng() * 52, 1.8, 4.2 + rng() * 1.6, 1.8);
+    }
+    addLabel(label, x, topY(x, z) + 8, z);
+  }
+
+  addTiledRect('cobblestone', -244, -150, 74, 48, { color: '#77766d', height: 0.13, tile: 3.4 });
+  for (let i = 0; i < 22; i += 1) {
+    const x = -276 + (i % 5) * 14;
+    const z = -166 + Math.floor(i / 5) * 11;
+    addTop('limestone', x, z, 9, 5.2, 8.5, vary(0xd8cfb7, (i % 4 - 1.5) * 0.035));
+    addTop('neon', x, z + 4.7, 5.2, 0.36, 0.28, 0xe6c663, 0, topY(x, z) + 3.1);
+  }
+  addLabel('Notting Hill / Portobello', -244, topY(-244, -150) + 12, -150);
+
+  addTiledRect('cobblestone', -216, -62, 76, 44, { color: '#77766d', height: 0.13, tile: 3.4 });
+  addTop('limestone', -226, -62, 28, 10, 16, null);
+  addTop('limestone', -194, -60, 24, 9, 14, null);
+  addTop('glass', -216, -42, 18, 9, 10, 0x9cc8c8);
+  addLabel('Kensington Museums', -216, topY(-216, -62) + 16, -62);
+}
+
+function buildSouthLondon({ addTop, addTiledRect, addLabel, rng }) {
+  addTiledRect('cobblestone', 58, 78, 64, 42, { color: '#77766d', height: 0.13, tile: 3.4 });
+  for (let i = 0; i < 18; i += 1) {
+    const x = 34 + (i % 6) * 9;
+    const z = 66 + Math.floor(i / 6) * 9;
+    addTop('wood', x, z, 5.8, 1.2, 3.6, null);
+    addTop('neon', x, z + 2.2, 4.2, 0.32, 0.24, 0xe6c663, 0, topY(x, z) + 1.4);
+  }
+  addLabel('Borough Market', 58, topY(58, 78) + 10, 78);
+
+  addTiledRect('concrete', 36, 48, 70, 34, { color: '#858983', height: 0.13, tile: 3.4 });
+  addTop('brick', 20, 50, 18, 10, 18, 0x9f583d);
+  addTop('shadow', 20, 50, 12, 0.7, 12, 0x2d2924, 0, topY(20, 50) + 10);
+  addTop('limestone', 54, 48, 20, 8, 13, null);
+  addTop('wood', 54, 58, 22, 4.2, 2.0, null);
+  addLabel('Tate Modern / Globe', 36, topY(36, 48) + 16, 48);
+
+  addTiledRect('cobblestone', -188, 86, 82, 44, { color: '#77766d', height: 0.13, tile: 3.4 });
+  addTop('brick', -188, 86, 40, 16, 20, 0x8f4d39);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      addTop('brick', -188 + sx * 16, 86 + sz * 8, 5.2, 28, 5.2, 0x8f4d39);
+    }
+  }
+  addTop('glass', -142, 92, 22, 18, 16, 0x9cc8c8);
+  addLabel('Battersea Power Station', -188, topY(-188, 86) + 34, 86);
+
+  for (const zone of [
+    ['Brixton', -92, 226, 0xd94f45],
+    ['Peckham Rooftops', 46, 228, 0x48d9ff]
+  ]) {
+    const [name, x, z, neonColor] = zone;
+    addTiledRect('cobblestone', x, z, 82, 50, { color: '#77766d', height: 0.13, tile: 3.4 });
+    for (let i = 0; i < 18; i += 1) {
+      const bx = x - 32 + (i % 6) * 12.8;
+      const bz = z - 16 + Math.floor(i / 6) * 13;
+      addTop(i % 2 ? 'brick' : 'concrete', bx, bz, 9, 5 + rng() * 6, 9, i % 2 ? 0x9f583d : 0x8b8d88);
+      if (i % 3 === 0) addTop('graffiti', bx, bz + 4.7, 6.2, 2.6, 0.28, 0x5d5a57, 0, topY(bx, bz) + 3.8);
+      if (i % 4 === 0) addTop('neonPink', bx, bz - 4.7, 5.4, 0.4, 0.28, neonColor, 0, topY(bx, bz) + 5.0);
+    }
+    addLabel(name, x, topY(x, z) + 14, z);
+  }
+}
+
+function buildDocklandsAndGreenwich({ addTop, addTiledRect, addLabel, rng }) {
+  for (const [x, z, width, depth] of [
+    [220, 96, 72, 18],
+    [250, 122, 62, 16],
+    [198, 70, 42, 14]
+  ]) {
+    addTiledRect('water', x, z, width, depth, { color: '#4d8fa5', height: 0.18, tile: 3.2 });
+    addTiledRect('concrete', x, z - depth / 2 - 5, width, 5, { color: '#858983', height: 0.13, tile: 3.4 });
+  }
+  const towerSites = [
+    [176, 50], [202, 48], [232, 54], [266, 74],
+    [164, 88], [300, 96], [202, 138], [296, 138],
+    [198, 136], [236, 142], [274, 148], [304, 132]
+  ];
+  towerSites.forEach(([x, z], index) => {
+    addTop(index % 2 ? 'glass' : 'steel', x, z, 12 + rng() * 8, 20 + rng() * 36, 12 + rng() * 6, index % 2 ? 0x86b2bf : 0x66727a);
+  });
+
+  addTiledRect('cobblestone', 268, 166, 72, 48, { color: '#77766d', height: 0.13, tile: 3.4 });
+  addTop('limestone', 250, 164, 34, 9, 16, null);
+  addTop('slate', 250, 164, 36, 2.4, 18, 0x596066, 0, topY(250, 164) + 9);
+  addTop('wood', 280, 160, 9, 1.2, 28, null, 0.18);
+  addTop('gold', 280, 160, 0.8, 10, 0.8, 0xd8a334);
+  addTiledRect('londonGrass', 286, 190, 44, 26, { color: '#61794f', height: 0.14, tile: 3.8 });
+  addTop('limestone', 286, 194, 11, 11, 11, null);
+  addLabel('Greenwich Maritime Quarter', 268, topY(268, 166) + 18, 166);
+
+  addTiledRect('concrete', -268, -248, 80, 56, { color: '#858983', height: 0.13, tile: 3.4 });
+  addTop('steel', -268, -248, 46, 12, 32, 0x66727a);
+  addTop('londonGrass', -268, -248, 34, 0.24, 22, 0x61794f, 0, topY(-268, -248) + 12);
+  addTop('gold', -268, -218, 2.2, 18, 2.2, 0xd8a334);
+  addLabel('Wembley Stadium', -268, topY(-268, -248) + 24, -248);
+}
+
+function buildTransitAndNightlife({ planner, addTop, addTiledRect, addLabel, rng }) {
+  const stations = [
+    ['Westminster Underground', -46, -12],
+    ['Waterloo Station', 24, 66],
+    ['Victoria Station', -106, -34],
+    ['Paddington Station', -190, -176],
+    ['Liverpool Street', 130, -86],
+    ['London Bridge Station', 86, 42],
+    ['Camden Town', -66, -220],
+    ['Canary Wharf DLR', 222, 92]
+  ];
+  for (const [name, x, z] of stations) {
+    planner.reserveRect(name, x, z, 20, 16, { force: true, type: 'station' });
+    addTiledRect('concrete', x, z, 22, 16, { color: '#858983', height: 0.13, tile: 3.2 });
+    addTop('brick', x, z, 12, 5.5, 7, 0x9f583d);
+    addTop('neon', x, z + 3.8, 8, 0.38, 0.32, 0xd94f45, 0, topY(x, z) + 5.7);
+    addTop('steel', x - 7, z, 0.65, 7.2, 0.65, 0x66727a);
+  }
+
+  const rails = [
+    ['Overground Viaduct', -32, -222, 160, 5, 0.02],
+    ['East London Overground', 172, -164, 116, 5, 0.12],
+    ['DLR Docklands', 224, 104, 116, 5, 0.16]
+  ];
+  for (const [tag, x, z, width, depth, yaw] of rails) {
+    planner.reserveRect(tag, x, z, width, depth + 8, { force: true, type: 'rail' });
+    addTiledRect('steel', x, z, width, depth, { color: '#66727a', height: 0.24, tile: 3.5, yaw });
+    for (let i = -Math.floor(width / 18); i <= Math.floor(width / 18); i += 1) {
+      addTop('concrete', x + i * 18 * Math.cos(yaw), z - i * 18 * Math.sin(yaw), 1.4, 5.2, 1.4, 0x858983);
+    }
+  }
+
+  const venues = [
+    ['Soho Nightlife', -66, -122, 'neonPink'],
+    ['West End Theatres', -32, -110, 'neon'],
+    ['Shoreditch Warehouses', 156, -130, 'neonCyan'],
+    ['Dalston Clubs', 204, -198, 'neonPink'],
+    ['Camden Live Music', -86, -252, 'neonCyan'],
+    ['Brixton Night Market', -92, 226, 'neon'],
+    ['Peckham Rooftop', 46, 228, 'neonPink']
+  ];
+  for (const [name, x, z, light] of venues) {
+    addTiledRect('cobblestone', x, z, 36, 22, { color: '#77766d', height: 0.13, tile: 3.4 });
+    addTop('brick', x - 7, z, 16, 7 + rng() * 5, 12, 0x8f4d39);
+    addTop('shadow', x + 8, z, 14, 6 + rng() * 5, 10, 0x2d2924);
+    addTop(light, x - 7, z + 6.2, 11, 0.48, 0.34, null, 0, topY(x, z) + 5.4);
+    for (let i = 0; i < 7; i += 1) {
+      const px = x - 16 + i * 5.2;
+      const pz = z + 12 + (rng() - 0.5) * 3;
+      addTop('crowd', px, pz, 0.58, 1.05, 0.58, null);
+      addTop('skin', px, pz, 0.36, 0.36, 0.36, null, 0, topY(px, pz) + 1.02);
+    }
+    if (name === 'Soho Nightlife' || name === 'Shoreditch Warehouses' || name === 'Brixton Night Market') {
+      addLabel(name, x, topY(x, z) + 13, z);
+    }
+  }
+}
+
 function buildUrbanBlocks({ planner, batch, addTop, rng }) {
   let placed = 0;
-  const xs = [-156, -130, -104, -78, -52, -26, 0, 26, 52, 78, 104, 132, 158];
-  const zs = [-154, -126, -98, -70, -42, -14, 18, 50, 82, 114, 146];
+  const xs = [-286, -260, -234, -208, -182, -156, -130, -104, -78, -52, -26, 0, 26, 52, 78, 104, 132, 158, 186, 214, 242, 270, 296];
+  const zs = [-282, -254, -226, -198, -170, -142, -114, -86, -58, -30, -2, 30, 62, 94, 126, 158, 190, 222, 254];
 
   for (const x of xs) {
     for (const z of zs) {
@@ -570,6 +886,62 @@ function buildCabs({ animated, rng }) {
   return cabs.length;
 }
 
+function buildTrains({ animated, rng }) {
+  const routes = createTrainRoutes();
+  const trains = [];
+  for (let i = 0; i < TRAIN_COUNT; i += 1) {
+    const route = routes[i % routes.length];
+    trains.push({ route, distance: rng() * route.length, speed: 9 + rng() * 5, lane: (rng() - 0.5) * route.width });
+  }
+
+  const group = new THREE.Group();
+  group.name = 'london-overground-and-dlr-trains';
+  const parts = {
+    body: makeInstancedPart(trains.length, 'london-train-body', 0xd8cfb7),
+    stripe: makeInstancedPart(trains.length, 'london-train-stripe', 0xd94f45),
+    window: makeInstancedPart(trains.length, 'london-train-windows', 0x253f52),
+    coupler: makeInstancedPart(trains.length, 'london-train-coupler', 0x202326)
+  };
+  Object.values(parts).forEach((mesh) => group.add(mesh));
+
+  animated.push({
+    object: group,
+    update(elapsed) {
+      updateTrains(parts, trains, elapsed);
+    }
+  });
+  updateTrains(parts, trains, 0);
+  return trains.length;
+}
+
+function buildRiverBoats({ animated, rng }) {
+  const routes = createRiverBoatRoutes();
+  const boats = [];
+  for (let i = 0; i < RIVER_BOAT_COUNT; i += 1) {
+    const route = routes[i % routes.length];
+    boats.push({ route, distance: rng() * route.length, speed: 5.5 + rng() * 2.8, lane: (rng() - 0.5) * route.width });
+  }
+
+  const group = new THREE.Group();
+  group.name = 'london-thames-riverboats';
+  const parts = {
+    hull: makeInstancedPart(boats.length, 'london-riverboat-hull', 0xd8cfb7),
+    cabin: makeInstancedPart(boats.length, 'london-riverboat-cabin', 0x6d9fb0),
+    stripe: makeInstancedPart(boats.length, 'london-riverboat-red-stripe', 0xb8282e),
+    wake: makeInstancedPart(boats.length, 'london-riverboat-wake', 0xbbe3e5)
+  };
+  Object.values(parts).forEach((mesh) => group.add(mesh));
+
+  animated.push({
+    object: group,
+    update(elapsed) {
+      updateRiverBoats(parts, boats, elapsed);
+    }
+  });
+  updateRiverBoats(parts, boats, 0);
+  return boats.length;
+}
+
 function makeInstancedPart(count, name, color) {
   const material = new THREE.MeshBasicMaterial({ color, vertexColors: false, fog: false });
   material.name = name;
@@ -589,7 +961,13 @@ function createPedestrianRoutes() {
     { width: 5.0, loop: true, points: [[-62, -42], [-26, -42], [-26, 10], [-62, 8]] },
     { width: 5.4, loop: true, points: [[-58, -96], [18, -96], [18, -62], [-58, -62]] },
     { width: 5.0, loop: true, ellipse: { x: -34, z: -78, rx: 28, rz: 20, segments: 36 } },
-    { width: 5.4, loop: true, ellipse: { x: 12, z: 42, rx: 24, rz: 18, segments: 32 } }
+    { width: 5.4, loop: true, ellipse: { x: 12, z: 42, rx: 24, rz: 18, segments: 32 } },
+    { width: 5.0, loop: true, points: [[-98, -260], [-66, -246], [-38, -232], [-66, -220]] },
+    { width: 5.2, loop: true, points: [[-276, -166], [-244, -150], [-210, -140], [-244, -122]] },
+    { width: 5.0, loop: true, points: [[130, -150], [156, -130], [186, -116], [154, -92]] },
+    { width: 5.0, loop: true, points: [[34, 66], [58, 78], [78, 92], [36, 100]] },
+    { width: 5.0, loop: true, points: [[-126, 198], [-92, 226], [-48, 236], [-70, 194]] },
+    { width: 5.0, loop: true, points: [[210, 70], [226, 78], [250, 122], [268, 166]] }
   ].map((definition) => {
     const points = definition.ellipse
       ? makeEllipsePoints(definition.ellipse)
@@ -603,8 +981,30 @@ function createVehicleRoutes() {
     { width: 4.0, loop: true, points: [[-114, -74], [-72, -74], [-34, -78], [20, -62], [92, -50], [136, -2], [96, 12], [24, 8], [-28, 2]] },
     { width: 4.0, loop: true, points: [[-78, -110], [-76, -96], [-34, -78], [-40, -34], [-28, 2], [12, 42], [58, 44], [96, 12]] },
     { width: 4.0, loop: true, points: [[-126, -126], [-30, -124], [-72, -96], [-82, -74], [-40, -48], [20, -62]] },
-    { width: 4.0, loop: true, points: [[12, -82], [36, -62], [76, -50], [92, -18], [96, 12], [142, 18], [94, 58], [36, 44]] }
+    { width: 4.0, loop: true, points: [[12, -82], [36, -62], [76, -50], [92, -18], [96, 12], [142, 18], [94, 58], [36, 44]] },
+    { width: 4.0, loop: true, points: [[-190, -176], [-126, -126], [-76, -108], [-18, -156], [48, -214], [-66, -226]] },
+    { width: 4.0, loop: true, points: [[128, -94], [156, -130], [204, -198], [226, 78], [268, 166], [142, 18]] },
+    { width: 4.0, loop: true, points: [[-188, 86], [-92, 226], [46, 228], [58, 78], [24, 66], [-28, 24]] }
   ].map((definition) => prepareRoute({ ...definition, points: definition.points.map(([x, z]) => ({ x, z })) }));
+}
+
+function createTrainRoutes() {
+  return [
+    { width: 1.4, loop: true, points: [[-102, -222], [-42, -222], [24, -214], [86, -204], [146, -164], [214, -122]] },
+    { width: 1.4, loop: true, points: [[128, -174], [170, -156], [212, -116], [236, -20], [224, 104], [268, 150]] },
+    { width: 1.3, loop: true, points: [[36, -214], [72, -178], [126, -86], [186, -40], [226, 78], [270, 148]] }
+  ].map((definition) => prepareRoute({ ...definition, points: definition.points.map(([x, z]) => ({ x, z })) }));
+}
+
+function createRiverBoatRoutes() {
+  const points = [];
+  for (let x = -270; x <= 292; x += 28) {
+    points.push({ x, z: thamesCenterZ(x) + Math.sin(x * 0.05) * 2 });
+  }
+  return [
+    prepareRoute({ width: 11, loop: false, points }),
+    prepareRoute({ width: 9, loop: false, points: points.map((point) => ({ x: point.x, z: point.z + 6 })) })
+  ];
 }
 
 function makeEllipsePoints({ x, z, rx, rz, segments }) {
@@ -710,6 +1110,42 @@ function updateVehicles(parts, vehicles, elapsed, type) {
       setPart(parts.wheelA, index, x, y, z, yaw, 0, 0.34, 1.18, 2.35, 0.32, 0.42);
       setPart(parts.wheelB, index, x, y, z, yaw, 0, 0.34, -1.18, 2.35, 0.32, 0.42);
     }
+  });
+  Object.values(parts).forEach((mesh) => {
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+}
+
+function updateTrains(parts, trains, elapsed) {
+  trains.forEach((train, index) => {
+    const sample = sampleRoute(train.route, train.distance + elapsed * train.speed);
+    const x = sample.x - sample.tangentZ * train.lane;
+    const z = sample.z + sample.tangentX * train.lane;
+    const y = topY(x, z) + 2.8;
+    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+
+    setPart(parts.body, index, x, y, z, yaw, 0, 0.8, 0, 2.8, 1.45, 13.5);
+    setPart(parts.stripe, index, x, y, z, yaw, 0, 1.1, 0, 2.9, 0.28, 13.7);
+    setPart(parts.window, index, x, y, z, yaw, 0, 1.45, 0.15, 2.95, 0.56, 10.6);
+    setPart(parts.coupler, index, x, y, z, yaw, 0, 0.62, -7.4, 2.2, 0.35, 0.42);
+  });
+  Object.values(parts).forEach((mesh) => {
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+}
+
+function updateRiverBoats(parts, boats, elapsed) {
+  boats.forEach((boat, index) => {
+    const sample = sampleRoute(boat.route, boat.distance + elapsed * boat.speed);
+    const x = sample.x - sample.tangentZ * boat.lane;
+    const z = sample.z + sample.tangentX * boat.lane;
+    const y = 0.74 + Math.sin(elapsed * 1.6 + index) * 0.04;
+    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+
+    setPart(parts.hull, index, x, y, z, yaw, 0, 0.32, 0, 3.4, 0.62, 10.2);
+    setPart(parts.cabin, index, x, y, z, yaw, 0, 1.08, -0.7, 2.3, 0.78, 4.8);
+    setPart(parts.stripe, index, x, y, z, yaw, 0, 0.74, 3.2, 3.5, 0.22, 2.0);
+    setPart(parts.wake, index, x, y, z, yaw, 0, 0.08, -6.6, 3.2, 0.08, 5.0);
   });
   Object.values(parts).forEach((mesh) => {
     mesh.instanceMatrix.needsUpdate = true;

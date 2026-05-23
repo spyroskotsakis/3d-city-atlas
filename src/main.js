@@ -93,7 +93,7 @@ const CITY_NAV_DETAILS = {
   'great-wall': { focus: 'China', tone: 'stone' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
   barcelona: { focus: 'Sagrada Familia', tone: 'mosaic' },
-  london: { focus: 'Westminster', tone: 'river' },
+  london: { focus: 'Greater London', tone: 'river' },
   munich: { focus: 'Marienplatz', tone: 'copper' },
   berlin: { focus: 'Brandenburg', tone: 'neon' },
   vienna: { focus: 'Stephansdom', tone: 'imperial' },
@@ -174,8 +174,18 @@ const CITY_LANDMARKS = {
   london: [
     { label: 'Elizabeth Tower', targetKey: 'bigBen' },
     { label: 'Westminster', targetKey: 'westminster' },
+    { label: 'London Eye', targetKey: 'londonEye' },
+    { label: 'Buckingham', targetKey: 'buckingham' },
+    { label: 'West End', targetKey: 'westEnd' },
+    { label: "St Paul's", targetKey: 'stPauls' },
     { label: 'Tower Bridge', targetKey: 'towerBridge' },
-    { label: 'Thames', targetKey: 'thames' }
+    { label: 'Camden', targetKey: 'camden' },
+    { label: 'Shoreditch', targetKey: 'shoreditch' },
+    { label: 'Borough Market', targetKey: 'boroughMarket' },
+    { label: 'Canary Wharf', targetKey: 'canaryWharf' },
+    { label: 'Greenwich', targetKey: 'greenwich' },
+    { label: 'Hyde Park', targetKey: 'hydePark' },
+    { label: 'London Aerial', targetKey: 'aerial' }
   ],
   munich: [
     { label: 'Neues Rathaus', targetKey: 'rathaus' },
