@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Great Wall, Mount Everest, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Grand Canyon, Brazil, and Peru. Each destination sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between destinations.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Manila, Great Wall, Mount Everest, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Grand Canyon, Brazil, and Peru. Each destination sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between destinations.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded seventeen-destination world.
+- Tested locally on macOS with a 55+ FPS target across the expanded eighteen-destination world.
 
 ## Cities
 
@@ -39,6 +39,10 @@ Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and
 ### Angkor
 
 Angkor is centered on Angkor Wat with the outer moat, long axial causeway, symmetrical galleries, lotus-shaped tower quincunx, courtyards, bas-relief wall bands, naga balustrades, monks, visitors, and ceremonial activity. The region includes Angkor Thom, Bayon face towers, Baphuon, Terrace of the Elephants, Ta Prohm-style root-wrapped ruins, Preah Khan, Ta Keo, Banteay Kdei, Srah Srang, East and West Baray reservoirs, Banteay Srei, Phnom Bakheng, canals, bridges, rice fields, jungle paths, stilt houses, ox carts, boats, and dense tropical overgrowth.
+
+### Manila
+
+Manila is centered on Intramuros with Manila Cathedral, Fort Santiago, San Agustin Church, stone walls, gates, cobbled streets, plazas, horse-carriage energy, street vendors, and the Pasig River. The wider Metro Manila scene includes Rizal Park, Binondo food alleys, Escolta Art Deco heritage, Quiapo markets, Makati CBD, Poblacion hidden bars, BGC High Street, Ortigas, Quezon City, Cubao Expo, Pasay and Manila Bay, Paranaque / Las Pinas, Marikina River Park, Navotas / Malabon markets, port edges, jeepneys, motorcycles, LRT/MRT lines, bridges, ferries, wet street reflections, neon nightlife, business towers, markets, basketball courts, sari-sari style street life, and dense everyday neighborhoods.
 
 ### Great Wall
 
@@ -94,7 +98,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Great Wall`, `Mount Everest`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Grand Canyon`, `Brazil`, `Peru`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Manila`, `Great Wall`, `Mount Everest`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Grand Canyon`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -132,6 +136,7 @@ src/
   athensScene.js    Procedural Athens module
   egyptScene.js     Procedural Ancient Egypt module
   angkorScene.js    Procedural Angkor module
+  manilaScene.js    Procedural Manila / Metro Manila module
   greatWallScene.js Procedural Great Wall of China module
   everestScene.js   Procedural Mount Everest / Himalayas module
   parisScene.js     Procedural Paris module
@@ -180,6 +185,7 @@ The current connectors are:
 - Rome to Athens
 - Athens to Egypt
 - Egypt to Angkor
+- Angkor to Manila
 - Angkor to Great Wall
 - Great Wall to Mount Everest
 - Rome to Paris

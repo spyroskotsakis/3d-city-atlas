@@ -90,6 +90,7 @@ const CITY_NAV_DETAILS = {
   athens: { focus: 'Acropolis and Attica', tone: 'stone' },
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
   angkor: { focus: 'Angkor Wat', tone: 'jungle' },
+  manila: { focus: 'Intramuros / Pasig River', tone: 'bay' },
   'great-wall': { focus: 'China', tone: 'stone' },
   'mount-everest': { focus: 'Nepal / China', tone: 'ice' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
@@ -145,6 +146,25 @@ const CITY_LANDMARKS = {
     { label: 'Ta Prohm', targetKey: 'taProhm' },
     { label: 'Barays', targetKey: 'baray' },
     { label: 'Stilt Village', targetKey: 'village' }
+  ],
+  manila: [
+    { label: 'Intramuros', targetKey: 'intramuros' },
+    { label: 'Manila Cathedral', targetKey: 'cathedral' },
+    { label: 'Fort Santiago', targetKey: 'fortSantiago' },
+    { label: 'Pasig River', targetKey: 'pasigRiver' },
+    { label: 'Rizal Park', targetKey: 'rizalPark' },
+    { label: 'Binondo', targetKey: 'binondo' },
+    { label: 'Quiapo', targetKey: 'quiapo' },
+    { label: 'Escolta', targetKey: 'escolta' },
+    { label: 'Makati', targetKey: 'makati' },
+    { label: 'Poblacion', targetKey: 'poblacion' },
+    { label: 'BGC', targetKey: 'bgc' },
+    { label: 'Ortigas', targetKey: 'ortigas' },
+    { label: 'Quezon City', targetKey: 'quezonCity' },
+    { label: 'Cubao Expo', targetKey: 'cubao' },
+    { label: 'Manila Bay', targetKey: 'manilaBay' },
+    { label: 'Marikina River', targetKey: 'marikina' },
+    { label: 'Manila Aerial', targetKey: 'aerial' }
   ],
   'great-wall': [
     { label: 'Great Wall Ridge', targetKey: 'greatWall' },
@@ -283,7 +303,11 @@ const CITY_LANDMARKS = {
 const CITY_ID_ALIASES = {
   everest: 'mount-everest',
   'mt-everest': 'mount-everest',
-  himalayas: 'mount-everest'
+  himalayas: 'mount-everest',
+  manilla: 'manila',
+  intramuros: 'manila',
+  'metro-manila': 'manila',
+  philippines: 'manila'
 };
 
 for (const [cityId, landmarks] of Object.entries(CITY_LANDMARKS)) {

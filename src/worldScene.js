@@ -9,6 +9,7 @@ import { createEverestScene, everestTerrainHeightAt } from './everestScene.js';
 import { createGrandCanyonScene, grandCanyonTerrainHeightAt } from './grandCanyonScene.js';
 import { createGreatWallScene, greatWallTerrainHeightAt } from './greatWallScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
+import { createManilaScene, manilaTerrainHeightAt } from './manilaScene.js';
 import { createMunichScene, munichTerrainHeightAt } from './munichScene.js';
 import { createNewYorkScene, newYorkTerrainHeightAt } from './newYorkScene.js';
 import { createParisScene, parisTerrainHeightAt } from './parisScene.js';
@@ -88,6 +89,20 @@ const CITY_SPECS = [
       title: 'Angkor Wat temple complex view',
       position: new THREE.Vector3(128, 132, 142),
       targetKey: 'angkorWat'
+    }
+  },
+  {
+    id: 'manila',
+    name: 'Manila',
+    origin: new THREE.Vector3(640, 0, 1770),
+    bounds: 340,
+    create: createManilaScene,
+    heightAt: manilaTerrainHeightAt,
+    view: {
+      label: 'Manila',
+      title: 'Manila Intramuros and Metro Manila view',
+      position: new THREE.Vector3(64, 152, 118),
+      targetKey: 'intramuros'
     }
   },
   {
@@ -332,6 +347,20 @@ const CONNECTOR_SPECS = [
     cameraBack: 68
   },
   {
+    id: 'angkor-manila-road',
+    label: 'A-M Road',
+    title: 'Angkor to Manila connector road',
+    fromCity: 'angkor',
+    toCity: 'manila',
+    start: new THREE.Vector3(108, 0, 1770),
+    end: new THREE.Vector3(300, 0, 1770),
+    terrain: 'manilaTerrain',
+    width: 18,
+    curve: -4.5,
+    cameraLift: 66,
+    cameraBack: 68
+  },
+  {
     id: 'great-wall-everest-road',
     label: 'GW-E Road',
     title: 'Great Wall to Mount Everest connector road',
@@ -539,7 +568,7 @@ const CONNECTOR_RENDER_MARGIN = 360;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-mount-everest-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-manila-great-wall-mount-everest-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
