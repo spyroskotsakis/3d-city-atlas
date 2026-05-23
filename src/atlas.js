@@ -87,6 +87,12 @@ const PALETTE = {
   manilaGrass: '#4f8750',
   manilaBay: '#3f91aa',
   jeepneyChrome: '#bfd0d5',
+  victoriaTerrain: '#9f8756',
+  victoriaSavanna: '#b99053',
+  victoriaRainforest: '#2f7444',
+  victoriaBasalt: '#4e4a43',
+  victoriaFoam: '#dcefee',
+  victoriaMist: '#f4fbfb',
   grandCanyonRim: '#b56c3d',
   grandCanyonPlateau: '#c99a60',
   grandCanyonSandstone: '#d48a4e',
@@ -119,7 +125,9 @@ const TEXTURE_BASE = {
   graffiti: '#ffffff',
   neonPink: '#ffffff',
   neonCyan: '#ffffff',
-  neonPurple: '#ffffff'
+  neonPurple: '#ffffff',
+  victoriaMist: '#ffffff',
+  victoriaFoam: '#ffffff'
 };
 
 function hashSeed(text) {
@@ -409,6 +417,12 @@ export function createMaterialLibrary(renderer) {
     manilaGrass: makeMaterial('manilaGrass', renderer),
     manilaBay: makeMaterial('manilaBay', renderer, { transparent: true, opacity: 0.86, depthWrite: false }),
     jeepneyChrome: makeMaterial('jeepneyChrome', renderer),
+    victoriaTerrain: makeMaterial('victoriaTerrain', renderer),
+    victoriaSavanna: makeMaterial('victoriaSavanna', renderer),
+    victoriaRainforest: makeMaterial('victoriaRainforest', renderer),
+    victoriaBasalt: makeMaterial('victoriaBasalt', renderer),
+    victoriaFoam: makeMaterial('victoriaFoam', renderer, { transparent: true, opacity: 0.82, depthWrite: false }),
+    victoriaMist: makeMaterial('victoriaMist', renderer, { transparent: true, opacity: 0.38, depthWrite: false }),
     grandCanyonRim: makeMaterial('grandCanyonRim', renderer),
     grandCanyonPlateau: makeMaterial('grandCanyonPlateau', renderer),
     grandCanyonSandstone: makeMaterial('grandCanyonSandstone', renderer),

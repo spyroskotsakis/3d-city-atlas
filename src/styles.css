@@ -889,6 +889,10 @@ body.is-flight canvas.webgl {
   background: #3f91aa;
 }
 
+.city-card[data-tone="falls"]::before {
+  background: #7edbd3;
+}
+
 .city-card__index {
   width: 24px;
   height: 24px;

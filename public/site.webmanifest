@@ -1,7 +1,7 @@
 {
   "name": "3D City Atlas",
   "short_name": "City Atlas",
-  "description": "A self-contained procedural WebGL atlas of eighteen flyable 3D destinations.",
+  "description": "A self-contained procedural WebGL atlas of nineteen flyable 3D destinations.",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",

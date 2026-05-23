@@ -89,6 +89,7 @@ const CITY_NAV_DETAILS = {
   venice: { focus: 'Grand Canal', tone: 'lagoon' },
   athens: { focus: 'Acropolis and Attica', tone: 'stone' },
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
+  'victoria-falls': { focus: 'Zambia / Zimbabwe', tone: 'falls' },
   angkor: { focus: 'Angkor Wat', tone: 'jungle' },
   manila: { focus: 'Intramuros / Pasig River', tone: 'bay' },
   'great-wall': { focus: 'China', tone: 'stone' },
@@ -138,6 +139,23 @@ const CITY_LANDMARKS = {
     { label: 'Nile Docks', targetKey: 'nile' },
     { label: 'Temple Courtyard', targetKey: 'temple' },
     { label: 'Necropolis', targetKey: 'necropolis' }
+  ],
+  'victoria-falls': [
+    { label: 'Victoria Falls', targetKey: 'falls' },
+    { label: "Devil's Cataract", targetKey: 'devilsCataract' },
+    { label: 'Main Falls', targetKey: 'mainFalls' },
+    { label: 'Horseshoe Falls', targetKey: 'horseshoeFalls' },
+    { label: 'Rainbow Falls', targetKey: 'rainbowFalls' },
+    { label: 'Eastern Cataract', targetKey: 'easternCataract' },
+    { label: 'Zambezi River', targetKey: 'zambeziRiver' },
+    { label: 'Boiling Pot', targetKey: 'boilingPot' },
+    { label: 'Knife-Edge Bridge', targetKey: 'knifeEdgeBridge' },
+    { label: 'Victoria Falls Bridge', targetKey: 'victoriaFallsBridge' },
+    { label: "Devil's Pool", targetKey: 'devilsPool' },
+    { label: 'Rainforest Trails', targetKey: 'rainforestTrail' },
+    { label: 'Livingstone', targetKey: 'livingstone' },
+    { label: 'Victoria Falls Town', targetKey: 'victoriaFallsTown' },
+    { label: 'Falls Aerial', targetKey: 'aerial' }
   ],
   angkor: [
     { label: 'Angkor Wat', targetKey: 'angkorWat' },
@@ -307,7 +325,14 @@ const CITY_ID_ALIASES = {
   manilla: 'manila',
   intramuros: 'manila',
   'metro-manila': 'manila',
-  philippines: 'manila'
+  philippines: 'manila',
+  victoria: 'victoria-falls',
+  'vic-falls': 'victoria-falls',
+  'mosi-oa-tunya': 'victoria-falls',
+  zambezi: 'victoria-falls',
+  livingstone: 'victoria-falls',
+  zambia: 'victoria-falls',
+  zimbabwe: 'victoria-falls'
 };
 
 for (const [cityId, landmarks] of Object.entries(CITY_LANDMARKS)) {

@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Manila, Great Wall, Mount Everest, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Grand Canyon, Brazil, and Peru. Each destination sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between destinations.
+The current atlas includes Rome, Venice, Athens, Egypt, Victoria Falls, Angkor, Manila, Great Wall, Mount Everest, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Grand Canyon, Brazil, and Peru. Each destination sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between destinations.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded eighteen-destination world.
+- Tested locally on macOS with a 55+ FPS target across the expanded nineteen-destination world.
 
 ## Cities
 
@@ -35,6 +35,10 @@ Athens is centered on the Acropolis hill and the Parthenon. It includes the Prop
 ### Egypt
 
 Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and the Great Sphinx. It includes the pyramids of Khafre and Menkaure, satellite pyramids, mastaba tombs, causeways, the Valley Temple, pylons, obelisks, hypostyle-style courtyards, sphinx-lined paths, a sacred lake, mudbrick villages, granaries, markets, workers, priests, guards, farmers, animals, Nile docks, irrigation canals, reed beds, palm groves, feluccas, cargo boats, and the contrast between green Nile land and desert plateau.
+
+### Victoria Falls
+
+Victoria Falls is centered on the Mosi-oa-Tunya / Victoria Falls escarpment, with Devil's Cataract, Main Falls, Horseshoe Falls, Rainbow Falls, and Eastern Cataract built as separate waterfall sections. The destination includes the upstream Zambezi River with islands and boats, a plunging waterfall curtain, mist plumes, rainbow accents, the Boiling Pot, zigzag basalt gorges, Knife-Edge Bridge, Victoria Falls Bridge, Devil's Pool, rainforest walking trails, lookout platforms, Livingstone, Victoria Falls town, lodges, markets, river docks, safari trucks, wildlife hints, rafts, visitors, and the Zambia / Zimbabwe cross-border setting.
 
 ### Angkor
 
@@ -98,7 +102,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Manila`, `Great Wall`, `Mount Everest`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Grand Canyon`, `Brazil`, `Peru`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Victoria Falls`, `Angkor`, `Manila`, `Great Wall`, `Mount Everest`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Grand Canyon`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -135,6 +139,7 @@ src/
   veniceScene.js    Procedural Venice module
   athensScene.js    Procedural Athens module
   egyptScene.js     Procedural Ancient Egypt module
+  victoriaFallsScene.js Procedural Victoria Falls / Zambezi gorge module
   angkorScene.js    Procedural Angkor module
   manilaScene.js    Procedural Manila / Metro Manila module
   greatWallScene.js Procedural Great Wall of China module
@@ -184,6 +189,7 @@ The current connectors are:
 - Rome to Venice
 - Rome to Athens
 - Athens to Egypt
+- Egypt to Victoria Falls
 - Egypt to Angkor
 - Angkor to Manila
 - Angkor to Great Wall

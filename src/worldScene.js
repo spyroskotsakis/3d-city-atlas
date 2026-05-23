@@ -17,6 +17,7 @@ import { createPeruScene, peruTerrainHeightAt } from './peruScene.js';
 import { createRomeScene, terrainHeightAt as romeTerrainHeightAt } from './romeScene.js';
 import { createVeniceScene, veniceTerrainHeightAt } from './veniceScene.js';
 import { createViennaScene, viennaTerrainHeightAt } from './viennaScene.js';
+import { createVictoriaFallsScene, victoriaFallsTerrainHeightAt } from './victoriaFallsScene.js';
 import { buildSpyrosTourists } from './spyrosTourist.js';
 import { VoxelBatcher } from './voxelBatcher.js';
 
@@ -75,6 +76,20 @@ const CITY_SPECS = [
       title: 'Ancient Egypt Giza Plateau view',
       position: new THREE.Vector3(142, 138, 156),
       targetKey: 'greatPyramid'
+    }
+  },
+  {
+    id: 'victoria-falls',
+    name: 'Victoria Falls',
+    origin: new THREE.Vector3(-970, 0, 1500),
+    bounds: 320,
+    create: createVictoriaFallsScene,
+    heightAt: victoriaFallsTerrainHeightAt,
+    view: {
+      label: 'Victoria Falls',
+      title: 'Victoria Falls Zambezi gorge view',
+      position: new THREE.Vector3(150, 175, 165),
+      targetKey: 'mainFalls'
     }
   },
   {
@@ -333,6 +348,20 @@ const CONNECTOR_SPECS = [
     cameraBack: 58
   },
   {
+    id: 'egypt-victoria-falls-road',
+    label: 'E-VF Road',
+    title: 'Egypt to Victoria Falls connector road',
+    fromCity: 'egypt',
+    toCity: 'victoria-falls',
+    start: new THREE.Vector3(-350, 0, 1450),
+    end: new THREE.Vector3(-650, 0, 1500),
+    terrain: 'victoriaSavanna',
+    width: 18,
+    curve: -6.0,
+    cameraLift: 74,
+    cameraBack: 78
+  },
+  {
     id: 'angkor-great-wall-road',
     label: 'A-GW Road',
     title: 'Angkor to Great Wall connector road',
@@ -568,7 +597,7 @@ const CONNECTOR_RENDER_MARGIN = 360;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-manila-great-wall-mount-everest-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-victoria-falls-angkor-manila-great-wall-mount-everest-paris-barcelona-london-munich-berlin-vienna-new-york-grand-canyon-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
