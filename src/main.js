@@ -87,6 +87,7 @@ const CITY_NAV_DETAILS = {
   athens: { focus: 'Acropolis and Attica', tone: 'stone' },
   egypt: { focus: 'Giza Plateau', tone: 'desert' },
   angkor: { focus: 'Angkor Wat', tone: 'jungle' },
+  'great-wall': { focus: 'China', tone: 'stone' },
   paris: { focus: 'Eiffel Tower', tone: 'iron' },
   barcelona: { focus: 'Sagrada Familia', tone: 'mosaic' },
   london: { focus: 'Westminster', tone: 'river' },
@@ -139,6 +140,18 @@ const CITY_LANDMARKS = {
     { label: 'Ta Prohm', targetKey: 'taProhm' },
     { label: 'Barays', targetKey: 'baray' },
     { label: 'Stilt Village', targetKey: 'village' }
+  ],
+  'great-wall': [
+    { label: 'Great Wall Ridge', targetKey: 'greatWall' },
+    { label: 'Badaling Gate', targetKey: 'badaling' },
+    { label: 'Mutianyu Wall', targetKey: 'mutianyu' },
+    { label: 'Jinshanling Ridge', targetKey: 'jinshanling' },
+    { label: 'Simatai Stairs', targetKey: 'simatai' },
+    { label: 'Jiankou Wild Wall', targetKey: 'jiankou' },
+    { label: 'Beacon Tower', targetKey: 'beacon' },
+    { label: 'Mountain Village', targetKey: 'village' },
+    { label: 'Valley Terraces', targetKey: 'terraces' },
+    { label: 'Great Wall Aerial', targetKey: 'aerial' }
   ],
   paris: [
     { label: 'Eiffel Tower', targetKey: 'eiffel' },

@@ -2,7 +2,7 @@
 
 An offline procedural 3D city atlas built with Vite, Three.js, WebGL, and instanced block geometry. The simulation presents a connected world of iconic city centres that can be explored from high above or flown through at street level.
 
-The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
+The current atlas includes Rome, Venice, Athens, Egypt, Angkor, Great Wall, Paris, Barcelona, London, Munich, Berlin, Vienna, New York, Brazil, and Peru. Each city sits on its own terrain patch with local rivers, canals, roads, landmarks, dense urban blocks, animated crowds, and connector routes between cities.
 
 Live site: https://3d-city-atlas.vercel.app/
 
@@ -16,7 +16,7 @@ Live site: https://3d-city-atlas.vercel.app/
 - Orbit navigation for zooming from monument detail to full-world views.
 - Collision-aware city placement through reserved planner rectangles.
 - Procedural landmark modelling for monuments, rivers, roads, bridges, rail lines, plazas, buildings, people, and vehicles.
-- Tested locally on macOS with a 55+ FPS target across the expanded fourteen-city world.
+- Tested locally on macOS with a 55+ FPS target across the expanded fifteen-city world.
 
 ## Cities
 
@@ -39,6 +39,10 @@ Ancient Egypt is centered on the Giza Plateau with the Great Pyramid of Giza and
 ### Angkor
 
 Angkor is centered on Angkor Wat with the outer moat, long axial causeway, symmetrical galleries, lotus-shaped tower quincunx, courtyards, bas-relief wall bands, naga balustrades, monks, visitors, and ceremonial activity. The region includes Angkor Thom, Bayon face towers, Baphuon, Terrace of the Elephants, Ta Prohm-style root-wrapped ruins, Preah Khan, Ta Keo, Banteay Kdei, Srah Srang, East and West Baray reservoirs, Banteay Srei, Phnom Bakheng, canals, bridges, rice fields, jungle paths, stilt houses, ox carts, boats, and dense tropical overgrowth.
+
+### Great Wall
+
+The Great Wall is centered on a dramatic northern Chinese mountain ridge, with the wall climbing and dropping across steep terrain through watchtowers, crenellated parapets, restored Mutianyu-style runs, rugged Jinshanling and Simatai ridges, wild Jiankou-style broken sections, Badaling and Juyongguan-inspired gates, beacon towers, stairways, banners, hikers, guards, forested slopes, rocky outcrops, valley terraces, and a small mountain village.
 
 ### Paris
 
@@ -82,7 +86,7 @@ Peru is centered on Machu Picchu and Cusco. Machu Picchu includes stepped agricu
 
 The foldable destination panel is the city switcher. It opens for the first five seconds for discoverability, then collapses to leave more room for the 3D world. It sits in the top-right on desktop and becomes a compact bottom-right drawer on smaller screens:
 
-- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Brazil`, `Peru`
+- `Rome`, `Venice`, `Athens`, `Egypt`, `Angkor`, `Great Wall`, `Paris`, `Barcelona`, `London`, `Munich`, `Berlin`, `Vienna`, `New York`, `Brazil`, `Peru`
 - `Fly`
 
 Connector roads remain visible in the world and can be explored in flight mode, but they are not shown as primary navigation buttons.
@@ -120,6 +124,7 @@ src/
   athensScene.js    Procedural Athens module
   egyptScene.js     Procedural Ancient Egypt module
   angkorScene.js    Procedural Angkor module
+  greatWallScene.js Procedural Great Wall of China module
   parisScene.js     Procedural Paris module
   barcelonaScene.js Procedural Barcelona module
   londonScene.js    Procedural London module
@@ -165,12 +170,14 @@ The current connectors are:
 - Rome to Athens
 - Athens to Egypt
 - Egypt to Angkor
+- Angkor to Great Wall
 - Rome to Paris
 - Paris to Barcelona
 - Paris to Munich
 - Munich to Berlin
 - Berlin to Vienna
 - Paris to London
+- London to Berlin
 - Paris to New York, modelled as a longer triple route
 - New York to Brazil
 - Brazil to Peru

@@ -5,6 +5,7 @@ import { createBarcelonaScene, barcelonaTerrainHeightAt } from './barcelonaScene
 import { createBerlinScene, berlinTerrainHeightAt } from './berlinScene.js';
 import { createBrazilScene, brazilTerrainHeightAt } from './brazilScene.js';
 import { createEgyptScene, egyptTerrainHeightAt } from './egyptScene.js';
+import { createGreatWallScene, greatWallTerrainHeightAt } from './greatWallScene.js';
 import { createLondonScene, londonTerrainHeightAt } from './londonScene.js';
 import { createMunichScene, munichTerrainHeightAt } from './munichScene.js';
 import { createNewYorkScene, newYorkTerrainHeightAt } from './newYorkScene.js';
@@ -88,6 +89,20 @@ const CITY_SPECS = [
     }
   },
   {
+    id: 'great-wall',
+    name: 'Great Wall',
+    origin: new THREE.Vector3(-120, 0, 2310),
+    bounds: 270,
+    create: createGreatWallScene,
+    heightAt: greatWallTerrainHeightAt,
+    view: {
+      label: 'Great Wall',
+      title: 'Great Wall mountain ridge view',
+      position: new THREE.Vector3(170, 210, 185),
+      targetKey: 'greatWall'
+    }
+  },
+  {
     id: 'paris',
     name: 'Paris',
     origin: new THREE.Vector3(540, 0, -8),
@@ -160,7 +175,7 @@ const CITY_SPECS = [
   {
     id: 'vienna',
     name: 'Vienna',
-    origin: new THREE.Vector3(1320, 0, -820),
+    origin: new THREE.Vector3(1320, 0, -900),
     bounds: 216,
     create: createViennaScene,
     heightAt: viennaTerrainHeightAt,
@@ -273,6 +288,20 @@ const CONNECTOR_SPECS = [
     cameraBack: 58
   },
   {
+    id: 'angkor-great-wall-road',
+    label: 'A-GW Road',
+    title: 'Angkor to Great Wall connector road',
+    fromCity: 'angkor',
+    toCity: 'great-wall',
+    start: new THREE.Vector3(-120, 0, 1998),
+    end: new THREE.Vector3(-120, 0, 2040),
+    terrain: 'greatWallTerrain',
+    width: 18,
+    curve: 4.8,
+    cameraLift: 72,
+    cameraBack: 68
+  },
+  {
     id: 'rome-paris-road',
     label: 'R-P Road',
     title: 'Rome to Paris connector road',
@@ -334,8 +363,8 @@ const CONNECTOR_SPECS = [
     title: 'Berlin to Vienna connector road',
     fromCity: 'berlin',
     toCity: 'vienna',
-    start: new THREE.Vector3(1180, 0, -612),
-    end: new THREE.Vector3(1228, 0, -604),
+    start: new THREE.Vector3(1180, 0, -634),
+    end: new THREE.Vector3(1228, 0, -684),
     terrain: 'viennaTerrain',
     width: 18,
     curve: 4.2,
@@ -357,16 +386,30 @@ const CONNECTOR_SPECS = [
     cameraBack: 54
   },
   {
+    id: 'london-berlin-road',
+    label: 'L-B Road',
+    title: 'London to Berlin connector road',
+    fromCity: 'london',
+    toCity: 'berlin',
+    start: new THREE.Vector3(734, 0, -520),
+    end: new THREE.Vector3(856, 0, -520),
+    terrain: 'berlinTerrain',
+    width: 18,
+    curve: 4.0,
+    cameraLift: 60,
+    cameraBack: 58
+  },
+  {
     id: 'paris-new-york-road-a',
     label: 'P-NY A',
     title: 'Paris to New York route segment',
     fromCity: 'paris',
     toCity: 'new-york',
     start: new THREE.Vector3(750, 0, -118),
-    end: new THREE.Vector3(990, 0, -250),
+    end: new THREE.Vector3(990, 0, -150),
     terrain: 'nyTerrain',
     width: 16,
-    curve: 8.5,
+    curve: 5.0,
     cameraLift: 66,
     cameraBack: 72,
     showInNav: false
@@ -377,11 +420,11 @@ const CONNECTOR_SPECS = [
     title: 'Long Paris to New York connector route',
     fromCity: 'paris',
     toCity: 'new-york',
-    start: new THREE.Vector3(990, 0, -250),
-    end: new THREE.Vector3(1240, 0, -390),
+    start: new THREE.Vector3(990, 0, -150),
+    end: new THREE.Vector3(1240, 0, -150),
     terrain: 'nyTerrain',
     width: 16,
-    curve: -10.5,
+    curve: 0,
     cameraLift: 78,
     cameraBack: 92
   },
@@ -391,11 +434,11 @@ const CONNECTOR_SPECS = [
     title: 'Paris to New York route segment',
     fromCity: 'paris',
     toCity: 'new-york',
-    start: new THREE.Vector3(1240, 0, -390),
-    end: new THREE.Vector3(1496, 0, -330),
+    start: new THREE.Vector3(1240, 0, -150),
+    end: new THREE.Vector3(1496, 0, -150),
     terrain: 'nyTerrain',
     width: 16,
-    curve: 7.0,
+    curve: -5.0,
     cameraLift: 66,
     cameraBack: 72,
     showInNav: false
@@ -436,7 +479,7 @@ const CONNECTOR_ENDPOINT_PROGRESS = 0.18;
 
 export function createWorldScene(materials) {
   const group = new THREE.Group();
-  group.name = 'procedural-rome-venice-athens-egypt-angkor-paris-barcelona-london-munich-berlin-vienna-new-york-brazil-peru-world';
+  group.name = 'procedural-rome-venice-athens-egypt-angkor-great-wall-paris-barcelona-london-munich-berlin-vienna-new-york-brazil-peru-world';
 
   const modules = CITY_SPECS.map((spec) => {
     const city = spec.create(materials);
