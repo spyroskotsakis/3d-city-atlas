@@ -174,21 +174,29 @@ const CITY_LANDMARKS = {
     { label: 'Pasig River', targetKey: 'pasigRiver' },
     { label: 'Rizal Park', targetKey: 'rizalPark' },
     { label: 'National Museum', targetKey: 'nationalMuseum' },
+    { label: 'City Hall', targetKey: 'cityHall' },
+    { label: 'Jones Bridge', targetKey: 'jonesBridge' },
     { label: 'Binondo', targetKey: 'binondo' },
     { label: 'Quiapo', targetKey: 'quiapo' },
     { label: 'Escolta', targetKey: 'escolta' },
     { label: 'Makati', targetKey: 'makati' },
     { label: 'Greenbelt', targetKey: 'greenbelt' },
+    { label: 'Salcedo', targetKey: 'salcedo' },
     { label: 'Poblacion', targetKey: 'poblacion' },
     { label: 'BGC', targetKey: 'bgc' },
     { label: 'Ortigas', targetKey: 'ortigas' },
+    { label: 'EDSA', targetKey: 'edsa' },
     { label: 'EDSA / MRT', targetKey: 'mrtLrt' },
     { label: 'Quezon City', targetKey: 'quezonCity' },
+    { label: 'Tomas Morato', targetKey: 'tomasMorato' },
     { label: 'Maginhawa', targetKey: 'maginhawa' },
     { label: 'UP Diliman', targetKey: 'upDiliman' },
     { label: 'Cubao Expo', targetKey: 'cubao' },
+    { label: 'Kapitolyo', targetKey: 'kapitolyo' },
     { label: 'La Loma', targetKey: 'laLoma' },
+    { label: 'Manila Bay', targetKey: 'manilaBay' },
     { label: 'Bay Area', targetKey: 'bayArea' },
+    { label: 'Paranaque', targetKey: 'paranaque' },
     { label: 'Navotas', targetKey: 'navotas' },
     { label: 'Port', targetKey: 'port' },
     { label: 'Marikina River', targetKey: 'marikina' },
@@ -1900,11 +1908,20 @@ function updateLabels() {
       mobileControlsRect.height > 0 &&
       isInsideRect(screenX, screenY, mobileControlsRect, 14);
   };
+  const occupiedLabelRects = [];
 
   for (const label of labels) {
     const pos = label.position.clone().project(camera);
     const screenX = (pos.x * 0.5 + 0.5) * width;
     const screenY = (-pos.y * 0.5 + 0.5) * height;
+    const labelWidth = Math.min(190, Math.max(70, label.name.length * 7.2 + 22));
+    const labelHeight = 30;
+    const labelRect = {
+      left: screenX - labelWidth / 2,
+      right: screenX + labelWidth / 2,
+      top: screenY - labelHeight / 2,
+      bottom: screenY + labelHeight / 2
+    };
     const visible =
       pos.z < 1 &&
       screenX > 100 &&
@@ -1914,12 +1931,14 @@ function updateLabels() {
       !inHudZone(screenX, screenY) &&
       !inControlsZone(screenX, screenY) &&
       !inMobileControlsZone(screenX, screenY) &&
+      !occupiedLabelRects.some((rect) => rectsOverlap(labelRect, rect, 8)) &&
       cameraPosition.distanceTo(label.position) < 260;
     if (!visible) {
       label.element.style.display = 'none';
       continue;
     }
 
+    occupiedLabelRects.push(labelRect);
     label.element.style.display = 'block';
     label.element.style.left = `${screenX}px`;
     label.element.style.top = `${screenY}px`;
@@ -1928,6 +1947,10 @@ function updateLabels() {
 
 function isInsideRect(x, y, rect, pad = 0) {
   return x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad;
+}
+
+function rectsOverlap(a, b, pad = 0) {
+  return a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
 }
 
 function updateMetrics(now) {

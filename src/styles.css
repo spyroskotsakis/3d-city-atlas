@@ -1369,7 +1369,7 @@ body.is-flight canvas.webgl {
   }
 
   .landmarks {
-    max-height: 66px;
+    max-height: min(138px, 24dvh);
     overflow-y: auto;
     padding-right: 3px;
   }
@@ -1414,7 +1414,7 @@ body.is-flight canvas.webgl {
   }
 
   .city-nav__rail {
-    max-height: min(360px, calc(100dvh - 300px));
+    max-height: min(300px, 38dvh);
   }
 
   .city-card {
