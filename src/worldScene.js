@@ -382,7 +382,7 @@ const CONNECTOR_SPECS = [
     fromCity: 'angkor',
     toCity: 'manila',
     start: new THREE.Vector3(108, 0, 1770),
-    end: new THREE.Vector3(300, 0, 1770),
+    end: new THREE.Vector3(420, 0, 1770),
     terrain: 'manilaTerrain',
     width: 18,
     curve: -4.5,
@@ -655,6 +655,10 @@ export function createWorldScene(materials) {
       acc.cyclists += module.city.metrics.cyclists ?? 0;
       acc.trams += module.city.metrics.trams ?? 0;
       acc.taxis += module.city.metrics.taxis ?? 0;
+      acc.jeepneys += module.city.metrics.jeepneys ?? 0;
+      acc.motorbikes += module.city.metrics.motorbikes ?? 0;
+      acc.tricycles += module.city.metrics.tricycles ?? 0;
+      acc.trains += module.city.metrics.trains ?? 0;
       acc.buses += module.city.metrics.buses ?? 0;
       acc.cabs += module.city.metrics.cabs ?? 0;
       acc.gondolas += module.city.metrics.gondolas ?? 0;
@@ -671,6 +675,10 @@ export function createWorldScene(materials) {
       cyclists: 0,
       trams: 0,
       taxis: 0,
+      jeepneys: 0,
+      motorbikes: 0,
+      tricycles: 0,
+      trains: 0,
       buses: 0,
       cabs: 0,
       gondolas: 0,

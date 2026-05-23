@@ -1316,16 +1316,17 @@ body.is-flight canvas.webgl {
     top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px));
     left: max(10px, calc(env(safe-area-inset-left, 0px) + 10px));
     width: min(318px, calc(100vw - max(20px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 20px))));
-    max-height: calc(100dvh - max(198px, calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 198px)));
+    max-height: min(318px, calc(100dvh - max(198px, calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 198px))));
     padding: 11px;
   }
 
   .hud:not(.is-collapsed) {
     width: min(318px, calc(100vw - max(20px, calc(env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 20px))));
+    z-index: 12;
   }
 
   .hud__body {
-    max-height: calc(100dvh - 278px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: min(212px, calc(100dvh - 330px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
   }
 
   .hud h1 {
@@ -1360,14 +1361,15 @@ body.is-flight canvas.webgl {
 
   .landmark-panel {
     gap: 6px;
+    order: -1;
   }
 
   .landmark-panel__title {
-    display: none;
+    display: flex;
   }
 
   .landmarks {
-    max-height: 88px;
+    max-height: 66px;
     overflow-y: auto;
     padding-right: 3px;
   }
