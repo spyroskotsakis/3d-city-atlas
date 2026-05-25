@@ -140,6 +140,7 @@ if (reclaimedWaterSamples > 0) failures.push(`Port reclaimed box still has ${rec
 
 const matrix = new THREE.Matrix4();
 const matrixPosition = new THREE.Vector3();
+const matrixScale = new THREE.Vector3();
 let instancedMeshes = 0;
 let scannedInstances = 0;
 let badMatrices = 0;
@@ -150,6 +151,7 @@ let nonWaterBoats = 0;
 let lowBridgeVehicles = 0;
 const roadLikePositions = [];
 const qualityPositions = [];
+const staticRoadOverlaps = [];
 const qualityKinds = new Set([
   'voxels:asphalt',
   'voxels:cobblestone',
@@ -167,6 +169,14 @@ const qualityKinds = new Set([
   'voxels:neonPink',
   'voxels:neonCyan'
 ]);
+const buildingOverlapKinds = new Set([
+  'voxels:concrete',
+  'voxels:brick',
+  'voxels:glass',
+  'voxels:limestone',
+  'voxels:steel'
+]);
+const mainRoadSegments = manilaTopologyProbe.roadSegments();
 
 for (const elapsed of [0, 0.5, 10, 60, 600]) {
   scene.update(elapsed);
@@ -194,6 +204,23 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
       if (elapsed === 0 && qualityKinds.has(object.name)) {
         qualityPositions.push([matrixPosition.x, matrixPosition.z]);
       }
+      if (elapsed === 0 && buildingOverlapKinds.has(object.name) && matrixPosition.y > -9999) {
+        matrixScale.setFromMatrixScale(matrix);
+        const roadOverlap = matrixScale.y >= 3 && matrixScale.x >= 3 && matrixScale.z >= 3
+          ? roadOverlapForFootprint(matrix, matrixPosition, mainRoadSegments)
+          : null;
+        if (roadOverlap) {
+          staticRoadOverlaps.push({
+            kind: object.name,
+            road: roadOverlap,
+            x: Number(matrixPosition.x.toFixed(1)),
+            z: Number(matrixPosition.z.toFixed(1)),
+            sx: Number(matrixScale.x.toFixed(1)),
+            sy: Number(matrixScale.y.toFixed(1)),
+            sz: Number(matrixScale.z.toFixed(1))
+          });
+        }
+      }
     }
   });
 }
@@ -204,6 +231,56 @@ if (hiddenKalesas > 0) failures.push(`Found ${hiddenKalesas} hidden kalesa place
 if (offRoadVehicles > 0) failures.push(`Found ${offRoadVehicles} road vehicle samples away from road decks`);
 if (lowBridgeVehicles > 0) failures.push(`Found ${lowBridgeVehicles} bridge vehicle samples below deck height`);
 if (nonWaterBoats > 0) failures.push(`Found ${nonWaterBoats} boat samples outside navigable water`);
+if (staticRoadOverlaps.length > 0) {
+  failures.push(`Found ${staticRoadOverlaps.length} solid building footprints on main road decks: ${JSON.stringify(staticRoadOverlaps.slice(0, 8))}`);
+}
+
+function roadOverlapForFootprint(matrix, position, roadSegments) {
+  const e = matrix.elements;
+  const center = { x: position.x, z: position.z };
+  const halfX = { x: e[0] * 0.5, z: e[2] * 0.5 };
+  const halfZ = { x: e[8] * 0.5, z: e[10] * 0.5 };
+  const corners = [
+    { x: center.x - halfX.x - halfZ.x, z: center.z - halfX.z - halfZ.z },
+    { x: center.x + halfX.x - halfZ.x, z: center.z + halfX.z - halfZ.z },
+    { x: center.x - halfX.x + halfZ.x, z: center.z - halfX.z + halfZ.z },
+    { x: center.x + halfX.x + halfZ.x, z: center.z + halfX.z + halfZ.z }
+  ];
+  const minX = Math.min(...corners.map((corner) => corner.x));
+  const maxX = Math.max(...corners.map((corner) => corner.x));
+  const minZ = Math.min(...corners.map((corner) => corner.z));
+  const maxZ = Math.max(...corners.map((corner) => corner.z));
+
+  for (const segment of roadSegments) {
+    const roadHalf = segment.width / 2 + 0.35;
+    if (Math.max(segment.a.x, segment.b.x) < minX - roadHalf || Math.min(segment.a.x, segment.b.x) > maxX + roadHalf) continue;
+    if (Math.max(segment.a.z, segment.b.z) < minZ - roadHalf || Math.min(segment.a.z, segment.b.z) > maxZ + roadHalf) continue;
+    const dx = segment.b.x - segment.a.x;
+    const dz = segment.b.z - segment.a.z;
+    const length = Math.hypot(dx, dz);
+    const steps = Math.max(1, Math.ceil(length / 2.2));
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps;
+      const x = segment.a.x + dx * t;
+      const z = segment.a.z + dz * t;
+      if (pointInExpandedFootprint(x, z, center, halfX, halfZ, roadHalf)) return segment.name;
+    }
+  }
+  return null;
+}
+
+function pointInExpandedFootprint(x, z, center, halfX, halfZ, pad) {
+  const relX = x - center.x;
+  const relZ = z - center.z;
+  const xHalf = Math.hypot(halfX.x, halfX.z);
+  const zHalf = Math.hypot(halfZ.x, halfZ.z);
+  if (xHalf <= 0.001 || zHalf <= 0.001) return false;
+  const ux = { x: halfX.x / xHalf, z: halfX.z / xHalf };
+  const uz = { x: halfZ.x / zHalf, z: halfZ.z / zHalf };
+  const localX = relX * ux.x + relZ * ux.z;
+  const localZ = relX * uz.x + relZ * uz.z;
+  return Math.abs(localX) <= xHalf + pad && Math.abs(localZ) <= zHalf + pad;
+}
 
 function nearestRoadDistance(x, z) {
   let best = Infinity;
@@ -268,6 +345,7 @@ const summary = {
   offRoadVehicles,
   nonWaterBoats,
   lowBridgeVehicles,
+  staticRoadOverlaps: staticRoadOverlaps.length,
   roadLikePositions: roadLikePositions.length,
   qualityPositions: qualityPositions.length,
   coverage: coverageSummary
