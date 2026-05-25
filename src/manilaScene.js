@@ -74,17 +74,7 @@ const PROTECTED_LANDMARK_ZONES = [
   ['Fort Santiago protected core', -122, -66, 36, 28],
   ['Rizal Park protected lawn', -112, 70, 84, 50],
   ['National Museum protected block', -118, 112, 64, 42],
-  ['Manila City Hall protected block', -54, 82, 52, 40],
-  ['Binondo heritage spine', -58, -92, 66, 48],
-  ['Quiapo church and market', 12, -130, 54, 42],
-  ['Makati tower podiums', 58, 72, 76, 54],
-  ['BGC high street podiums', 148, 78, 84, 58],
-  ['Ortigas mall podiums', 176, 30, 70, 50],
-  ['UP / QC civic core', 116, -198, 84, 50],
-  ['Cubao Expo and Araneta core', 168, -128, 66, 44],
-  ['Bay Area convention core', -168, 188, 86, 54],
-  ['Port fish-market core', -218, -118, 66, 48],
-  ['Marikina river park core', 268, -114, 66, 46]
+  ['Manila City Hall protected block', -54, 82, 52, 40]
 ];
 
 const PEDESTRIAN_ROUTES = [
@@ -102,21 +92,15 @@ const PEDESTRIAN_ROUTES = [
   [[296, -118], [318, -108], [326, -74], [300, -66], [296, -118]]
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
-const ROAD_ROUTE_POINTS = [
-  [[-190, -236], [-190, 250], [-126, 278], [-76, 210], [-36, 112], [-18, 24], [-4, -104], [8, -172], [94, -238]],
-  [[92, -250], [98, -126], [100, -26], [84, 74], [104, 168], [190, 220]],
-  [[-142, -128], [-72, -114], [8, -126], [96, -76], [172, -18], [218, 72]],
-  [[-24, 92], [58, 72], [148, 78], [220, 92], [286, -88]]
-];
-
-const ROAD_ROUTES = ROAD_ROUTE_POINTS.map((points) => points.map(([x, z]) => ({ x, z })));
-
 const PAVED_ROADS = [
   ['Roxas Boulevard', [[-190, -236], [-190, 250]], 12],
   ['EDSA', [[92, -250], [98, -126], [100, -26], [84, 74], [104, 168]], 12],
   ['C5 Corridor', [[220, -224], [212, -108], [218, 72], [196, 196]], 14],
   ['Ayala Avenue', [[-4, 76], [112, 72]], 8],
-  ['BGC High Street', [[104, 96], [192, 96]], 8],
+  ['BGC Service North', [[104, 64], [192, 64]], 7],
+  ['BGC Service South', [[104, 112], [192, 112]], 7],
+  ['BGC 5th Avenue Link', [[104, 64], [104, 112]], 6],
+  ['BGC 11th Avenue Link', [[192, 64], [192, 112]], 6],
   ['Quezon Avenue', [[18, -126], [104, -186], [170, -184]], 8],
   ['Taft / Rizal Avenue', [[-36, 112], [-18, 24], [-4, -104], [8, -172]], 12],
   ['Port Road', [[-244, -120], [-154, -104], [-62, -88]], 12],
@@ -126,6 +110,8 @@ const PAVED_ROADS = [
   ['Poblacion Night Street', [[-6, 18], [16, 24], [42, 34]], 6],
   ['Cubao Expo Lane', [[142, -142], [168, -128], [202, -118]], 6]
 ];
+
+const ROAD_ROUTES = PAVED_ROADS.map(([, points]) => points.map(([x, z]) => ({ x, z })));
 
 const TRAIN_ROUTES = [
   [[-200, -118], [-94, -82], [-2, -116], [90, -178], [178, -138]],
@@ -139,8 +125,8 @@ const BOAT_ROUTES = [
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const KALESA_ROUTES = [
-  [[-130, -46], [-96, -48], [-66, -34], [-64, 16], [-100, 26], [-128, 8], [-130, -46]],
-  [[-124, -38], [-76, -38], [-68, -4], [-92, 22], [-124, 12], [-124, -38]]
+  [[-128, -24], [-96, -24], [-70, -16], [-70, 16], [-100, 26], [-128, 8], [-128, -24]],
+  [[-120, -16], [-84, -16], [-64, 2], [-84, 24], [-118, 18], [-120, -16]]
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const CYCLIST_ROUTES = [
@@ -171,6 +157,39 @@ const URBAN_FILL_ZONES = [
   { name: 'Marikina river neighborhood fabric', x: 270, z: -102, width: 92, depth: 64, attempts: 76, height: [3.4, 10], material: 'brick', accent: 'gold' },
   { name: 'Port industrial fabric', x: -222, z: -118, width: 90, depth: 78, attempts: 78, height: [3.2, 12], material: 'steel', accent: 'cloth' },
   { name: 'La Loma food district fabric', x: -34, z: -188, width: 78, depth: 54, attempts: 62, height: [3.4, 8.5], material: 'brick', accent: 'neon' }
+];
+
+const CITY_SURFACE_MATS = [
+  { x: -74, z: -134, width: 150, depth: 92, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 12, z: -180, width: 128, depth: 82, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 78, z: -48, width: 142, depth: 92, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 62, z: 52, width: 132, depth: 106, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 158, z: 78, width: 146, depth: 100, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 180, z: -28, width: 122, depth: 84, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: 118, z: -204, width: 158, depth: 104, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: -150, z: 168, width: 136, depth: 116, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: -138, z: 258, width: 126, depth: 84, kind: 'concrete', color: '#8b8d88', tile: 3.4 },
+  { x: -132, z: -202, width: 118, depth: 82, kind: 'asphalt', color: '#34383d', tile: 3.4 },
+  { x: -220, z: -116, width: 88, depth: 76, kind: 'asphalt', color: '#34383d', tile: 3.4 },
+  { x: 270, z: -94, width: 94, depth: 72, kind: 'concrete', color: '#8b8d88', tile: 3.4 }
+];
+
+const CITY_FABRIC_ZONES = [
+  { name: 'Santa Cruz / Tondo compact blocks', x: -96, z: -164, cols: 7, rows: 4, stepX: 13, stepZ: 13, width: 7.2, depth: 7.2, height: [4, 9], material: 'concrete', accent: 'cloth' },
+  { name: 'Binondo north shop blocks', x: -92, z: -128, cols: 7, rows: 3, stepX: 12, stepZ: 11, width: 6.8, depth: 6.2, height: [4.5, 10], material: 'brick', accent: 'neonPink' },
+  { name: 'Recto / Avenida blocks', x: -8, z: -166, cols: 8, rows: 4, stepX: 12, stepZ: 12, width: 6.6, depth: 6.8, height: [4.5, 10.5], material: 'concrete', accent: 'gold' },
+  { name: 'Quiapo fringe blocks', x: 36, z: -122, cols: 5, rows: 4, stepX: 12, stepZ: 12, width: 6.4, depth: 6.4, height: [4, 9], material: 'concrete', accent: 'cloth' },
+  { name: 'Mandaluyong bridge blocks', x: 112, z: -28, cols: 7, rows: 4, stepX: 13, stepZ: 13, width: 7.2, depth: 7.2, height: [5, 14], material: 'concrete', accent: 'neon' },
+  { name: 'Makati fringe blocks', x: 18, z: 64, cols: 5, rows: 5, stepX: 13, stepZ: 13, width: 7.4, depth: 7.4, height: [7, 18], material: 'glass', accent: 'neonCyan' },
+  { name: 'Makati / Pasay edge blocks', x: -42, z: 132, cols: 6, rows: 4, stepX: 13, stepZ: 13, width: 7.4, depth: 7.4, height: [5, 13], material: 'concrete', accent: 'cloth' },
+  { name: 'BGC podium grid', x: 150, z: 128, cols: 7, rows: 3, stepX: 14, stepZ: 13, width: 8.2, depth: 7.6, height: [6, 15], material: 'glass', accent: 'neonCyan' },
+  { name: 'Ortigas north grid', x: 202, z: -16, cols: 6, rows: 4, stepX: 13, stepZ: 13, width: 7.8, depth: 7.6, height: [7, 22], material: 'glass', accent: 'neon' },
+  { name: 'QC food and campus blocks', x: 96, z: -230, cols: 8, rows: 4, stepX: 14, stepZ: 13, width: 7.6, depth: 7.2, height: [4, 10], material: 'concrete', accent: 'graffiti' },
+  { name: 'Cubao station blocks', x: 194, z: -154, cols: 5, rows: 4, stepX: 13, stepZ: 12, width: 7.4, depth: 7.0, height: [5, 14], material: 'concrete', accent: 'neonPink' },
+  { name: 'Bay reclaimed grid', x: -154, z: 228, cols: 7, rows: 4, stepX: 14, stepZ: 14, width: 8.0, depth: 8.0, height: [5, 15], material: 'glass', accent: 'neon' },
+  { name: 'Coastal village grid', x: -118, z: 286, cols: 6, rows: 3, stepX: 13, stepZ: 13, width: 7.2, depth: 7.0, height: [3.5, 8], material: 'concrete', accent: 'cloth' },
+  { name: 'Navotas market grid', x: -146, z: -224, cols: 7, rows: 4, stepX: 12, stepZ: 12, width: 7.0, depth: 6.8, height: [3.5, 8], material: 'steel', accent: 'cloth' },
+  { name: 'Marikina neighborhood grid', x: 290, z: -72, cols: 4, rows: 4, stepX: 13, stepZ: 13, width: 7.2, depth: 7.0, height: [3.5, 8.5], material: 'brick', accent: 'gold' }
 ];
 
 function createRng(seed = 0x4d4e4c41) {
@@ -245,6 +264,10 @@ function isBay(x, z, pad = 0) {
   return x < bayEdge(z) + pad;
 }
 
+function isReclaimedPortLand(x, z, pad = 0) {
+  return x >= -232 - pad && x <= -172 + pad && z >= -154 - pad && z <= -78 + pad;
+}
+
 function isPasig(x, z, pad = 0) {
   return Math.abs(z - pasigWaterCenterZ(x)) <= pasigWidthAt(x) / 2 + pad && x > -260 - pad && x < 294 + pad;
 }
@@ -265,13 +288,26 @@ function isHistoricCore(x, z, pad = 0) {
 }
 
 function isWater(x, z, pad = 0) {
+  if (isReclaimedPortLand(x, z, pad)) return false;
   const pasig = isPasig(x, z, pad);
   if (isHistoricCore(x, z, pad) && !pasig) return false;
   return isBay(x, z, pad) || pasig || esteroDistance(x, z) < 4.4 + pad;
 }
 
 function isDryRouteSurface(x, z, pad = 0) {
+  return isWalkRouteSurface(x, z, pad);
+}
+
+function isWalkRouteSurface(x, z, pad = 0) {
   return !isWater(x, z, pad) || isRoadDeck(x, z, pad);
+}
+
+function isRoadRouteSurface(x, z, pad = 0) {
+  return isRoadDeck(x, z, pad);
+}
+
+function isHistoricStreetSurface(x, z, pad = 0) {
+  return isHistoricCore(x, z, 4) && isWalkRouteSurface(x, z, pad);
 }
 
 function isNavigableWater(x, z, pad = 0) {
@@ -298,6 +334,24 @@ function topY(x, z) {
 function manilaWaterY(x, z) {
   return isBay(x, z, 0.5) && !isPasig(x, z, 0.5) ? 0.34 : 0.62;
 }
+
+function roadSurfaceY(x, z) {
+  if (isWater(x, z, 1.2) && isRoadDeck(x, z, 1.2)) return Math.max(topY(x, z) + 1.45, 1.85);
+  return topY(x, z);
+}
+
+export const manilaTopologyProbe = {
+  isWater,
+  isRoadDeck,
+  isDryRouteSurface,
+  isWalkRouteSurface,
+  isRoadRouteSurface,
+  isHistoricStreetSurface,
+  isNavigableWater,
+  pasigWaterCenterZ,
+  pasigWidthAt,
+  roadSurfaceY
+};
 
 function isParkArea(x, z) {
   return (
@@ -388,10 +442,11 @@ export function createManilaScene(materials) {
   buildTerrain(batch);
   buildWaterways({ addTop, addTiledRect, addLabel });
   buildRoadsAndTransit({ reserveRoadSegment, addTop, addTiledRect, addLabel });
+  const connectedFabric = buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng });
   buildIntramuros({ addTop, addTiledRect, addLabel, rng });
   buildCivicLandmarks({ addTop, addTiledRect, addLabel, rng });
   buildOldManila({ addTop, addTiledRect, addLabel, rng });
-  buildBusinessDistricts({ addTop, addTiledRect, addLabel, rng });
+  buildBusinessDistricts({ planner, addTop, addTiledRect, addLabel, rng });
   buildNeighborhoods({ addTop, addTiledRect, addLabel, rng });
   const cityLifeDetails = buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
   const blocks = buildUrbanBlocks({ planner, addTop, rng });
@@ -417,7 +472,7 @@ export function createManilaScene(materials) {
     focusTargets: {
       intramuros: new THREE.Vector3(-96, topY(-96, -14) + 18, -14),
       cathedral: new THREE.Vector3(-82, topY(-82, -18) + 22, -18),
-      fortSantiago: new THREE.Vector3(-122, topY(-122, -66) + 16, -66),
+      fortSantiago: new THREE.Vector3(-122, topY(-122, -54) + 16, -54),
       sanAgustin: new THREE.Vector3(-100, topY(-100, 16) + 16, 16),
       casaManila: new THREE.Vector3(-70, topY(-70, 16) + 12, 16),
       baluarte: new THREE.Vector3(-132, topY(-132, 24) + 12, 24),
@@ -473,7 +528,8 @@ export function createManilaScene(materials) {
       reservations: planner.reservations.length,
       monuments: LANDMARK_ZONES.length,
       blocks,
-      cityLifeDetails
+      cityLifeDetails,
+      connectedFabric
     },
     update(elapsed) {
       for (const item of animated) item.update(elapsed);
@@ -482,9 +538,6 @@ export function createManilaScene(materials) {
 }
 
 function reserveLandmarkZones(planner) {
-  LANDMARK_ZONES.forEach(([name, x, z, width, depth]) => {
-    planner.reserveRect(name, x, z, width, depth, { force: true, type: 'district' });
-  });
   PROTECTED_LANDMARK_ZONES.forEach(([name, x, z, width, depth]) => {
     planner.reserveRect(name, x, z, width, depth, { force: true, type: 'landmark' });
   });
@@ -867,10 +920,10 @@ function buildQuiapoDetails({ addTop, rng }) {
   addTop('neon', 28, -134, 8, 0.8, 0.34, 0xf0dfb2, 0, topY(28, -134) + 5.2);
 }
 
-function buildBusinessDistricts({ addTop, addTiledRect, addLabel, rng }) {
-  buildBusinessCore({ addTop, addTiledRect, x: 58, z: 72, label: 'Makati CBD', towers: 12, rng });
-  buildBusinessCore({ addTop, addTiledRect, x: 148, z: 78, label: 'BGC High Street', towers: 14, rng, modern: true });
-  buildBusinessCore({ addTop, addTiledRect, x: 176, z: 30, label: 'Ortigas Center', towers: 10, rng });
+function buildBusinessDistricts({ planner, addTop, addTiledRect, addLabel, rng }) {
+  buildBusinessCore({ planner, addTop, addTiledRect, x: 58, z: 72, label: 'Makati CBD', towers: 12, rng });
+  buildBusinessCore({ planner, addTop, addTiledRect, x: 148, z: 78, label: 'BGC High Street', towers: 14, rng, modern: true });
+  buildBusinessCore({ planner, addTop, addTiledRect, x: 176, z: 30, label: 'Ortigas Center', towers: 10, rng });
   buildGreenbeltAndMarkets({ addTop, addTiledRect, addLabel, rng });
   buildBGCArtAndRooftops({ addTop, addTiledRect, addLabel, rng });
   buildOrtigasMalls({ addTop, addTiledRect, addLabel, rng });
@@ -881,15 +934,26 @@ function buildBusinessDistricts({ addTop, addTiledRect, addLabel, rng }) {
   addLabel('Ortigas Center', 176, topY(176, 30) + 32, 30);
 }
 
-function buildBusinessCore({ addTop, addTiledRect, x, z, towers, rng, modern = false }) {
+function buildBusinessCore({ planner, addTop, addTiledRect, x, z, label, towers, rng, modern = false }) {
   addTiledRect('concrete', x, z, 76, 54, { color: '#8b8d88', height: 0.14, tile: 3.4 });
   addTiledRect('manilaGrass', x - 22, z + 16, 20, 12, { color: '#4f8750', height: 0.12, tile: 3.4 });
-  for (let i = 0; i < towers; i += 1) {
-    const tx = x - 30 + (i % 5) * 15 + (rng() - 0.5) * 3;
-    const tz = z - 20 + Math.floor(i / 5) * 18 + (rng() - 0.5) * 3;
+  const towerSlots = [
+    [-31, -21], [-15, -21], [4, -21], [23, -21], [35, -17],
+    [-33, 19], [-16, 20], [2, 21], [20, 20], [35, 18],
+    [-24, 34], [-6, 35], [12, 34], [30, 33]
+  ];
+  let placed = 0;
+  for (let i = 0; i < Math.min(towers, towerSlots.length); i += 1) {
+    const [slotX, slotZ] = towerSlots[i];
+    const tx = x + slotX + (rng() - 0.5) * 2.2;
+    const tz = z + slotZ + (rng() - 0.5) * 2.2;
+    const width = 8 + rng() * 3.4;
+    const depth = 8 + rng() * 3.4;
+    if (!canPlaceUrbanParcel(planner, tx, tz, width, depth, 1.8)) continue;
+    if (!planner.reserveRect(`${label}-tower-${i}`, tx, tz, width + 1.2, depth + 1.2, { type: 'building' })) continue;
     const h = modern ? 18 + rng() * 34 : 14 + rng() * 28;
-    addTop(i % 3 === 0 ? 'glass' : 'concrete', tx, tz, 8 + rng() * 4, h, 8 + rng() * 4, i % 3 === 0 ? 0x9cc8c8 : 0x8b8d88);
-    addTop('steel', tx, tz, 8.8, 0.6, 8.8, 0x66727a, 0, topY(tx, tz) + h);
+    addTop(i % 3 === 0 ? 'glass' : 'concrete', tx, tz, width, h, depth, i % 3 === 0 ? 0x9cc8c8 : 0x8b8d88);
+    addTop('steel', tx, tz, width + 0.8, 0.6, depth + 0.8, 0x66727a, 0, topY(tx, tz) + h);
     addTop(i % 2 ? 'neon' : 'neonCyan', tx - 3.2, tz - 4.9, 0.38, Math.min(14, h * 0.72), 0.28, i % 2 ? 0xd8a334 : 0x48d9ff, 0, topY(tx, tz) + h * 0.28);
     addTop(i % 2 ? 'neonCyan' : 'neon', tx + 3.2, tz - 4.9, 0.38, Math.min(12, h * 0.62), 0.28, i % 2 ? 0x48d9ff : 0xd8a334, 0, topY(tx, tz) + h * 0.36);
     if (i % 5 === 0) {
@@ -897,11 +961,25 @@ function buildBusinessCore({ addTop, addTiledRect, x, z, towers, rng, modern = f
       addTop('steel', tx + 1.8, tz - 1.8, 0.36, 3.8, 0.36, 0x66727a, 0, topY(tx, tz) + h + 0.8);
     }
     if (i % 4 === 0) addTop('neonCyan', tx, tz - 4.8, 4.2, 1.2, 0.35, 0x48d9ff, 0, topY(tx, tz) + h * 0.56);
+    placed += 1;
   }
-  addTop('asphalt', x + 26, z - 24, 18, 0.15, 12, 0x34383d);
-  addTop('gold', x + 26, z - 24, 12, 0.18, 0.45, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
-  addTop('gold', x + 20, z - 24, 0.45, 0.18, 9, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
-  addTop('gold', x + 32, z - 24, 0.45, 0.18, 9, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
+  if (canPlaceUrbanParcel(planner, x + 26, z - 24, 18, 12, 0.8)) {
+    planner.reserveRect(`${label}-parking-podium`, x + 26, z - 24, 20, 14, { type: 'building' });
+    addTop('asphalt', x + 26, z - 24, 18, 0.15, 12, 0x34383d);
+    addTop('gold', x + 26, z - 24, 12, 0.18, 0.45, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
+    addTop('gold', x + 20, z - 24, 0.45, 0.18, 9, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
+    addTop('gold', x + 32, z - 24, 0.45, 0.18, 9, 0xd8a334, 0, topY(x + 26, z - 24) + 0.22);
+  }
+  if (placed < Math.ceil(towers * 0.55)) {
+    for (let i = placed; i < Math.ceil(towers * 0.55); i += 1) {
+      const tx = x - 28 + i * 12;
+      const tz = z + 31 + (i % 2) * 5;
+      if (canPlaceUrbanParcel(planner, tx, tz, 7.2, 7.2, 1.2) && planner.reserveRect(`${label}-skyline-backfill-${i}`, tx, tz, 8.4, 8.4, { type: 'building' })) {
+        addTop('glass', tx, tz, 7.2, modern ? 24 : 18, 7.2, 0x9cc8c8);
+        addTop('steel', tx, tz, 7.8, 0.5, 7.8, 0x66727a, 0, topY(tx, tz) + (modern ? 24 : 18));
+      }
+    }
+  }
 }
 
 function buildNightlifePocket({ addTop, addTiledRect, addLabel, x, z, label, rng }) {
@@ -1195,6 +1273,271 @@ function addBasketballCourt({ addTop, x, z }) {
   addTop('gold', x - 8, z, 0.4, 4, 0.4, 0xd8a334);
   addTop('gold', x + 8, z, 0.4, 4, 0.4, 0xd8a334);
   addTop('cloth', x, z, 14, 0.18, 0.35, 0xd94f45, 0, topY(x, z) + 0.24);
+}
+
+function buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng }) {
+  let count = 0;
+
+  for (const mat of CITY_SURFACE_MATS) {
+    addTiledRect(mat.kind, mat.x, mat.z, mat.width, mat.depth, {
+      color: mat.color,
+      height: 0.08,
+      tile: mat.tile,
+      baseOffset: -0.035
+    });
+    count += Math.floor((mat.width * mat.depth) / 120);
+  }
+
+  for (const zone of CITY_FABRIC_ZONES) {
+    count += buildDistrictStreetGrid({ planner, addTop, zone, rng });
+  }
+
+  count += buildHistoricCivicConnectors({ planner, addTop, rng });
+  count += buildOldManilaParcelFrontages({ planner, addTop, addLabel, rng });
+  count += buildReclaimedPortSystem({ planner, addTop, rng });
+  count += buildNavotasMalabonPortSpine({ planner, addTop, addLabel, rng });
+  return count;
+}
+
+function buildDistrictStreetGrid({ planner, addTop, zone, rng }) {
+  let count = 0;
+  const minX = zone.x - ((zone.cols - 1) * zone.stepX) / 2;
+  const maxX = zone.x + ((zone.cols - 1) * zone.stepX) / 2;
+  const minZ = zone.z - ((zone.rows - 1) * zone.stepZ) / 2;
+  const maxZ = zone.z + ((zone.rows - 1) * zone.stepZ) / 2;
+
+  for (let row = 0; row < zone.rows; row += 1) {
+    const z = minZ + row * zone.stepZ;
+    count += addLocalStreet({ planner, addTop, points: [[minX - 8, z], [maxX + 8, z]], width: 3.0, material: zone.material === 'brick' ? 'cobblestone' : 'asphalt' });
+  }
+
+  for (let col = 0; col < zone.cols; col += 1) {
+    const x = minX + col * zone.stepX;
+    count += addLocalStreet({ planner, addTop, points: [[x, minZ - 8], [x, maxZ + 8]], width: 2.8, material: 'asphalt' });
+  }
+
+  for (let row = 0; row < zone.rows; row += 1) {
+    for (let col = 0; col < zone.cols; col += 1) {
+      const x = minX + col * zone.stepX + (rng() - 0.5) * 2.2;
+      const z = minZ + row * zone.stepZ + (rng() - 0.5) * 2.2;
+      const width = zone.width * (0.82 + rng() * 0.26);
+      const depth = zone.depth * (0.82 + rng() * 0.26);
+      if (!canPlaceUrbanParcel(planner, x, z, width, depth, 1.4)) continue;
+      if (!planner.reserveRect(`${zone.name}-${row}-${col}`, x, z, width + 1.0, depth + 1.0, { type: 'building' })) continue;
+      const height = zone.height[0] + rng() * (zone.height[1] - zone.height[0]);
+      const material = resolveFabricMaterial(zone, height, rng);
+      const yaw = (rng() - 0.5) * 0.08;
+      addTop(material, x, z, width, height, depth, materialColor(material, rng), yaw);
+      addTop(height > 12 ? 'steel' : 'slate', x, z, width + 0.5, 0.42, depth + 0.5, height > 12 ? 0x66727a : 0x5c6268, yaw, topY(x, z) + height);
+      addTop(zone.accent, x, z - depth / 2 - 0.22, width * 0.62, 0.4, 0.22, accentColor(zone.accent, rng), yaw, topY(x, z) + Math.min(4.8, height * 0.58));
+      if (rng() > 0.72) addLaundryLines(addTop, null, x + width * 0.18, z + depth / 2 + 0.6, width * 0.62, yaw);
+      count += 3;
+    }
+  }
+
+  return count;
+}
+
+function addLocalStreet({ planner, addTop, points, width, material = 'asphalt' }) {
+  let count = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const [ax, az] = points[i - 1];
+    const [bx, bz] = points[i];
+    const mx = (ax + bx) / 2;
+    const mz = (az + bz) / 2;
+    if (planner.hasPoint(mx, mz, 'landmark') || isWater(mx, mz, 1.0)) continue;
+    const dx = bx - ax;
+    const dz = bz - az;
+    const length = Math.hypot(dx, dz);
+    const steps = Math.max(1, Math.ceil(length / 11));
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps;
+      const x = ax + dx * t;
+      const z = az + dz * t;
+      if (!planner.hasPoint(x, z, 'landmark')) planner.reserveRect(`local-street-${x.toFixed(1)}-${z.toFixed(1)}`, x, z, width + 3.4, width + 3.4, { force: true, type: 'road' });
+    }
+    buildPath(addTop, [points[i - 1], points[i]], width, material);
+    count += Math.ceil(length / 10);
+  }
+  return count;
+}
+
+function canPlaceUrbanParcel(planner, x, z, width, depth, roadPad = 1.2) {
+  if (footprintTouchesWater(x, z, width, depth, 3.0) || footprintTouchesRoad(x, z, width, depth, roadPad)) return false;
+  return planner.canPlaceRect(x, z, width, depth);
+}
+
+function resolveFabricMaterial(zone, height, rng) {
+  if (height > 18) return rng() > 0.34 ? 'glass' : 'concrete';
+  if (zone.material === 'brick') return rng() > 0.2 ? 'brick' : 'concrete';
+  if (zone.material === 'steel') return rng() > 0.38 ? 'steel' : 'concrete';
+  if (zone.material === 'glass') return rng() > 0.35 ? 'glass' : 'concrete';
+  return rng() > 0.72 ? 'brick' : 'concrete';
+}
+
+function materialColor(material, rng) {
+  if (material === 'brick') return rng() > 0.5 ? 0x9f583d : 0xb96038;
+  if (material === 'glass') return rng() > 0.5 ? 0x9cc8c8 : 0x88bfc6;
+  if (material === 'steel') return 0x66727a;
+  if (material === 'limestone') return 0xd8cfb7;
+  return rng() > 0.5 ? 0x8b8d88 : 0x9a9b94;
+}
+
+function buildHistoricCivicConnectors({ planner, addTop, rng }) {
+  let count = 0;
+  count += addLocalStreet({ planner, addTop, points: [[-82, -54], [-82, -18], [-96, 18], [-112, 50], [-112, 72], [-118, 112]], width: 4.2, material: 'cobblestone' });
+  count += addLocalStreet({ planner, addTop, points: [[-84, 70], [-54, 82], [-32, 90]], width: 3.8, material: 'asphalt' });
+  count += addLocalStreet({ planner, addTop, points: [[-138, 38], [-112, 50], [-76, 52], [-46, 60]], width: 3.4, material: 'cobblestone' });
+  count += addLocalStreet({ planner, addTop, points: [[-132, -44], [-110, -24], [-82, -18], [-62, -8]], width: 3.2, material: 'cobblestone' });
+
+  for (const [x, z, width, depth] of [
+    [-82, -5, 22, 16],
+    [-108, 42, 24, 10],
+    [-58, 62, 22, 10],
+    [-112, 100, 36, 8],
+    [-54, 64, 20, 10]
+  ]) {
+    if (isWater(x, z, 1.5) || planner.hasPoint(x, z, 'landmark')) continue;
+    addTop('cobblestone', x, z, width, 0.11, depth, 0x77766d, 0, topY(x, z) + 0.035);
+    for (let i = 0; i < Math.max(2, Math.floor(width / 8)); i += 1) {
+      const px = x - width / 2 + 4 + i * 8;
+      addTop('gold', px, z - depth / 2 + 1.2, 0.26, 3.2, 0.26, 0xd8a334);
+      addTop('neon', px, z - depth / 2 + 1.2, 0.78, 0.35, 0.78, 0xf0dfb2, 0, topY(px, z) + 2.95);
+      if (i % 2 === 0) addStaticPerson(addTop, px + (rng() - 0.5) * 2, z + 1.8 + rng() * 3.0, 'crowd', 0.78);
+      count += 3;
+    }
+    count += 1;
+  }
+
+  for (let i = 0; i < 9; i += 1) {
+    const z = 44 + i * 7.6;
+    addTop('vegetation', -144, z, 2.1, 3.4, 2.1, 0x4f8750);
+    addTop('vegetation', -78, z, 2.1, 3.4, 2.1, 0x4f8750);
+    count += 2;
+  }
+
+  return count;
+}
+
+function buildOldManilaParcelFrontages({ planner, addTop, addLabel, rng }) {
+  let count = 0;
+  const frontages = [
+    { name: 'Ongpin food alley', points: [[-98, -112], [-76, -116], [-54, -112], [-34, -106]], side: -1, accent: 'neonPink', material: 'brick' },
+    { name: 'Escolta heritage frontage', points: [[-82, -66], [-58, -66], [-32, -68], [-12, -74]], side: 1, accent: 'neonCyan', material: 'limestone' },
+    { name: 'Avenida book row', points: [[-18, -156], [4, -158], [28, -154], [50, -146]], side: -1, accent: 'gold', material: 'concrete' },
+    { name: 'Recto cinema row', points: [[-24, -178], [4, -180], [32, -174], [58, -164]], side: 1, accent: 'neonPink', material: 'concrete' },
+    { name: 'Quiapo market lane', points: [[-12, -142], [8, -140], [30, -136], [46, -126]], side: 1, accent: 'cloth', material: 'concrete' }
+  ];
+
+  for (const frontage of frontages) {
+    for (let i = 1; i < frontage.points.length; i += 1) {
+      const [ax, az] = frontage.points[i - 1];
+      const [bx, bz] = frontage.points[i];
+      const dx = bx - ax;
+      const dz = bz - az;
+      const length = Math.hypot(dx, dz);
+      const nx = (-dz / length) * frontage.side;
+      const nz = (dx / length) * frontage.side;
+      count += addLocalStreet({ planner, addTop, points: [frontage.points[i - 1], frontage.points[i]], width: 2.8, material: 'asphalt' });
+      const parcels = Math.max(2, Math.floor(length / 6));
+      for (let p = 0; p < parcels; p += 1) {
+        const t = (p + 0.5) / parcels;
+        const x = ax + dx * t + nx * 5.0;
+        const z = az + dz * t + nz * 5.0;
+        const width = 4.4 + rng() * 2.0;
+        const depth = 4.8 + rng() * 1.8;
+        if (!canPlaceUrbanParcel(planner, x, z, width, depth, 0.9)) continue;
+        if (!planner.reserveRect(`${frontage.name}-${i}-${p}`, x, z, width + 0.8, depth + 0.8, { type: 'building' })) continue;
+        const height = 4 + rng() * 4.5;
+        addTop(frontage.material, x, z, width, height, depth, materialColor(frontage.material, rng), 0);
+        addTop('slate', x, z, width + 0.4, 0.34, depth + 0.4, 0x5c6268, 0, topY(x, z) + height);
+        addTop(frontage.accent, x - nx * (width / 2 + 0.12), z - nz * (depth / 2 + 0.12), Math.min(4.2, width * 0.78), 0.46, 0.22, accentColor(frontage.accent, rng), 0, topY(x, z) + Math.min(3.8, height * 0.6));
+        if (frontage.name.includes('cinema') && p % 2 === 0) addTop('neon', x, z - depth / 2 - 0.28, width * 0.9, 1.1, 0.26, 0xd8a334, 0, topY(x, z) + 3.1);
+        if (frontage.name.includes('book')) addTop('wood', x + width / 2 + 0.4, z, 1.2, 1.2, depth * 0.72, 0x7a4d30, 0, topY(x, z) + 0.6);
+        if (p % 2 === 0) addStaticPerson(addTop, x - nx * 3.8, z - nz * 3.8, p % 3 === 0 ? 'cloth' : 'crowd', 0.78);
+        count += 5;
+      }
+    }
+  }
+
+  addLabel('Ongpin Food Alleys', -64, topY(-64, -112) + 10, -112);
+  addLabel('Avenida / Recto Book Row', 18, topY(18, -160) + 10, -160);
+  addLabel('Quiapo Underpass Market', 26, topY(26, -136) + 10, -136);
+
+  return count;
+}
+
+function buildReclaimedPortSystem({ planner, addTop, rng }) {
+  let count = 0;
+  addTop('asphalt', -202, -116, 58, 0.11, 64, 0x34383d, 0, topY(-202, -116) + 0.025);
+  for (let i = 0; i < 5; i += 1) {
+    const z = -148 + i * 15;
+    count += addLocalStreet({ planner, addTop, points: [[-230, z], [-176, z]], width: 3.4, material: 'asphalt' });
+  }
+  for (let i = 0; i < 6; i += 1) {
+    const x = -224 + i * 9.2;
+    const z = -138 + (i % 3) * 18;
+    if (!canPlaceUrbanParcel(planner, x, z, 6.2, 7.0, 0.8)) continue;
+    planner.reserveRect(`port-cold-storage-${i}`, x, z, 7.4, 8.2, { type: 'building' });
+    addTop(i % 2 ? 'steel' : 'concrete', x, z, 6.2, 4.2 + rng() * 2.4, 7.0, i % 2 ? 0x66727a : 0x8b8d88);
+    addTop('cloth', x, z - 3.7, 4.6, 0.5, 0.24, i % 2 ? 0x48d9ff : 0xf0dfb2, 0, topY(x, z) + 2.6);
+    count += 3;
+  }
+  for (let i = 0; i < 9; i += 1) {
+    const x = -232 - (i % 3) * 8.5;
+    const z = -146 + Math.floor(i / 3) * 20;
+    addTop('wood', x, z, 14, 0.44, 3.2, 0x7a4d30, 0.03, topY(x, z) + 0.42);
+    addTop('steel', x - 4, z, 2.6, 1.2, 2.0, 0x66727a, 0.03, topY(x, z) + 0.92);
+    count += 2;
+  }
+  return count;
+}
+
+function buildNavotasMalabonPortSpine({ planner, addTop, addLabel, rng }) {
+  let count = 0;
+  count += addLocalStreet({ planner, addTop, points: [[-176, -232], [-146, -220], [-118, -198], [-88, -170], [-68, -146]], width: 4.4, material: 'asphalt' });
+  count += addLocalStreet({ planner, addTop, points: [[-228, -118], [-198, -132], [-166, -154], [-140, -184]], width: 4.2, material: 'asphalt' });
+
+  for (let i = 0; i < 14; i += 1) {
+    const x = -184 + (i % 7) * 10.4;
+    const z = -224 + Math.floor(i / 7) * 18;
+    if (canPlaceDetailFootprint(x, z, 6.4, 4.6, { roadPad: 0.4, waterPad: 1.4 }) && !planner.hasPoint(x, z, 'building')) {
+      addTop('wood', x, z, 6.2, 1.0, 4.2, 0x7a4d30);
+      addTop('cloth', x, z - 2.4, 6.8, 0.38, 4.8, i % 2 ? 0x48d9ff : 0xf0dfb2, 0, topY(x, z) + 0.95);
+      addTop('steel', x + 2.7, z + 1.8, 1.2, 1.2, 1.8, 0x66727a, 0, topY(x, z) + 0.9);
+      if (i % 2 === 0) addStaticPerson(addTop, x - 2.4, z + 3.2, 'crowd', 0.78);
+      count += 4;
+    }
+  }
+
+  for (let i = 0; i < 10; i += 1) {
+    const x = -132 + (i % 5) * 11.2;
+    const z = -188 + Math.floor(i / 5) * 16;
+    if (!canPlaceUrbanParcel(planner, x, z, 6.4, 7.0, 0.8)) continue;
+    if (!planner.reserveRect(`malabon-shop-house-${i}`, x, z, 7.6, 8.2, { type: 'building' })) continue;
+    const h = 4.2 + rng() * 3.4;
+    addTop(i % 2 ? 'brick' : 'concrete', x, z, 6.4, h, 7.0, i % 2 ? 0x9f583d : 0x8b8d88);
+    addTop('slate', x, z, 6.9, 0.38, 7.5, 0x5c6268, 0, topY(x, z) + h);
+    addTop(i % 2 ? 'neonCyan' : 'gold', x, z - 3.7, 4.4, 0.5, 0.24, i % 2 ? 0x48d9ff : 0xd8a334, 0, topY(x, z) + 3.2);
+    count += 3;
+  }
+
+  for (let i = 0; i < 7; i += 1) {
+    const x = -226 + i * 8.4;
+    const z = -104 + (i % 2) * 10;
+    if (isWater(x, z, 0.8) && !isReclaimedPortLand(x, z, 0)) {
+      addTop('wood', x, z, 9.5, 0.42, 2.7, 0x7a4d30, 0.02, topY(x, z) + 0.36);
+      addTop('steel', x + 2.4, z, 2.4, 1.0, 1.6, 0x66727a, 0, topY(x, z) + 0.82);
+      count += 2;
+    }
+  }
+
+  addBasketballCourt({ addTop, x: -88, z: -184 });
+  addTop('limestone', -92, -202, 9.2, 4.8, 7.2, 0xd8cfb7);
+  addTop('gold', -92, -205.8, 6.2, 0.45, 0.28, 0xd8a334, 0, topY(-92, -202) + 3.5);
+  addLabel('Navotas Fish Market', -156, topY(-156, -216) + 9, -216);
+  addLabel('Malabon Riverside Streets', -98, topY(-98, -184) + 9, -184);
+  return count + 8;
 }
 
 function buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng }) {
@@ -1493,7 +1836,7 @@ function buildStreetLife({ planner, addTop, rng }) {
     const sample = sampleRoute(route, rng() * 900);
     const x = sample.x - sample.tangentZ * (3 + rng() * 8);
     const z = sample.z + sample.tangentX * (3 + rng() * 8);
-    if (isWater(x, z, 3) || planner.hasPoint(x, z, 'building')) continue;
+    if (isWater(x, z, 3) || planner.hasPoint(x, z, 'building') || footprintTouchesRoad(x, z, 4.6, 3.4, 0.4)) continue;
     if (i % 4 === 0) {
       addTop('cloth', x, z, 4.8, 2.6, 3.2, i % 8 === 0 ? 0xd94f45 : 0xf0dfb2);
       addTop('gold', x, z - 1.8, 4.5, 0.35, 0.25, 0xd8a334, 0, topY(x, z) + 2.2);
@@ -1789,19 +2132,19 @@ const quaternion = new THREE.Quaternion();
 const scaleVector = new THREE.Vector3();
 const resolvedRoutePoint = { x: 0, z: 0, valid: true };
 
-function resolveDryRoutePoint(sample, lane, pad = 1.2) {
+function resolveRoutePoint(sample, lane, pad, validator) {
   const sideX = -sample.tangentZ;
   const sideZ = sample.tangentX;
   resolvedRoutePoint.x = sample.x + sideX * lane;
   resolvedRoutePoint.z = sample.z + sideZ * lane;
   resolvedRoutePoint.valid = true;
-  if (isDryRouteSurface(resolvedRoutePoint.x, resolvedRoutePoint.z, pad)) return resolvedRoutePoint;
+  if (validator(resolvedRoutePoint.x, resolvedRoutePoint.z, pad)) return resolvedRoutePoint;
 
   const fallbacks = [0, lane * 0.5, -lane * 0.5, lane * 0.25, -lane * 0.25];
   for (const fallbackLane of fallbacks) {
     const x = sample.x + sideX * fallbackLane;
     const z = sample.z + sideZ * fallbackLane;
-    if (isDryRouteSurface(x, z, pad)) {
+    if (validator(x, z, pad)) {
       resolvedRoutePoint.x = x;
       resolvedRoutePoint.z = z;
       resolvedRoutePoint.valid = true;
@@ -1811,34 +2154,24 @@ function resolveDryRoutePoint(sample, lane, pad = 1.2) {
 
   resolvedRoutePoint.x = sample.x;
   resolvedRoutePoint.z = sample.z;
-  resolvedRoutePoint.valid = isDryRouteSurface(sample.x, sample.z, pad);
+  resolvedRoutePoint.valid = validator(sample.x, sample.z, pad);
   return resolvedRoutePoint;
 }
 
+function resolveDryRoutePoint(sample, lane, pad = 1.2) {
+  return resolveRoutePoint(sample, lane, pad, isWalkRouteSurface);
+}
+
+function resolveRoadRoutePoint(sample, lane, pad = 1.2) {
+  return resolveRoutePoint(sample, lane, pad, isRoadRouteSurface);
+}
+
+function resolveHistoricRoutePoint(sample, lane, pad = 1.0) {
+  return resolveRoutePoint(sample, lane, pad, isHistoricStreetSurface);
+}
+
 function resolveWaterRoutePoint(sample, lane, pad = 1.2) {
-  const sideX = -sample.tangentZ;
-  const sideZ = sample.tangentX;
-  resolvedRoutePoint.x = sample.x + sideX * lane;
-  resolvedRoutePoint.z = sample.z + sideZ * lane;
-  resolvedRoutePoint.valid = true;
-  if (isNavigableWater(resolvedRoutePoint.x, resolvedRoutePoint.z, pad)) return resolvedRoutePoint;
-
-  const fallbacks = [0, lane * 0.5, -lane * 0.5, lane * 0.25, -lane * 0.25];
-  for (const fallbackLane of fallbacks) {
-    const x = sample.x + sideX * fallbackLane;
-    const z = sample.z + sideZ * fallbackLane;
-    if (isNavigableWater(x, z, pad)) {
-      resolvedRoutePoint.x = x;
-      resolvedRoutePoint.z = z;
-      resolvedRoutePoint.valid = true;
-      return resolvedRoutePoint;
-    }
-  }
-
-  resolvedRoutePoint.x = sample.x;
-  resolvedRoutePoint.z = sample.z;
-  resolvedRoutePoint.valid = isNavigableWater(sample.x, sample.z, pad);
-  return resolvedRoutePoint;
+  return resolveRoutePoint(sample, lane, pad, isNavigableWater);
 }
 
 function hideParts(parts, index) {
@@ -1903,14 +2236,14 @@ function updateCyclists(parts, cyclists, elapsed) {
 function updateJeepneys(parts, vehicles, elapsed) {
   vehicles.forEach((vehicle, index) => {
     const sample = sampleRoute(vehicle.route, vehicle.distance + elapsed * vehicle.speed);
-    const resolved = resolveDryRoutePoint(sample, vehicle.lane, 1.0);
+    const resolved = resolveRoadRoutePoint(sample, vehicle.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;
     }
     const x = resolved.x;
     const z = resolved.z;
-    const y = topY(x, z) + 0.18;
+    const y = roadSurfaceY(x, z) + 0.18;
     const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
     setPart(parts.body, index, x, y, z, yaw, 0, 1.0, 0, 2.3, 1.25, 4.8);
     setPart(parts.cab, index, x, y, z, yaw, 0, 1.78, -1.2, 2.1, 0.85, 1.7);
@@ -1924,14 +2257,14 @@ function updateJeepneys(parts, vehicles, elapsed) {
 function updateMotorbikes(parts, bikes, elapsed) {
   bikes.forEach((bike, index) => {
     const sample = sampleRoute(bike.route, bike.distance + elapsed * bike.speed);
-    const resolved = resolveDryRoutePoint(sample, bike.lane, 1.0);
+    const resolved = resolveRoadRoutePoint(sample, bike.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;
     }
     const x = resolved.x;
     const z = resolved.z;
-    const y = topY(x, z) + 0.14;
+    const y = roadSurfaceY(x, z) + 0.14;
     const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
     setPart(parts.bike, index, x, y, z, yaw, 0, 0.45, 0, 0.62, 0.34, 1.7);
     setPart(parts.rider, index, x, y, z, yaw, 0, 1.08, -0.15, 0.44, 0.85, 0.42);
@@ -1944,14 +2277,14 @@ function updateMotorbikes(parts, bikes, elapsed) {
 function updateTricycles(parts, tricycles, elapsed) {
   tricycles.forEach((tricycle, index) => {
     const sample = sampleRoute(tricycle.route, tricycle.distance + elapsed * tricycle.speed);
-    const resolved = resolveDryRoutePoint(sample, tricycle.lane, 1.0);
+    const resolved = resolveRoadRoutePoint(sample, tricycle.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;
     }
     const x = resolved.x;
     const z = resolved.z;
-    const y = topY(x, z) + 0.14;
+    const y = roadSurfaceY(x, z) + 0.14;
     const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
     setPart(parts.bike, index, x, y, z, yaw, -0.3, 0.46, 0, 0.58, 0.34, 1.65);
     setPart(parts.sidecar, index, x, y, z, yaw, 0.58, 0.58, 0.08, 0.88, 0.64, 1.22);
@@ -1964,14 +2297,14 @@ function updateTricycles(parts, tricycles, elapsed) {
 function updateTaxis(parts, taxis, elapsed) {
   taxis.forEach((taxi, index) => {
     const sample = sampleRoute(taxi.route, taxi.distance + elapsed * taxi.speed);
-    const resolved = resolveDryRoutePoint(sample, taxi.lane, 1.0);
+    const resolved = resolveRoadRoutePoint(sample, taxi.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;
     }
     const x = resolved.x;
     const z = resolved.z;
-    const y = topY(x, z) + 0.16;
+    const y = roadSurfaceY(x, z) + 0.16;
     const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
     setPart(parts.body, index, x, y, z, yaw, 0, 0.72, 0, 1.65, 0.72, 3.1);
     setPart(parts.roof, index, x, y, z, yaw, 0, 1.18, -0.2, 1.35, 0.48, 1.55);
@@ -1984,14 +2317,14 @@ function updateTaxis(parts, taxis, elapsed) {
 function updateBuses(parts, buses, elapsed) {
   buses.forEach((bus, index) => {
     const sample = sampleRoute(bus.route, bus.distance + elapsed * bus.speed);
-    const resolved = resolveDryRoutePoint(sample, bus.lane, 1.0);
+    const resolved = resolveRoadRoutePoint(sample, bus.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;
     }
     const x = resolved.x;
     const z = resolved.z;
-    const y = topY(x, z) + 0.2;
+    const y = roadSurfaceY(x, z) + 0.2;
     const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
     setPart(parts.body, index, x, y, z, yaw, 0, 1.0, 0, 2.2, 1.3, 5.4);
     setPart(parts.stripe, index, x, y, z, yaw, 0, 1.42, -0.2, 2.3, 0.28, 5.0);
@@ -2039,7 +2372,7 @@ function updateBoats(parts, boats, elapsed) {
 function updateKalesas(parts, kalesas, elapsed) {
   kalesas.forEach((kalesa, index) => {
     const sample = sampleRoute(kalesa.route, kalesa.distance + elapsed * kalesa.speed);
-    const resolved = resolveDryRoutePoint(sample, kalesa.lane, 1.0);
+    const resolved = resolveHistoricRoutePoint(sample, kalesa.lane, 1.0);
     if (!resolved.valid) {
       hideParts(parts, index);
       return;

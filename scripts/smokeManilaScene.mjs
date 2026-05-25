@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createManilaScene } from '../src/manilaScene.js';
+import { createManilaScene, manilaTerrainHeightAt, manilaTopologyProbe } from '../src/manilaScene.js';
 
 const MATERIAL_KEYS = [
   'manilaTerrain',
@@ -43,12 +43,24 @@ const REQUIRED_FOCUS_TARGETS = [
   'quiapo',
   'escolta',
   'makati',
+  'greenbelt',
+  'salcedo',
   'poblacion',
   'bgc',
   'ortigas',
+  'edsa',
+  'mrtLrt',
   'quezonCity',
+  'tomasMorato',
+  'maginhawa',
+  'upDiliman',
   'cubao',
+  'kapitolyo',
+  'laLoma',
+  'manilaBay',
   'bayArea',
+  'paranaque',
+  'navotas',
   'port',
   'marikina',
   'aerial'
@@ -97,15 +109,64 @@ if (animatedSum !== scene.metrics.animatedInstances) {
   failures.push(`Animated metric mismatch: expected ${animatedSum}, got ${scene.metrics.animatedInstances}`);
 }
 
-if (scene.metrics.blocks < 175) failures.push(`Manila block density regressed: ${scene.metrics.blocks}`);
+const rebuiltDensity = scene.metrics.blocks + Math.floor((scene.metrics.connectedFabric ?? 0) / 18);
+if (scene.metrics.blocks < 120) failures.push(`Manila urban block fallback regressed: ${scene.metrics.blocks}`);
+if ((scene.metrics.connectedFabric ?? 0) < 1800) failures.push(`Manila connected fabric regressed: ${scene.metrics.connectedFabric ?? 0}`);
+if (rebuiltDensity < 250) failures.push(`Manila rebuilt density regressed: ${rebuiltDensity}`);
 if (scene.metrics.cityLifeDetails < 650) failures.push(`Manila city-life details regressed: ${scene.metrics.cityLifeDetails}`);
 if (scene.labels.length < 50) failures.push(`Manila labels regressed: ${scene.labels.length}`);
+for (const expectedLabel of ['Ongpin Food Alleys', 'Avenida / Recto Book Row', 'Quiapo Underpass Market']) {
+  if (!scene.labels.some((label) => label.name === expectedLabel)) failures.push(`Missing rebuilt local label: ${expectedLabel}`);
+}
+
+const waterFocusTargets = new Set(['pasig', 'pasigRiver', 'jonesBridge', 'bay', 'manilaBay']);
+for (const [key, target] of Object.entries(scene.focusTargets)) {
+  if (waterFocusTargets.has(key)) continue;
+  if (manilaTopologyProbe.isWater(target.x, target.z, 1.2)) failures.push(`Dry focus target is in water: ${key}`);
+  if (target.y - manilaTerrainHeightAt(target.x, target.z) < 7) failures.push(`Focus target camera too low: ${key}`);
+}
+
+if (manilaTopologyProbe.isWater(-218, -118, 2)) failures.push('Port focus is still classified as water');
+if (manilaTerrainHeightAt(-218, -118) <= 0.7) failures.push('Port reclaimed land terrain is too low');
+if (!manilaTopologyProbe.isWater(-246, -118, 0)) failures.push('Adjacent Manila Bay water beside port was lost');
+if (!manilaTopologyProbe.isWater(-250, -104, 0)) failures.push('Adjacent dock water beside port was lost');
+let reclaimedWaterSamples = 0;
+for (let x = -232; x <= -172; x += 8) {
+  for (let z = -154; z <= -78; z += 8) {
+    if (manilaTopologyProbe.isWater(x, z, 0)) reclaimedWaterSamples += 1;
+  }
+}
+if (reclaimedWaterSamples > 0) failures.push(`Port reclaimed box still has ${reclaimedWaterSamples} water samples`);
 
 const matrix = new THREE.Matrix4();
+const matrixPosition = new THREE.Vector3();
 let instancedMeshes = 0;
 let scannedInstances = 0;
 let badMatrices = 0;
-let hiddenPedestrians = 0;
+let hiddenAnimated = 0;
+let offRoadVehicles = 0;
+let hiddenKalesas = 0;
+let nonWaterBoats = 0;
+let lowBridgeVehicles = 0;
+const roadLikePositions = [];
+const qualityPositions = [];
+const qualityKinds = new Set([
+  'voxels:asphalt',
+  'voxels:cobblestone',
+  'voxels:limestone',
+  'voxels:concrete',
+  'voxels:brick',
+  'voxels:glass',
+  'voxels:steel',
+  'voxels:gold',
+  'voxels:wood',
+  'voxels:cloth',
+  'voxels:vegetation',
+  'voxels:graffiti',
+  'voxels:neon',
+  'voxels:neonPink',
+  'voxels:neonCyan'
+]);
 
 for (const elapsed of [0, 0.5, 10, 60, 600]) {
   scene.update(elapsed);
@@ -116,13 +177,85 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
       object.getMatrixAt(index, matrix);
       scannedInstances += 1;
       if (!matrix.elements.every(Number.isFinite)) badMatrices += 1;
-      if (object.name === 'manila-pedestrian-body' && matrix.elements[13] < -9999) hiddenPedestrians += 1;
+      matrixPosition.setFromMatrixPosition(matrix);
+      const hidden = matrixPosition.y < -9999;
+      if (!object.name.startsWith('voxels:') && hidden) hiddenAnimated += 1;
+      if (object.name.includes('kalesa') && hidden) hiddenKalesas += 1;
+      if (!hidden && ['manila-jeepney-body', 'manila-motorbike-frame', 'manila-tricycle-bike', 'manila-taxi-body', 'manila-bus-body'].includes(object.name)) {
+        if (!manilaTopologyProbe.isRoadDeck(matrixPosition.x, matrixPosition.z, 1.45)) offRoadVehicles += 1;
+        if (manilaTopologyProbe.isWater(matrixPosition.x, matrixPosition.z, 1.2) && matrixPosition.y < manilaTerrainHeightAt(matrixPosition.x, matrixPosition.z) + 1.3) {
+          lowBridgeVehicles += 1;
+        }
+      }
+      if (!hidden && object.name === 'manila-boat-hull' && !manilaTopologyProbe.isNavigableWater(matrixPosition.x, matrixPosition.z, 1.4)) nonWaterBoats += 1;
+      if (elapsed === 0 && (object.name === 'voxels:asphalt' || object.name === 'voxels:cobblestone')) {
+        roadLikePositions.push([matrixPosition.x, matrixPosition.z]);
+      }
+      if (elapsed === 0 && qualityKinds.has(object.name)) {
+        qualityPositions.push([matrixPosition.x, matrixPosition.z]);
+      }
     }
   });
 }
 
 if (badMatrices > 0) failures.push(`Found ${badMatrices} non-finite instance matrices`);
-if (hiddenPedestrians > 0) failures.push(`Found ${hiddenPedestrians} hidden pedestrian placements`);
+if (hiddenAnimated > 0) failures.push(`Found ${hiddenAnimated} hidden animated placements`);
+if (hiddenKalesas > 0) failures.push(`Found ${hiddenKalesas} hidden kalesa placements`);
+if (offRoadVehicles > 0) failures.push(`Found ${offRoadVehicles} road vehicle samples away from road decks`);
+if (lowBridgeVehicles > 0) failures.push(`Found ${lowBridgeVehicles} bridge vehicle samples below deck height`);
+if (nonWaterBoats > 0) failures.push(`Found ${nonWaterBoats} boat samples outside navigable water`);
+
+function nearestRoadDistance(x, z) {
+  let best = Infinity;
+  for (const [rx, rz] of roadLikePositions) {
+    const distance = Math.hypot(rx - x, rz - z);
+    if (distance < best) best = distance;
+  }
+  return best;
+}
+
+for (const [key, target] of Object.entries(scene.focusTargets)) {
+  if (waterFocusTargets.has(key)) continue;
+  const maxDistance = ['marikina', 'paranaque', 'navotas'].includes(key) ? 42 : 34;
+  const distance = nearestRoadDistance(target.x, target.z);
+  if (distance > maxDistance) failures.push(`Focus target has no nearby street deck: ${key} (${distance.toFixed(1)})`);
+}
+
+function nearestQualityDistance(x, z) {
+  let best = Infinity;
+  for (const [qx, qz] of qualityPositions) {
+    const distance = Math.hypot(qx - x, qz - z);
+    if (distance < best) best = distance;
+  }
+  return best;
+}
+
+const coverageBoxes = {
+  oldManila: [-120, 60, -188, -54, 28],
+  civicCore: [-150, -30, 42, 136, 38],
+  businessCore: [-10, 224, 0, 144, 32],
+  qcCubao: [40, 230, -250, -100, 38],
+  baySouth: [-210, -86, 150, 306, 38],
+  portNavotas: [-238, -76, -246, -78, 38],
+  marikina: [230, 326, -132, -54, 34]
+};
+
+const coverageSummary = {};
+for (const [name, [x1, x2, z1, z2, limit]] of Object.entries(coverageBoxes)) {
+  let maxGap = 0;
+  let samples = 0;
+  for (let x = x1; x <= x2; x += 10) {
+    for (let z = z1; z <= z2; z += 10) {
+      if (manilaTopologyProbe.isWater(x, z, 1.5)) continue;
+      const distance = nearestQualityDistance(x, z);
+      maxGap = Math.max(maxGap, distance);
+      samples += 1;
+    }
+  }
+  coverageSummary[name] = { maxGap: Number(maxGap.toFixed(1)), samples };
+  if (samples === 0) failures.push(`Urban coverage box had no dry samples: ${name}`);
+  if (maxGap > limit) failures.push(`Urban coverage gap too large in ${name}: ${maxGap.toFixed(1)} > ${limit}`);
+}
 
 const summary = {
   labels: scene.labels.length,
@@ -131,7 +264,13 @@ const summary = {
   instancedMeshes,
   scannedInstances,
   badMatrices,
-  hiddenPedestrians
+  hiddenAnimated,
+  offRoadVehicles,
+  nonWaterBoats,
+  lowBridgeVehicles,
+  roadLikePositions: roadLikePositions.length,
+  qualityPositions: qualityPositions.length,
+  coverage: coverageSummary
 };
 
 if (failures.length > 0) {
