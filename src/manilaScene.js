@@ -81,11 +81,11 @@ const PEDESTRIAN_ROUTES = [
   [[-128, -10], [-76, -10], [-66, 20], [-116, 26], [-128, -10]],
   [[-78, -100], [-58, -104], [-34, -110], [-54, -112], [-78, -100]],
   [[6, 12], [34, 18], [42, 42], [8, 48], [6, 12]],
-  [[104, 48], [184, 48], [188, 108], [112, 108], [104, 48]],
-  [[68, -226], [164, -226], [176, -178], [86, -164], [68, -226]],
-  [[-210, 160], [-128, 158], [-122, 220], [-200, 224], [-210, 160]],
-  [[34, 116], [66, 120], [74, 92], [46, 72], [34, 116]],
-  [[40, -220], [90, -208], [124, -236], [74, -250], [40, -220]],
+  [[116, 82], [180, 82], [180, 108], [116, 108], [116, 82]],
+  [[88, -236], [158, -232], [166, -190], [96, -182], [88, -236]],
+  [[-190, 160], [-128, 158], [-122, 220], [-188, 224], [-190, 160]],
+  [[34, 116], [66, 120], [74, 98], [50, 90], [34, 116]],
+  [[88, -224], [126, -212], [152, -236], [116, -248], [88, -224]],
   [[144, -142], [202, -156], [214, -124], [168, -104], [144, -142]],
   [[-156, -216], [-118, -202], [-86, -176], [-126, -160], [-156, -216]],
   [[-174, 252], [-122, 272], [-96, 242], [-138, 222], [-174, 252]],
@@ -93,30 +93,38 @@ const PEDESTRIAN_ROUTES = [
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const PAVED_ROADS = [
-  ['Roxas Boulevard', [[-204, -236], [-204, 250]], 12],
+  ['Roxas Boulevard', [[-200, -236], [-200, 250]], 12],
   ['EDSA', [[70, -250], [74, -126], [78, -26], [80, 74], [104, 168]], 12],
   ['C5 Corridor', [[234, -224], [230, -108], [232, 72], [210, 196]], 14],
   ['Ayala Avenue', [[-4, 76], [112, 72]], 8],
-  ['BGC Service North', [[104, 64], [192, 64]], 7],
+  ['BGC Service North', [[104, 52], [184, 52]], 7],
   ['BGC Service South', [[104, 132], [192, 132]], 7],
   ['BGC 5th Avenue Link', [[104, 64], [104, 132]], 6],
   ['BGC 11th Avenue Link', [[192, 64], [192, 132]], 6],
   ['Quezon Avenue', [[38, -154], [104, -166], [170, -166]], 8],
   ['Taft / Rizal Avenue', [[-18, 112], [-18, 24], [-18, -104], [-18, -172]], 12],
   ['Port Road', [[-238, -150], [-172, -150], [-122, -140], [-104, -134]], 12],
-  ['Makati Connector', [[-24, 92], [58, 72], [148, 78], [220, 92], [286, -88]], 14],
-  ['Old Manila Route', [[-142, -132], [-86, -148], [-28, -158], [42, -154], [112, -112], [188, -58], [242, -36], [258, 72]], 14],
-  ['Marikina Bike / River Road', [[232, -124], [268, -124], [304, -116], [318, -82]], 6],
-  ['Poblacion Night Street', [[-8, 2], [18, 3], [44, 4]], 6],
-  ['Cubao Expo Lane', [[142, -140], [168, -134], [202, -128]], 6]
+  ['Makati Connector', [[-24, 92], [58, 72], [96, 54], [104, 52], [184, 52], [220, 92], [286, -88]], 14],
+  ['Old Manila Route', [[-142, -132], [-86, -148], [-40, -166], [24, -172], [74, -148], [112, -112], [188, -58], [242, -36], [258, 72]], 14],
+  ['Marikina Bike / River Road', [[232, -124], [268, -124], [304, -116], [318, -82]], 6, { traffic: false }],
+  ['Poblacion Night Street', [[-8, 2], [18, 3], [44, 4]], 6, { traffic: false }],
+  ['Cubao Expo Lane', [[142, -140], [168, -134], [202, -128]], 6, { traffic: false }]
 ];
 
-const ROAD_ROUTES = PAVED_ROADS.map(([, points]) => points.map(([x, z]) => ({ x, z })));
+const VEHICLE_ROADS = PAVED_ROADS.filter(([, , , options]) => options?.traffic !== false);
+const ROAD_ROUTES = VEHICLE_ROADS.map(([, points]) => points.map(([x, z]) => ({ x, z })));
 
 const TRAIN_ROUTES = [
-  [[-200, -118], [-94, -82], [-2, -116], [90, -178], [178, -138]],
-  [[92, -250], [98, -126], [100, -26], [84, 74], [104, 168]]
+  [[-200, -118], [-112, -92], [-42, -98], [48, -118], [112, -112], [178, -138]],
+  [[70, -250], [74, -126], [78, -26], [80, 74], [104, 168]]
 ].map((points) => points.map(([x, z]) => ({ x, z })));
+
+const PASIG_BRIDGES = [
+  [-82, 'Jones Bridge'],
+  [-22, 'Quezon Bridge'],
+  [72, 'Guadalupe Bridge'],
+  [164, 'Ortigas Bridge']
+];
 
 const BOAT_ROUTES = [
   [[-248, -22], [-204, -32], [-156, -40]],
@@ -273,7 +281,15 @@ function isPasig(x, z, pad = 0) {
 }
 
 function isRoadDeck(x, z, pad = 0) {
-  for (const [, points, width] of PAVED_ROADS) {
+  return isRoadDeckFor(PAVED_ROADS, x, z, pad);
+}
+
+function isVehicleRoadDeck(x, z, pad = 0) {
+  return isRoadDeckFor(VEHICLE_ROADS, x, z, pad);
+}
+
+function isRoadDeckFor(roads, x, z, pad = 0) {
+  for (const [, points, width] of roads) {
     for (let i = 1; i < points.length; i += 1) {
       const a = { x: points[i - 1][0], z: points[i - 1][1] };
       const b = { x: points[i][0], z: points[i][1] };
@@ -303,7 +319,7 @@ function isWalkRouteSurface(x, z, pad = 0) {
 }
 
 function isRoadRouteSurface(x, z, pad = 0) {
-  return isRoadDeck(x, z, pad);
+  return isVehicleRoadDeck(x, z, pad);
 }
 
 function isHistoricStreetSurface(x, z, pad = 0) {
@@ -351,11 +367,27 @@ export const manilaTopologyProbe = {
   pasigWaterCenterZ,
   pasigWidthAt,
   roadSurfaceY,
+  bridgeSegments: () => PASIG_BRIDGES.map(([x, name]) => {
+    const z = pasigWaterCenterZ(x);
+    const halfLength = (pasigWidthAt(x) + 18) / 2;
+    return {
+      name,
+      width: 8,
+      a: { x, z: z - halfLength },
+      b: { x, z: z + halfLength }
+    };
+  }),
   roadSegments: () => PAVED_ROADS.flatMap(([name, points, width]) => points.slice(1).map((point, index) => ({
     name,
     width,
     a: { x: points[index][0], z: points[index][1] },
     b: { x: point[0], z: point[1] }
+  }))),
+  trainSegments: () => TRAIN_ROUTES.flatMap((points, routeIndex) => points.slice(1).map((point, index) => ({
+    name: `rail-${routeIndex}`,
+    width: 6.8,
+    a: points[index],
+    b: point
   })))
 };
 
@@ -445,16 +477,17 @@ export function createManilaScene(materials) {
   };
 
   reserveLandmarkZones(planner);
+  reserveFixedManilaFootprints(planner);
   buildTerrain(batch);
   buildWaterways({ addTop, addTiledRect, addLabel });
-  buildRoadsAndTransit({ reserveRoadSegment, addTop, addTiledRect, addLabel });
+  buildRoadsAndTransit({ planner, reserveRoadSegment, addTop, addTiledRect, addLabel });
   const connectedFabric = buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng });
   buildIntramuros({ addTop, addTiledRect, addLabel, rng });
   buildCivicLandmarks({ addTop, addTiledRect, addLabel, rng });
   buildOldManila({ planner, addTop, addTiledRect, addLabel, rng });
   buildBusinessDistricts({ planner, addTop, addTiledRect, addLabel, rng });
   buildNeighborhoods({ planner, addTop, addTiledRect, addLabel, rng });
-  const cityLifeDetails = buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
+  const cityLifeDetails = buildLayeredCityLife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng });
   const blocks = buildUrbanBlocks({ planner, addTop, rng });
   buildStreetLife({ planner, addTop, rng });
   const pedestrians = buildPedestrians({ animated, rng });
@@ -549,6 +582,40 @@ function reserveLandmarkZones(planner) {
   });
 }
 
+function reserveFixedManilaFootprints(planner) {
+  [
+    ['quiapo-church', 0, -134, 22, 20],
+    ['escolta-art-deco', -44, -70, 30, 18],
+    ['escolta-side-buildings', -32, -60, 14, 10],
+    ['binondo-gate-west', -90, -116, 6, 5],
+    ['binondo-gate-east', -74, -116, 6, 5],
+    ['up-diliman-main-hall', 96, -210, 36, 20],
+    ['qc-campus-block', 150, -190, 50, 20],
+    ['araneta-city-block', 202, -156, 22, 22],
+    ['bay-area-hotel', -146, 174, 20, 20],
+    ['bay-area-tower', -182, 182, 18, 18],
+    ['bay-area-convention-hall', -170, 210, 48, 24],
+    ['paranaque-church', -144, 268, 24, 20],
+    ['marikina-river-shoe-hall', 252, -104, 22, 14],
+    ['marikina-shoe-sign', 288, -98, 8, 10],
+    ['kapitolyo-civic-anchor', 126, -58, 12, 10],
+    ['barangay-civic-anchor', -106, -192, 12, 10],
+    ['coastal-civic-anchor', -116, 232, 12, 10],
+    ['marikina-civic-anchor', 268, -100, 12, 10],
+    ['laloma-civic-anchor', -2, -192, 12, 10],
+    ['laloma-grill-row', -32, -188, 56, 34],
+    ['poblacion-neon-alleys', 18, 31, 58, 26],
+    ['bgc-high-street-promenade', 148, 100, 88, 20],
+    ['bgc-retail-pavilion', 148, 118, 34, 14],
+    ['baywalk-promenade', -212, 188, 16, 136],
+    ['marikina-river-park-core', 268, -108, 74, 44],
+    ['malabon-riverside-civic', -92, -202, 14, 12],
+    ['ortigas-bridge-approach', 164, -34, 16, 58]
+  ].forEach(([name, x, z, width, depth]) => {
+    planner.reserveRect(`fixed-${name}`, x, z, width, depth, { force: true, type: 'landmark' });
+  });
+}
+
 function buildTerrain(batch) {
   for (let x = -WORLD_BOUNDS; x <= WORLD_BOUNDS; x += TERRAIN_CELL) {
     for (let z = -WORLD_BOUNDS; z <= WORLD_BOUNDS; z += TERRAIN_CELL) {
@@ -581,12 +648,7 @@ function buildWaterways({ addTop, addTiledRect, addLabel }) {
     addTop('water', x, z, 13.2, 0.15, Math.max(12, pasigWidthAt(x) * 0.72), 0x3f91aa, 0, 0.6);
     addTop('manilaBay', x, z + pasigWidthAt(x) * 0.36, 12.6, 0.08, 1.2, 0x3f91aa, 0, 0.78);
   }
-  for (const [x, label] of [
-    [-82, 'Jones Bridge'],
-    [-22, 'Quezon Bridge'],
-    [72, 'Guadalupe Bridge'],
-    [164, 'Ortigas Bridge']
-  ]) {
+  for (const [x, label] of PASIG_BRIDGES) {
     const z = pasigWaterCenterZ(x);
     addTop('steel', x, z, 8, 1.0, pasigWidthAt(x) + 18, 0x66727a, 0, topY(x, z) + 1.2);
     addTop('asphalt', x, z, 5.5, 0.18, pasigWidthAt(x) + 15, 0x3f4243, 0, topY(x, z) + 2.1);
@@ -594,7 +656,7 @@ function buildWaterways({ addTop, addTiledRect, addLabel }) {
     addLabel(label, x, topY(x, z) + 6, z);
   }
   buildPasigRiverfront(addTop, addLabel);
-  addTiledRect('cobblestone', -194, 170, 82, 16, { color: '#77766d', height: 0.12, tile: 3.4 });
+  addTiledRect('cobblestone', -212, 188, 10, 132, { color: '#77766d', height: 0.12, tile: 3.4 });
   addLabel('Pasig River', -42, topY(-42, pasigWaterCenterZ(-42)) + 7, pasigWaterCenterZ(-42));
   addLabel('Manila Bay Promenade', -190, topY(-190, 188) + 7, 188);
 }
@@ -641,12 +703,12 @@ function buildPasigRiverfront(addTop, addLabel) {
   }
 }
 
-function buildRoadsAndTransit({ reserveRoadSegment, addTop, addTiledRect, addLabel }) {
+function buildRoadsAndTransit({ planner, reserveRoadSegment, addTop, addTiledRect, addLabel }) {
   for (const [name, points, width] of PAVED_ROADS) {
     for (let i = 1; i < points.length; i += 1) reserveRoadSegment(`${name}-${i}`, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1], width);
   }
 
-  for (const route of TRAIN_ROUTES) {
+  for (const [routeIndex, route] of TRAIN_ROUTES.entries()) {
     for (let i = 1; i < route.length; i += 1) {
       const a = route[i - 1];
       const b = route[i];
@@ -656,6 +718,11 @@ function buildRoadsAndTransit({ reserveRoadSegment, addTop, addTiledRect, addLab
       const yaw = Math.atan2(dx, dz);
       const mx = (a.x + b.x) / 2;
       const mz = (a.z + b.z) / 2;
+      const steps = Math.max(1, Math.ceil(length / 10));
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps;
+        planner.reserveRect(`rail-corridor-${routeIndex}-${i}-${step}`, a.x + dx * t, a.z + dz * t, 13, 13, { force: true, type: 'rail' });
+      }
       addTop('steel', mx, mz, 2.2, 0.72, length, 0x66727a, yaw, topY(mx, mz) + 6.2);
       addTop('steel', mx, mz, 6.4, 0.46, length, 0x66727a, yaw, topY(mx, mz) + 5.7);
       for (let t = 0; t <= 1; t += 0.22) {
@@ -736,15 +803,19 @@ function buildManilaCityHall(addTop, addTiledRect, addLabel, x, z) {
 }
 
 function enhanceJonesBridge(addTop, x, z) {
+  const avoidWestGate = Math.abs(x + 82) < 0.1;
   for (let i = -3; i <= 3; i += 1) {
     const px = x + i * 5.6;
+    if (avoidWestGate && px < -88) continue;
     addTop('limestone', px, z - 3.1, 0.8, 2.3, 0.8, 0xd8cfb7, 0, topY(px, z) + 2.4);
     addTop('limestone', px, z + 3.1, 0.8, 2.3, 0.8, 0xd8cfb7, 0, topY(px, z) + 2.4);
     addTop('gold', px, z - 3.1, 0.9, 0.7, 0.9, 0xd8a334, 0, topY(px, z) + 4.4);
     addTop('gold', px, z + 3.1, 0.9, 0.7, 0.9, 0xd8a334, 0, topY(px, z) + 4.4);
   }
-  addTop('limestone', x, z - 3.2, 36, 0.7, 0.55, 0xd8cfb7, 0, topY(x, z) + 3.0);
-  addTop('limestone', x, z + 3.2, 36, 0.7, 0.55, 0xd8cfb7, 0, topY(x, z) + 3.0);
+  const railX = avoidWestGate ? x + 7 : x;
+  const railWidth = avoidWestGate ? 22 : 36;
+  addTop('limestone', railX, z - 3.2, railWidth, 0.7, 0.55, 0xd8cfb7, 0, topY(x, z) + 3.0);
+  addTop('limestone', railX, z + 3.2, railWidth, 0.7, 0.55, 0xd8cfb7, 0, topY(x, z) + 3.0);
 }
 
 function buildIntramuros({ addTop, addTiledRect, addLabel, rng }) {
@@ -773,12 +844,21 @@ function buildIntramuros({ addTop, addTiledRect, addLabel, rng }) {
 }
 
 function addWallRect(addTop, x, z, width, depth) {
-  addTop('limestone', x, z - depth / 2, width, 5.2, 3.0, 0x8b8276);
+  const northZ = z - depth / 2;
+  const southZ = z + depth / 2;
+  const westX = x - width / 2;
+  const eastX = x + width / 2;
+  const gateGapMin = x - 10;
+  const bridgeGapMax = x + 22;
+  addTop('limestone', (westX + gateGapMin) / 2, northZ, gateGapMin - westX, 5.2, 3.0, 0x8b8276);
+  addTop('limestone', (bridgeGapMax + eastX) / 2, northZ, eastX - bridgeGapMax, 5.2, 3.0, 0x8b8276);
   addTop('limestone', x, z + depth / 2, width, 5.2, 3.0, 0x8b8276);
   addTop('limestone', x - width / 2, z, 3.0, 5.2, depth, 0x8b8276);
   addTop('limestone', x + width / 2, z, 3.0, 5.2, depth, 0x8b8276);
   for (let i = 0; i < 8; i += 1) {
-    addTop('limestone', x - width / 2 + i * (width / 7), z - depth / 2, 4.2, 6.3, 4.2, 0x8b8276);
+    const towerX = x - width / 2 + i * (width / 7);
+    if (towerX > gateGapMin && towerX < bridgeGapMax) continue;
+    addTop('limestone', towerX, northZ, 4.2, 6.3, 4.2, 0x8b8276);
   }
 }
 
@@ -909,7 +989,7 @@ function buildBinondoDetails({ addTop, rng }) {
 
 function buildEscoltaDetails({ addTop, rng }) {
   for (let i = 0; i < 4; i += 1) {
-    const x = -74 + i * 14;
+    const x = -64 + i * 10.5;
     addTop('limestone', x, -60, 10, 8 + (i % 2) * 2.2, 6, 0xd8cfb7);
     addTop('neonCyan', x, -63.4, 7.2, 0.8, 0.34, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, -60) + 4.8);
     addTop('glass', x, -63.7, 5.2, 2.1, 0.28, 0x9cc8c8, 0, topY(x, -60) + 2.2);
@@ -1193,7 +1273,20 @@ function buildLaLomaGrillDistrict({ addTop, addTiledRect, addLabel, rng }) {
     if (i % 2 === 0) addStaticPerson(addTop, x - 2, z + 4.2, 'crowd', 0.82);
   }
   buildMarketStalls(addTop, -18, -178, 5, 0xf0dfb2, rng);
+  addLaLomaStreetLife(addTop, rng);
   addLabel('La Loma Grill District', -32, topY(-32, -188) + 12, -188);
+}
+
+function addLaLomaStreetLife(addTop, rng) {
+  for (let i = 0; i < 9; i += 1) {
+    const x = -54 + i * 7.4;
+    const z = -173 + (i % 2) * 4.2;
+    if (isWater(x, z, 1.5)) continue;
+    addTop('gold', x, z, 0.24, 2.8, 0.24, 0xd8a334);
+    addTop('neon', x, z, 0.82, 0.36, 0.82, 0xf0dfb2, 0, topY(x, z) + 2.55);
+    addTop('wood', x + 2.4, z + 1.6, 2.8, 0.42, 1.1, 0x7a4d30, 0.08);
+    if (i % 2 === 0) addStaticPerson(addTop, x - 1.4 + rng() * 1.2, z + 2.8, i % 3 === 0 ? 'cloth' : 'crowd', 0.8);
+  }
 }
 
 function buildSouthernCoast({ addTop, addTiledRect, addLabel, rng }) {
@@ -1279,6 +1372,7 @@ function buildMarketStalls(addTop, x, z, count, color, rng, yaw = 0) {
     const sx = x + lx * cos + lz * sin;
     const sz = z - lx * sin + lz * cos;
     if (isWater(sx, sz, 1.5)) continue;
+    if (footprintTouchesRoad(sx, sz, 4.2, 3.2, 0.5)) continue;
     addTop('wood', sx, sz, 3.2, 1.05, 2.4, 0x7a4d30, yaw);
     addTop('cloth', sx, sz, 3.8, 0.32, 2.8, color, yaw, topY(sx, sz) + 1.0);
     if (i % 2 === 0) addStaticPerson(addTop, sx + (rng() - 0.5) * 2.8, sz + 3.4, i % 4 === 0 ? 'cloth' : 'crowd', 0.86);
@@ -1314,6 +1408,7 @@ function buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng
   count += buildOldManilaParcelFrontages({ planner, addTop, addLabel, rng });
   count += buildReclaimedPortSystem({ planner, addTop, rng });
   count += buildNavotasMalabonPortSpine({ planner, addTop, addLabel, rng });
+  count += buildMetroConnectorStreets({ planner, addTop });
   return count;
 }
 
@@ -1363,21 +1458,46 @@ function addLocalStreet({ planner, addTop, points, width, material = 'asphalt' }
     const [bx, bz] = points[i];
     const mx = (ax + bx) / 2;
     const mz = (az + bz) / 2;
-    if (planner.hasPoint(mx, mz, 'landmark') || isWater(mx, mz, 1.0)) continue;
+    if (localStreetTouchesReservedFootprint(planner, ax, az, bx, bz, width) || isWater(mx, mz, 1.0)) continue;
     const dx = bx - ax;
     const dz = bz - az;
     const length = Math.hypot(dx, dz);
-    const steps = Math.max(1, Math.ceil(length / 11));
+    const steps = Math.max(1, Math.ceil(length / 3.2));
     for (let step = 0; step <= steps; step += 1) {
       const t = step / steps;
       const x = ax + dx * t;
       const z = az + dz * t;
-      if (!planner.hasPoint(x, z, 'landmark')) planner.reserveRect(`local-street-${x.toFixed(1)}-${z.toFixed(1)}`, x, z, width + 1.4, width + 1.4, { force: true, type: 'road' });
+      if (!planner.hasPoint(x, z, 'road') && !localStreetPointTouchesReservedFootprint(planner, x, z)) {
+        planner.reserveRect(`local-street-${x.toFixed(1)}-${z.toFixed(1)}`, x, z, width + 5.6, width + 5.6, { force: true, type: 'road' });
+      }
     }
     buildPath(addTop, [points[i - 1], points[i]], width, material);
     count += Math.ceil(length / 10);
   }
   return count;
+}
+
+function localStreetTouchesReservedFootprint(planner, ax, az, bx, bz, width) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const length = Math.hypot(dx, dz);
+  const steps = Math.max(1, Math.ceil(length / 4.5));
+  const nx = length > 0.001 ? -dz / length : 0;
+  const nz = length > 0.001 ? dx / length : 0;
+  const edgePad = Math.max(width * 0.58, 1.8);
+  for (let step = 0; step <= steps; step += 1) {
+    const t = step / steps;
+    const x = ax + dx * t;
+    const z = az + dz * t;
+    if (localStreetPointTouchesReservedFootprint(planner, x, z)) return true;
+    if (localStreetPointTouchesReservedFootprint(planner, x + nx * edgePad, z + nz * edgePad)) return true;
+    if (localStreetPointTouchesReservedFootprint(planner, x - nx * edgePad, z - nz * edgePad)) return true;
+  }
+  return false;
+}
+
+function localStreetPointTouchesReservedFootprint(planner, x, z) {
+  return planner.hasPoint(x, z, 'landmark') || planner.hasPoint(x, z, 'building') || planner.hasPoint(x, z, 'detail');
 }
 
 function canPlaceUrbanParcel(planner, x, z, width, depth, roadPad = 1.2) {
@@ -1558,12 +1678,24 @@ function buildNavotasMalabonPortSpine({ planner, addTop, addLabel, rng }) {
   return count + 8;
 }
 
-function buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng }) {
+function buildMetroConnectorStreets({ planner, addTop }) {
+  let count = 0;
+  count += addLocalStreet({
+    planner,
+    addTop,
+    points: [[-204, 250], [-184, 262], [-164, 280], [-126, 286]],
+    width: 4.2,
+    material: 'asphalt'
+  });
+  return count;
+}
+
+function buildLayeredCityLife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng }) {
   let details = 0;
-  details += buildOldManilaFineGrain({ addTop, reserveDetail, rng });
+  details += buildOldManilaFineGrain({ planner, addTop, reserveDetail, rng });
   details += buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
   details += buildCorporateAfterWorkLayer({ addTop, rng });
-  details += buildQuezonCreativeLayer({ addTop, addLabel, reserveDetail, rng });
+  details += buildQuezonCreativeLayer({ planner, addTop, addLabel, reserveDetail, rng });
   details += buildWaterfrontAndPortLayer({ addTop, addLabel, rng });
   details += buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng });
   return details;
@@ -1575,9 +1707,12 @@ function canPlaceDetailFootprint(x, z, width = 4, depth = 4, options = {}) {
   return true;
 }
 
-function addDetailBuilding(addTop, reserveDetail, x, z, width, height, depth, material, color, yaw = 0) {
+function addDetailBuilding(addTop, reserveDetail, x, z, width, height, depth, material, color, yaw = 0, planner = null) {
   if (!canPlaceDetailFootprint(x, z, width, depth, { roadPad: 1.0 })) return 0;
-  reserveDetail?.(x, z, width + 1.6, depth + 1.6, 'building');
+  const reservationWidth = width + 1.8;
+  const reservationDepth = depth + 1.8;
+  if (planner && !planner.reserveRect(`detail-building-${x.toFixed(1)}-${z.toFixed(1)}`, x, z, reservationWidth, reservationDepth, { type: 'building' })) return 0;
+  if (!planner) reserveDetail?.(x, z, reservationWidth, reservationDepth, 'building');
   addTop(material, x, z, width, height, depth, color, yaw);
   addTop(height > 9 ? 'steel' : 'slate', x, z, width + 0.5, 0.42, depth + 0.5, height > 9 ? 0x66727a : 0x5c6268, yaw, topY(x, z) + height);
   return 2;
@@ -1614,7 +1749,7 @@ function addSariSariCluster(addTop, reserveDetail, x, z, rng, yaw = 0) {
   return 6;
 }
 
-function buildOldManilaFineGrain({ addTop, reserveDetail, rng }) {
+function buildOldManilaFineGrain({ planner, addTop, reserveDetail, rng }) {
   let details = 0;
   for (let i = 0; i < 12; i += 1) {
     const x = -92 + i * 7.0;
@@ -1632,7 +1767,7 @@ function buildOldManilaFineGrain({ addTop, reserveDetail, rng }) {
 
   for (let i = 0; i < 7; i += 1) {
     const x = -74 + i * 12;
-    details += addDetailBuilding(addTop, reserveDetail, x, -54, 8.6, 5.2 + (i % 3) * 1.8, 5.6, i % 2 ? 'limestone' : 'brick', i % 2 ? 0xd8cfb7 : 0x9f583d);
+    details += addDetailBuilding(addTop, reserveDetail, x, -54, 8.6, 5.2 + (i % 3) * 1.8, 5.6, i % 2 ? 'limestone' : 'brick', i % 2 ? 0xd8cfb7 : 0x9f583d, 0, planner);
     addTop('graffiti', x, -57.1, 6.8, 2.2, 0.32, i % 2 ? 0x48d9ff : 0xf25fa7, 0, topY(x, -54) + 2.2);
     details += 1;
   }
@@ -1696,11 +1831,14 @@ function buildCorporateAfterWorkLayer({ addTop, rng }) {
   return details;
 }
 
-function buildQuezonCreativeLayer({ addTop, addLabel, reserveDetail, rng }) {
+function buildQuezonCreativeLayer({ planner, addTop, addLabel, reserveDetail, rng }) {
   let details = 0;
   for (let i = 0; i < 11; i += 1) {
     const x = 40 + i * 8.4;
-    details += addDetailBuilding(addTop, reserveDetail, x, -170 + (i % 3) * 8, 6.6, 4 + rng() * 2, 5.2, 'concrete', 0x8b8d88);
+    const z = -170 + (i % 3) * 8;
+    const placed = addDetailBuilding(addTop, reserveDetail, x, z, 6.6, 4 + rng() * 2, 5.2, 'concrete', 0x8b8d88, 0, planner);
+    details += placed;
+    if (placed === 0) continue;
     addTop('graffiti', x, -173 + (i % 3) * 8, 5.2, 2.4, 0.3, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, -170 + (i % 3) * 8) + 2.2);
     details += 1;
   }
@@ -1719,14 +1857,15 @@ function buildWaterfrontAndPortLayer({ addTop, addLabel, rng }) {
   let details = 0;
   for (let i = 0; i < 18; i += 1) {
     const z = 118 + i * 8.2;
-    const x = -198 + Math.sin(i * 0.7) * 8;
+    const x = -212 + Math.sin(i * 0.7) * 3;
     if (isWater(x - 12, z, 1.5)) {
-      addTop('limestone', x, z, 18, 0.56, 1.4, 0xd8cfb7, 0.08, topY(x, z) + 0.22);
+      addTop('limestone', x, z, 12, 0.56, 1.4, 0xd8cfb7, 0.08, topY(x, z) + 0.22);
       addTop('gold', x + 7.8, z + 1.1, 0.25, 2.8, 0.25, 0xd8a334);
       if (i % 3 === 0) addStaticPerson(addTop, x + 4, z + 2.4, 'crowd', 0.78);
       details += 3;
     }
   }
+  details += addBaywalkSocialEdge(addTop, rng);
   for (let i = 0; i < 10; i += 1) {
     const x = -246 + i * 7.4;
     addTop('cloth', x, -88, 5.4, 0.6, 0.36, i % 2 ? 0x48d9ff : 0xf0dfb2, 0, topY(x, -88) + 2.8);
@@ -1735,7 +1874,24 @@ function buildWaterfrontAndPortLayer({ addTop, addLabel, rng }) {
   }
   buildMarketStalls(addTop, -132, 238, 8, 0xd94f45, rng, 0.12);
   addLabel('Manila Bay Sunset Promenade', -198, topY(-198, 188) + 9, 188);
+  addLabel('Manila Baywalk', -214, topY(-214, 188) + 8, 188);
   return details + 24;
+}
+
+function addBaywalkSocialEdge(addTop, rng) {
+  let details = 0;
+  for (let i = 0; i < 12; i += 1) {
+    const z = 138 + i * 10.2;
+    const x = -214 + Math.sin(i * 0.56) * 2.4;
+    if (isWater(x, z, 0.5) || footprintTouchesRoad(x, z, 7.2, 4.8, 0.4)) continue;
+    addTop('wood', x, z, 3.8, 0.36, 1.2, 0x7a4d30, 0.04, topY(x, z) + 0.22);
+    addTop('gold', x + 3.2, z - 1.2, 0.24, 3.2, 0.24, 0xd8a334);
+    addTop('neon', x + 3.2, z - 1.2, 0.86, 0.36, 0.86, 0xf0dfb2, 0, topY(x, z) + 3.0);
+    if (i % 3 === 0) addTop('vegetation', x - 3.4, z + 1.3, 1.8, 3.4, 1.8, 0x4f8750);
+    if (i % 2 === 0) addStaticPerson(addTop, x + (rng() - 0.5) * 2.4, z + 2.0, 'crowd', 0.78);
+    details += i % 3 === 0 ? 5 : 4;
+  }
+  return details;
 }
 
 function buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng }) {

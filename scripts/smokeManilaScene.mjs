@@ -149,9 +149,16 @@ let offRoadVehicles = 0;
 let hiddenKalesas = 0;
 let nonWaterBoats = 0;
 let lowBridgeVehicles = 0;
+let pedestriansOnVehicleRoad = 0;
 const roadLikePositions = [];
 const qualityPositions = [];
 const staticRoadOverlaps = [];
+const solidBuildingFootprints = [];
+const localAsphaltRoadStrips = [];
+const localAsphaltRoadOverlaps = [];
+const railOverlaps = [];
+const bridgeStructureFootprints = [];
+const bridgeOverlaps = [];
 const qualityKinds = new Set([
   'voxels:asphalt',
   'voxels:cobblestone',
@@ -177,6 +184,8 @@ const buildingOverlapKinds = new Set([
   'voxels:steel'
 ]);
 const mainRoadSegments = manilaTopologyProbe.roadSegments();
+const trainSegments = manilaTopologyProbe.trainSegments();
+const bridgeSegments = manilaTopologyProbe.bridgeSegments();
 
 for (const elapsed of [0, 0.5, 10, 60, 600]) {
   scene.update(elapsed);
@@ -192,22 +201,72 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
       if (!object.name.startsWith('voxels:') && hidden) hiddenAnimated += 1;
       if (object.name.includes('kalesa') && hidden) hiddenKalesas += 1;
       if (!hidden && ['manila-jeepney-body', 'manila-motorbike-frame', 'manila-tricycle-bike', 'manila-taxi-body', 'manila-bus-body'].includes(object.name)) {
-        if (!manilaTopologyProbe.isRoadDeck(matrixPosition.x, matrixPosition.z, 1.45)) offRoadVehicles += 1;
+        if (!manilaTopologyProbe.isRoadRouteSurface(matrixPosition.x, matrixPosition.z, 1.45)) offRoadVehicles += 1;
         if (manilaTopologyProbe.isWater(matrixPosition.x, matrixPosition.z, 1.2) && matrixPosition.y < manilaTerrainHeightAt(matrixPosition.x, matrixPosition.z) + 1.3) {
           lowBridgeVehicles += 1;
         }
       }
+      if (!hidden && object.name === 'manila-pedestrian-body' && manilaTopologyProbe.isRoadRouteSurface(matrixPosition.x, matrixPosition.z, 0.65)) {
+        pedestriansOnVehicleRoad += 1;
+      }
       if (!hidden && object.name === 'manila-boat-hull' && !manilaTopologyProbe.isNavigableWater(matrixPosition.x, matrixPosition.z, 1.4)) nonWaterBoats += 1;
       if (elapsed === 0 && (object.name === 'voxels:asphalt' || object.name === 'voxels:cobblestone')) {
         roadLikePositions.push([matrixPosition.x, matrixPosition.z]);
+      }
+      if (elapsed === 0 && object.name === 'voxels:asphalt' && matrixPosition.y > -9999) {
+        matrixScale.setFromMatrixScale(matrix);
+        if (isLocalAsphaltRoadStrip(matrixScale)) {
+          localAsphaltRoadStrips.push({
+            kind: object.name,
+            footprint: footprintFromMatrix(matrix, matrixPosition),
+            x: Number(matrixPosition.x.toFixed(1)),
+            z: Number(matrixPosition.z.toFixed(1)),
+            sx: Number(matrixScale.x.toFixed(1)),
+            sz: Number(matrixScale.z.toFixed(1))
+          });
+        }
+      }
+      if (elapsed === 0 && matrixPosition.y > -9999) {
+        matrixScale.setFromMatrixScale(matrix);
+        if (isBridgeStructureCandidate(object.name, matrixScale)) {
+          const bridgeFootprint = footprintFromMatrix(matrix, matrixPosition);
+          const bridge = roadOverlapForFootprint(bridgeFootprint, bridgeSegments);
+          if (bridge) {
+            bridgeStructureFootprints.push({
+              bridge,
+              kind: object.name,
+              footprint: bridgeFootprint,
+              x: Number(matrixPosition.x.toFixed(1)),
+              z: Number(matrixPosition.z.toFixed(1)),
+              sx: Number(matrixScale.x.toFixed(1)),
+              sy: Number(matrixScale.y.toFixed(1)),
+              sz: Number(matrixScale.z.toFixed(1))
+            });
+          }
+        }
       }
       if (elapsed === 0 && qualityKinds.has(object.name)) {
         qualityPositions.push([matrixPosition.x, matrixPosition.z]);
       }
       if (elapsed === 0 && buildingOverlapKinds.has(object.name) && matrixPosition.y > -9999) {
         matrixScale.setFromMatrixScale(matrix);
-        const roadOverlap = matrixScale.y >= 3 && matrixScale.x >= 3 && matrixScale.z >= 3
-          ? roadOverlapForFootprint(matrix, matrixPosition, mainRoadSegments)
+        const buildingFootprint = matrixScale.y >= 3 && matrixScale.x >= 3 && matrixScale.z >= 3
+          ? footprintFromMatrix(matrix, matrixPosition)
+          : null;
+        if (buildingFootprint) {
+          solidBuildingFootprints.push({
+            kind: object.name,
+            footprint: buildingFootprint,
+            x: Number(matrixPosition.x.toFixed(1)),
+            z: Number(matrixPosition.z.toFixed(1)),
+            topY: Number((matrixPosition.y + matrixScale.y / 2).toFixed(1)),
+            sx: Number(matrixScale.x.toFixed(1)),
+            sy: Number(matrixScale.y.toFixed(1)),
+            sz: Number(matrixScale.z.toFixed(1))
+          });
+        }
+        const roadOverlap = buildingFootprint
+          ? roadOverlapForFootprint(buildingFootprint, mainRoadSegments)
           : null;
         if (roadOverlap) {
           staticRoadOverlaps.push({
@@ -225,17 +284,75 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
   });
 }
 
+for (const road of localAsphaltRoadStrips) {
+  for (const building of solidBuildingFootprints) {
+    if (!localAsphaltRoadStripOverlapsBuilding(road.footprint, building.footprint)) continue;
+    localAsphaltRoadOverlaps.push({
+      road: { x: road.x, z: road.z, sx: road.sx, sz: road.sz },
+      building: { kind: building.kind, x: building.x, z: building.z, sx: building.sx, sy: building.sy, sz: building.sz }
+    });
+    if (localAsphaltRoadOverlaps.length >= 16) break;
+  }
+  if (localAsphaltRoadOverlaps.length >= 16) break;
+}
+
+for (const building of solidBuildingFootprints) {
+  if (building.topY < manilaTerrainHeightAt(building.x, building.z) + 5.2) continue;
+  const railOverlap = roadOverlapForFootprint(building.footprint, trainSegments);
+  if (!railOverlap) continue;
+  railOverlaps.push({
+    rail: railOverlap,
+    building: { kind: building.kind, x: building.x, z: building.z, topY: building.topY, sx: building.sx, sy: building.sy, sz: building.sz }
+  });
+  if (railOverlaps.length >= 16) break;
+}
+
+for (const bridge of bridgeStructureFootprints) {
+  for (const building of solidBuildingFootprints) {
+    if (!localAsphaltRoadStripOverlapsBuilding(bridge.footprint, building.footprint)) continue;
+    bridgeOverlaps.push({
+      bridge: { name: bridge.bridge, kind: bridge.kind, x: bridge.x, z: bridge.z, sx: bridge.sx, sy: bridge.sy, sz: bridge.sz },
+      building: { kind: building.kind, x: building.x, z: building.z, sx: building.sx, sy: building.sy, sz: building.sz }
+    });
+    if (bridgeOverlaps.length >= 16) break;
+  }
+  if (bridgeOverlaps.length >= 16) break;
+}
+
 if (badMatrices > 0) failures.push(`Found ${badMatrices} non-finite instance matrices`);
 if (hiddenAnimated > 0) failures.push(`Found ${hiddenAnimated} hidden animated placements`);
 if (hiddenKalesas > 0) failures.push(`Found ${hiddenKalesas} hidden kalesa placements`);
 if (offRoadVehicles > 0) failures.push(`Found ${offRoadVehicles} road vehicle samples away from road decks`);
+if (pedestriansOnVehicleRoad > 0) failures.push(`Found ${pedestriansOnVehicleRoad} pedestrian samples on vehicle road decks`);
 if (lowBridgeVehicles > 0) failures.push(`Found ${lowBridgeVehicles} bridge vehicle samples below deck height`);
 if (nonWaterBoats > 0) failures.push(`Found ${nonWaterBoats} boat samples outside navigable water`);
 if (staticRoadOverlaps.length > 0) {
   failures.push(`Found ${staticRoadOverlaps.length} solid building footprints on main road decks: ${JSON.stringify(staticRoadOverlaps.slice(0, 8))}`);
 }
+if (localAsphaltRoadOverlaps.length > 0) {
+  failures.push(`Found ${localAsphaltRoadOverlaps.length} local asphalt strips crossing solid buildings: ${JSON.stringify(localAsphaltRoadOverlaps.slice(0, 8))}`);
+}
+if (railOverlaps.length > 0) {
+  failures.push(`Found ${railOverlaps.length} elevated rail corridors crossing tall solid buildings: ${JSON.stringify(railOverlaps.slice(0, 8))}`);
+}
+if (bridgeOverlaps.length > 0) {
+  failures.push(`Found ${bridgeOverlaps.length} bridge structures crossing solid buildings: ${JSON.stringify(bridgeOverlaps.slice(0, 8))}`);
+}
 
-function roadOverlapForFootprint(matrix, position, roadSegments) {
+function isLocalAsphaltRoadStrip(scale) {
+  const longSide = Math.max(scale.x, scale.z);
+  const shortSide = Math.min(scale.x, scale.z);
+  return scale.y <= 0.25 && shortSide >= 2.2 && shortSide <= 6.2 && longSide >= 3.8;
+}
+
+function isBridgeStructureCandidate(name, scale) {
+  if (!['voxels:asphalt', 'voxels:steel', 'voxels:limestone'].includes(name)) return false;
+  const longSide = Math.max(scale.x, scale.z);
+  const shortSide = Math.min(scale.x, scale.z);
+  return scale.y <= 3.8 && longSide >= 5.5 && shortSide <= 9.0;
+}
+
+function footprintFromMatrix(matrix, position) {
   const e = matrix.elements;
   const center = { x: position.x, z: position.z };
   const halfX = { x: e[0] * 0.5, z: e[2] * 0.5 };
@@ -251,10 +368,14 @@ function roadOverlapForFootprint(matrix, position, roadSegments) {
   const minZ = Math.min(...corners.map((corner) => corner.z));
   const maxZ = Math.max(...corners.map((corner) => corner.z));
 
+  return { center, halfX, halfZ, corners, minX, maxX, minZ, maxZ };
+}
+
+function roadOverlapForFootprint(footprint, roadSegments) {
   for (const segment of roadSegments) {
     const roadHalf = segment.width / 2 + 0.35;
-    if (Math.max(segment.a.x, segment.b.x) < minX - roadHalf || Math.min(segment.a.x, segment.b.x) > maxX + roadHalf) continue;
-    if (Math.max(segment.a.z, segment.b.z) < minZ - roadHalf || Math.min(segment.a.z, segment.b.z) > maxZ + roadHalf) continue;
+    if (Math.max(segment.a.x, segment.b.x) < footprint.minX - roadHalf || Math.min(segment.a.x, segment.b.x) > footprint.maxX + roadHalf) continue;
+    if (Math.max(segment.a.z, segment.b.z) < footprint.minZ - roadHalf || Math.min(segment.a.z, segment.b.z) > footprint.maxZ + roadHalf) continue;
     const dx = segment.b.x - segment.a.x;
     const dz = segment.b.z - segment.a.z;
     const length = Math.hypot(dx, dz);
@@ -263,10 +384,33 @@ function roadOverlapForFootprint(matrix, position, roadSegments) {
       const t = step / steps;
       const x = segment.a.x + dx * t;
       const z = segment.a.z + dz * t;
-      if (pointInExpandedFootprint(x, z, center, halfX, halfZ, roadHalf)) return segment.name;
+      if (pointInExpandedFootprint(x, z, footprint.center, footprint.halfX, footprint.halfZ, roadHalf)) return segment.name;
     }
   }
   return null;
+}
+
+function localAsphaltRoadStripOverlapsBuilding(road, building) {
+  if (!footprintsIntersect(road, building, 0.12)) return false;
+  const halfXLength = Math.hypot(road.halfX.x, road.halfX.z);
+  const halfZLength = Math.hypot(road.halfZ.x, road.halfZ.z);
+  const longHalf = halfXLength >= halfZLength ? road.halfX : road.halfZ;
+  const shortHalf = halfXLength >= halfZLength ? road.halfZ : road.halfX;
+  const longLength = Math.max(halfXLength, halfZLength) * 2;
+  const steps = Math.max(1, Math.ceil(longLength / 1.7));
+  for (let step = 0; step <= steps; step += 1) {
+    const along = step / steps * 2 - 1;
+    for (const across of [0, -0.82, 0.82]) {
+      const x = road.center.x + longHalf.x * along + shortHalf.x * across;
+      const z = road.center.z + longHalf.z * along + shortHalf.z * across;
+      if (pointInExpandedFootprint(x, z, building.center, building.halfX, building.halfZ, 0.12)) return true;
+    }
+  }
+  return false;
+}
+
+function footprintsIntersect(a, b, pad = 0) {
+  return a.minX <= b.maxX + pad && a.maxX >= b.minX - pad && a.minZ <= b.maxZ + pad && a.maxZ >= b.minZ - pad;
 }
 
 function pointInExpandedFootprint(x, z, center, halfX, halfZ, pad) {
@@ -343,9 +487,16 @@ const summary = {
   badMatrices,
   hiddenAnimated,
   offRoadVehicles,
+  pedestriansOnVehicleRoad,
   nonWaterBoats,
   lowBridgeVehicles,
   staticRoadOverlaps: staticRoadOverlaps.length,
+  localAsphaltRoadOverlaps: localAsphaltRoadOverlaps.length,
+  railOverlaps: railOverlaps.length,
+  bridgeOverlaps: bridgeOverlaps.length,
+  bridgeStructureFootprints: bridgeStructureFootprints.length,
+  localAsphaltRoadStrips: localAsphaltRoadStrips.length,
+  solidBuildingFootprints: solidBuildingFootprints.length,
   roadLikePositions: roadLikePositions.length,
   qualityPositions: qualityPositions.length,
   coverage: coverageSummary
