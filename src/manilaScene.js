@@ -5,15 +5,16 @@ import { VoxelBatcher } from './voxelBatcher.js';
 const WORLD_BOUNDS = 340;
 const TERRAIN_CELL = 5.8;
 const TILE = 3.4;
-const PEDESTRIAN_COUNT = 460;
-const JEEPNEY_COUNT = 58;
-const MOTORBIKE_COUNT = 72;
-const TRICYCLE_COUNT = 44;
-const TAXI_COUNT = 28;
-const BUS_COUNT = 18;
-const TRAIN_COUNT = 14;
-const BOAT_COUNT = 18;
-const KALESA_COUNT = 10;
+const PEDESTRIAN_COUNT = 620;
+const JEEPNEY_COUNT = 74;
+const MOTORBIKE_COUNT = 96;
+const TRICYCLE_COUNT = 58;
+const TAXI_COUNT = 34;
+const BUS_COUNT = 22;
+const TRAIN_COUNT = 16;
+const BOAT_COUNT = 24;
+const KALESA_COUNT = 12;
+const CYCLIST_COUNT = 46;
 const tempColor = new THREE.Color();
 const ANIMATED_BOX_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
 
@@ -68,9 +69,27 @@ const LANDMARK_ZONES = [
   ['La Loma Grill District', -32, -188, 54, 34]
 ];
 
+const PROTECTED_LANDMARK_ZONES = [
+  ['Intramuros protected core', -96, -14, 88, 84],
+  ['Fort Santiago protected core', -122, -66, 36, 28],
+  ['Rizal Park protected lawn', -112, 70, 84, 50],
+  ['National Museum protected block', -118, 112, 64, 42],
+  ['Manila City Hall protected block', -54, 82, 52, 40],
+  ['Binondo heritage spine', -58, -92, 66, 48],
+  ['Quiapo church and market', 12, -130, 54, 42],
+  ['Makati tower podiums', 58, 72, 76, 54],
+  ['BGC high street podiums', 148, 78, 84, 58],
+  ['Ortigas mall podiums', 176, 30, 70, 50],
+  ['UP / QC civic core', 116, -198, 84, 50],
+  ['Cubao Expo and Araneta core', 168, -128, 66, 44],
+  ['Bay Area convention core', -168, 188, 86, 54],
+  ['Port fish-market core', -218, -118, 66, 48],
+  ['Marikina river park core', 268, -114, 66, 46]
+];
+
 const PEDESTRIAN_ROUTES = [
   [[-128, -10], [-76, -10], [-66, 20], [-116, 26], [-128, -10]],
-  [[-64, -98], [-28, -104], [4, -112], [-24, -118], [-64, -98]],
+  [[-78, -100], [-58, -104], [-34, -110], [-54, -112], [-78, -100]],
   [[6, 12], [34, 18], [42, 42], [8, 48], [6, 12]],
   [[104, 48], [184, 48], [188, 108], [112, 108], [104, 48]],
   [[68, -226], [164, -226], [176, -178], [86, -164], [68, -226]],
@@ -84,10 +103,10 @@ const PEDESTRIAN_ROUTES = [
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const ROAD_ROUTE_POINTS = [
-  [[-190, -236], [-190, 250], [-126, 278], [-76, 210], [-52, 112], [-36, 22], [-28, -104], [-12, -172], [94, -238]],
+  [[-190, -236], [-190, 250], [-126, 278], [-76, 210], [-36, 112], [-18, 24], [-4, -104], [8, -172], [94, -238]],
   [[92, -250], [98, -126], [100, -26], [84, 74], [104, 168], [190, 220]],
-  [[-142, -128], [-64, -98], [18, -118], [96, -76], [172, -18], [218, 72]],
-  [[-40, 84], [58, 72], [148, 78], [220, 92], [286, -88]]
+  [[-142, -128], [-72, -114], [8, -126], [96, -76], [172, -18], [218, 72]],
+  [[-24, 92], [58, 72], [148, 78], [220, 92], [286, -88]]
 ];
 
 const ROAD_ROUTES = ROAD_ROUTE_POINTS.map((points) => points.map(([x, z]) => ({ x, z })));
@@ -99,10 +118,13 @@ const PAVED_ROADS = [
   ['Ayala Avenue', [[-4, 76], [112, 72]], 8],
   ['BGC High Street', [[104, 96], [192, 96]], 8],
   ['Quezon Avenue', [[18, -126], [104, -186], [170, -184]], 8],
-  ['Taft / Rizal Avenue', [[-52, 112], [-36, 22], [-28, -104], [-12, -172]], 16],
+  ['Taft / Rizal Avenue', [[-36, 112], [-18, 24], [-4, -104], [8, -172]], 12],
   ['Port Road', [[-244, -120], [-154, -104], [-62, -88]], 12],
-  ['Makati Connector', [[-40, 84], [58, 72], [148, 78], [220, 92], [286, -88]], 18],
-  ['Old Manila Route', [[-142, -128], [-64, -98], [18, -118], [96, -76], [172, -18], [218, 72]], 22]
+  ['Makati Connector', [[-24, 92], [58, 72], [148, 78], [220, 92], [286, -88]], 14],
+  ['Old Manila Route', [[-142, -128], [-72, -114], [8, -126], [96, -76], [172, -18], [218, 72]], 14],
+  ['Marikina Bike / River Road', [[232, -116], [268, -108], [304, -92], [318, -66]], 6],
+  ['Poblacion Night Street', [[-6, 18], [16, 24], [42, 34]], 6],
+  ['Cubao Expo Lane', [[142, -142], [168, -128], [202, -118]], 6]
 ];
 
 const TRAIN_ROUTES = [
@@ -121,11 +143,34 @@ const KALESA_ROUTES = [
   [[-124, -38], [-76, -38], [-68, -4], [-92, 22], [-124, 12], [-124, -38]]
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
+const CYCLIST_ROUTES = [
+  [[232, -124], [268, -116], [304, -92], [320, -66], [300, -54], [260, -78], [232, -124]],
+  [[80, -230], [122, -236], [164, -210], [126, -184], [86, -198], [80, -230]],
+  [[28, 120], [66, 124], [76, 96], [42, 78], [28, 120]]
+].map((points) => points.map(([x, z]) => ({ x, z })));
+
 const ESTERO_POLYLINES = [
   [{ x: -92, z: -130 }, { x: -82, z: -54 }, { x: -120, z: 12 }],
   [{ x: -16, z: -146 }, { x: -32, z: -74 }, { x: -6, z: -30 }],
   [{ x: -204, z: -166 }, { x: -214, z: -98 }, { x: -238, z: -40 }],
   [{ x: 230, z: -132 }, { x: 268, z: -132 }, { x: 302, z: -132 }, { x: 314, z: -120 }]
+];
+
+const URBAN_FILL_ZONES = [
+  { name: 'Tondo / Navotas dense streets', x: -122, z: -204, width: 118, depth: 74, attempts: 150, height: [3.4, 9.5], material: 'concrete', accent: 'cloth' },
+  { name: 'Binondo / Escolta shophouse fabric', x: -56, z: -98, width: 104, depth: 74, attempts: 145, height: [4.2, 12], material: 'brick', accent: 'neonPink' },
+  { name: 'Quiapo / Avenida market fabric', x: 10, z: -138, width: 94, depth: 72, attempts: 135, height: [4.2, 11], material: 'concrete', accent: 'gold' },
+  { name: 'Makati CBD tower fabric', x: 62, z: 76, width: 108, depth: 88, attempts: 120, height: [9, 34], material: 'glass', accent: 'neonCyan' },
+  { name: 'BGC glass grid fabric', x: 150, z: 84, width: 118, depth: 88, attempts: 118, height: [10, 38], material: 'glass', accent: 'neonCyan' },
+  { name: 'Ortigas mall-office fabric', x: 180, z: 22, width: 96, depth: 72, attempts: 90, height: [8, 30], material: 'concrete', accent: 'neon' },
+  { name: 'Mandaluyong / San Juan fabric', x: 118, z: -66, width: 102, depth: 64, attempts: 92, height: [4, 15], material: 'concrete', accent: 'cloth' },
+  { name: 'Quezon City student creative fabric', x: 118, z: -198, width: 144, depth: 98, attempts: 154, height: [3.6, 13], material: 'concrete', accent: 'graffiti' },
+  { name: 'Cubao / Araneta fabric', x: 172, z: -132, width: 98, depth: 72, attempts: 96, height: [4.8, 18], material: 'concrete', accent: 'neonPink' },
+  { name: 'Bay Area hotel blocks', x: -164, z: 188, width: 112, depth: 86, attempts: 88, height: [6, 26], material: 'glass', accent: 'neon' },
+  { name: 'Paranaque / Las Pinas coastal fabric', x: -138, z: 270, width: 110, depth: 70, attempts: 84, height: [3.4, 10], material: 'concrete', accent: 'cloth' },
+  { name: 'Marikina river neighborhood fabric', x: 270, z: -102, width: 92, depth: 64, attempts: 76, height: [3.4, 10], material: 'brick', accent: 'gold' },
+  { name: 'Port industrial fabric', x: -222, z: -118, width: 90, depth: 78, attempts: 78, height: [3.2, 12], material: 'steel', accent: 'cloth' },
+  { name: 'La Loma food district fabric', x: -34, z: -188, width: 78, depth: 54, attempts: 62, height: [3.4, 8.5], material: 'brick', accent: 'neon' }
 ];
 
 function createRng(seed = 0x4d4e4c41) {
@@ -287,6 +332,11 @@ export function createManilaScene(materials) {
   const addTop = (kind, x, z, sx, sy, sz, color = null, yaw = 0, base = topY(x, z)) => {
     batch.addTop(kind, x, base, z, sx, sy, sz, color, yaw);
   };
+  let detailReservationId = 0;
+  const reserveDetail = (x, z, width, depth, type = 'detail') => {
+    planner.reserveRect(`manila-detail-${detailReservationId}`, x, z, width, depth, { force: true, type });
+    detailReservationId += 1;
+  };
 
   const addTiledRect = (kind, x, z, width, depth, options = {}) => {
     const tile = options.tile ?? TILE;
@@ -343,9 +393,11 @@ export function createManilaScene(materials) {
   buildOldManila({ addTop, addTiledRect, addLabel, rng });
   buildBusinessDistricts({ addTop, addTiledRect, addLabel, rng });
   buildNeighborhoods({ addTop, addTiledRect, addLabel, rng });
+  const cityLifeDetails = buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
   const blocks = buildUrbanBlocks({ planner, addTop, rng });
   buildStreetLife({ planner, addTop, rng });
   const pedestrians = buildPedestrians({ animated, rng });
+  const cyclists = buildCyclists({ animated, rng });
   const jeepneys = buildJeepneys({ animated, rng });
   const motorbikes = buildMotorbikes({ animated, rng });
   const tricycles = buildTricycles({ animated, rng });
@@ -409,7 +461,7 @@ export function createManilaScene(materials) {
       taxis,
       jeepneys,
       buses,
-      cyclists: 0,
+      cyclists,
       motorbikes,
       tricycles,
       trams: 0,
@@ -417,10 +469,11 @@ export function createManilaScene(materials) {
       boats,
       carts: kalesas,
       kalesas,
-      animatedInstances: pedestrians + jeepneys + motorbikes + tricycles + taxis + buses + trains + boats + kalesas,
+      animatedInstances: pedestrians + cyclists + jeepneys + motorbikes + tricycles + taxis + buses + trains + boats + kalesas,
       reservations: planner.reservations.length,
       monuments: LANDMARK_ZONES.length,
-      blocks
+      blocks,
+      cityLifeDetails
     },
     update(elapsed) {
       for (const item of animated) item.update(elapsed);
@@ -430,6 +483,9 @@ export function createManilaScene(materials) {
 
 function reserveLandmarkZones(planner) {
   LANDMARK_ZONES.forEach(([name, x, z, width, depth]) => {
+    planner.reserveRect(name, x, z, width, depth, { force: true, type: 'district' });
+  });
+  PROTECTED_LANDMARK_ZONES.forEach(([name, x, z, width, depth]) => {
     planner.reserveRect(name, x, z, width, depth, { force: true, type: 'landmark' });
   });
 }
@@ -1141,24 +1197,268 @@ function addBasketballCourt({ addTop, x, z }) {
   addTop('cloth', x, z, 14, 0.18, 0.35, 0xd94f45, 0, topY(x, z) + 0.24);
 }
 
+function buildLayeredCityLife({ addTop, addTiledRect, addLabel, reserveDetail, rng }) {
+  let details = 0;
+  details += buildOldManilaFineGrain({ addTop, reserveDetail, rng });
+  details += buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
+  details += buildCorporateAfterWorkLayer({ addTop, rng });
+  details += buildQuezonCreativeLayer({ addTop, addLabel, reserveDetail, rng });
+  details += buildWaterfrontAndPortLayer({ addTop, addLabel, rng });
+  details += buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng });
+  return details;
+}
+
+function canPlaceDetailFootprint(x, z, width = 4, depth = 4, options = {}) {
+  if (footprintTouchesWater(x, z, width, depth, options.waterPad ?? 1.4)) return false;
+  if (!options.allowRoad && footprintTouchesRoad(x, z, width, depth, options.roadPad ?? 1.4)) return false;
+  return true;
+}
+
+function addDetailBuilding(addTop, reserveDetail, x, z, width, height, depth, material, color, yaw = 0) {
+  if (!canPlaceDetailFootprint(x, z, width, depth, { roadPad: 1.0 })) return 0;
+  reserveDetail?.(x, z, width + 1.6, depth + 1.6, 'building');
+  addTop(material, x, z, width, height, depth, color, yaw);
+  addTop(height > 9 ? 'steel' : 'slate', x, z, width + 0.5, 0.42, depth + 0.5, height > 9 ? 0x66727a : 0x5c6268, yaw, topY(x, z) + height);
+  return 2;
+}
+
+function addShopfrontSign(addTop, x, z, width, color, y = 3.2, yaw = 0) {
+  if (isWater(x, z, 1.4)) return 0;
+  addTop('neonCyan', x, z, width, 0.62, 0.28, color, yaw, topY(x, z) + y);
+  addTop('gold', x - width / 2 - 0.6, z, 0.24, 1.7, 0.24, 0xd8a334, yaw, topY(x, z) + y - 0.45);
+  addTop('gold', x + width / 2 + 0.6, z, 0.24, 1.7, 0.24, 0xd8a334, yaw, topY(x, z) + y - 0.45);
+  return 3;
+}
+
+function addLaundryLines(addTop, reserveDetail, x, z, width = 9, yaw = 0) {
+  if (!canPlaceDetailFootprint(x, z, width, 2.2, { roadPad: 0.8 })) return 0;
+  reserveDetail?.(x, z, width + 1.4, 3.4);
+  addTop('wood', x - width / 2, z, 0.22, 3.1, 0.22, 0x7a4d30, yaw);
+  addTop('wood', x + width / 2, z, 0.22, 3.1, 0.22, 0x7a4d30, yaw);
+  addTop('cloth', x, z, width, 0.18, 0.2, 0xf0dfb2, yaw, topY(x, z) + 2.7);
+  for (let i = -2; i <= 2; i += 1) {
+    addTop(i % 2 ? 'cloth' : 'neonCyan', x + i * (width / 5), z + 0.2, 1.2, 0.8, 0.18, i % 2 ? 0xd94f45 : 0x48d9ff, yaw, topY(x, z) + 2.15);
+  }
+  return 8;
+}
+
+function addSariSariCluster(addTop, reserveDetail, x, z, rng, yaw = 0) {
+  if (!canPlaceDetailFootprint(x, z, 8, 7, { roadPad: 0.8 })) return 0;
+  reserveDetail?.(x, z, 9.2, 8.2);
+  addTop('wood', x, z, 6.2, 2.8, 4.2, 0x7a4d30, yaw);
+  addTop('cloth', x, z - 2.3, 6.8, 0.55, 0.3, rng() > 0.5 ? 0xd94f45 : 0xf0dfb2, yaw, topY(x, z) + 2.35);
+  addTop('neon', x - 1.6, z - 2.55, 1.0, 1.0, 0.26, 0xd8a334, yaw, topY(x, z) + 1.35);
+  addTop('neonPink', x + 1.6, z - 2.55, 1.0, 1.0, 0.26, 0xf25fa7, yaw, topY(x, z) + 1.35);
+  addStaticPerson(addTop, x + 3.4, z + 1.8, 'crowd', 0.78);
+  return 6;
+}
+
+function buildOldManilaFineGrain({ addTop, reserveDetail, rng }) {
+  let details = 0;
+  for (let i = 0; i < 12; i += 1) {
+    const x = -92 + i * 7.0;
+    details += addShopfrontSign(addTop, x, -108, 4.8, i % 2 ? 0xf25fa7 : 0xd8a334, 3.6);
+    if (i % 2 === 0) {
+      addTop('neonPink', x, -112.2, 0.8, 1.2, 0.28, 0xf25fa7, 0, topY(x, -112.2) + 3.0);
+      addTop('gold', x, -113.2, 1.1, 0.4, 1.1, 0xd8a334, 0, topY(x, -113.2) + 2.45);
+      details += 2;
+    }
+    if (i % 3 === 0) addStaticPerson(addTop, x + (rng() - 0.5) * 2, -100 + rng() * 8, 'crowd', 0.82);
+  }
+  buildMarketStalls(addTop, -78, -122, 8, 0xd94f45, rng, 0.08);
+  buildMarketStalls(addTop, -34, -90, 7, 0xf0dfb2, rng, -0.12);
+  details += 30;
+
+  for (let i = 0; i < 7; i += 1) {
+    const x = -74 + i * 12;
+    details += addDetailBuilding(addTop, reserveDetail, x, -54, 8.6, 5.2 + (i % 3) * 1.8, 5.6, i % 2 ? 'limestone' : 'brick', i % 2 ? 0xd8cfb7 : 0x9f583d);
+    addTop('graffiti', x, -57.1, 6.8, 2.2, 0.32, i % 2 ? 0x48d9ff : 0xf25fa7, 0, topY(x, -54) + 2.2);
+    details += 1;
+  }
+  buildMarketStalls(addTop, 12, -150, 9, 0xd8a334, rng, 0.04);
+  addTop('shadow', 2, -118, 42, 0.16, 8.2, 0x2e2924, 0, topY(2, -118) + 0.12);
+  addTop('neon', -4, -116, 22, 0.42, 0.36, 0xf0dfb2, 0, topY(-4, -116) + 1.1);
+  details += 38;
+  return details;
+}
+
+function buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDetail, rng }) {
+  let details = 0;
+  addTiledRect('asphalt', 16, 30, 50, 16, { color: '#2f3338', height: 0.1, tile: 3.2, baseOffset: 0.04 });
+  for (let i = 0; i < 14; i += 1) {
+    const x = -4 + (i % 7) * 7.2;
+    const z = 18 + Math.floor(i / 7) * 13;
+    details += addDetailBuilding(addTop, reserveDetail, x, z, 5.8, 4.6 + rng() * 2.8, 5.2, i % 2 ? 'brick' : 'concrete', i % 2 ? 0x9f583d : 0x8b8d88);
+    details += addShopfrontSign(addTop, x, z - 2.9, 3.8, i % 3 === 0 ? 0xf25fa7 : 0x48d9ff, 3.0);
+    if (i % 4 === 0) {
+      addTop('shadow', x - 1.8, z - 3.15, 1.2, 2.0, 0.34, 0x2e2924, 0, topY(x, z) + 1.0);
+      addStaticPerson(addTop, x + 2.8, z - 2.6, 'cloth', 0.76);
+      details += 2;
+    }
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const x = 0 + i * 5.4;
+    addTop(i % 2 ? 'neonPink' : 'neonCyan', x, 45, 3.0, 0.48, 0.3, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, 45) + 4.8);
+    addTop('steel', x, 46.8, 1.2, 1.2, 1.2, 0x66727a, i * 0.4, topY(x, 45) + 5.2);
+    details += 2;
+  }
+  buildMarketStalls(addTop, 34, 42, 7, 0xf25fa7, rng, -0.06);
+  addLabel('Poblacion Neon Alleys', 18, topY(18, 34) + 12, 34);
+  return details + 24;
+}
+
+function buildCorporateAfterWorkLayer({ addTop, rng }) {
+  let details = 0;
+  for (const [x, z, width, count, color] of [
+    [58, 54, 72, 10, 0x48d9ff],
+    [148, 70, 86, 12, 0xf25fa7],
+    [178, 12, 66, 8, 0xd8a334]
+  ]) {
+    for (let i = 0; i < count; i += 1) {
+      const px = x - width / 2 + i * (width / Math.max(1, count - 1));
+      const pz = z + (i % 2 ? 9 : -9);
+      if (isWater(px, pz, 1.5)) continue;
+      addTop('gold', px, pz, 0.26, 3.8, 0.26, 0xd8a334);
+      addTop('neon', px, pz, 0.9, 0.42, 0.9, 0xf0dfb2, 0, topY(px, pz) + 3.45);
+      if (i % 3 === 0) addStaticPerson(addTop, px + 1.8, pz + 1.2, 'cloth', 0.84);
+      if (i % 4 === 0) {
+        addTop('neonCyan', px, pz - 2.4, 4.4, 0.46, 0.26, color, 0, topY(px, pz) + 2.4);
+      }
+      details += 4;
+    }
+  }
+  for (let i = 0; i < 9; i += 1) {
+    const x = 108 + i * 10;
+    addTop('graffiti', x, 91.4, 4.2, 3.8, 0.32, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, 91) + 2.5);
+    details += 1;
+  }
+  return details;
+}
+
+function buildQuezonCreativeLayer({ addTop, addLabel, reserveDetail, rng }) {
+  let details = 0;
+  for (let i = 0; i < 11; i += 1) {
+    const x = 40 + i * 8.4;
+    details += addDetailBuilding(addTop, reserveDetail, x, -170 + (i % 3) * 8, 6.6, 4 + rng() * 2, 5.2, 'concrete', 0x8b8d88);
+    addTop('graffiti', x, -173 + (i % 3) * 8, 5.2, 2.4, 0.3, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, -170 + (i % 3) * 8) + 2.2);
+    details += 1;
+  }
+  addTop('wood', 176, -116, 10, 1.0, 6, 0x7a4d30);
+  addTop('neonPink', 176, -119.2, 8.2, 0.8, 0.32, 0xf25fa7, 0, topY(176, -116) + 2.1);
+  addTop('steel', 176, -112.2, 8.8, 0.42, 0.42, 0x66727a, 0, topY(176, -116) + 2.5);
+  for (let i = 0; i < 12; i += 1) {
+    addStaticPerson(addTop, 160 + rng() * 34, -126 + rng() * 18, i % 3 === 0 ? 'cloth' : 'crowd', 0.78);
+  }
+  buildMarketStalls(addTop, 70, -186, 8, 0xf0dfb2, rng, -0.08);
+  addLabel('QC Indie Music Rooms', 176, topY(176, -116) + 10, -116);
+  return details + 36;
+}
+
+function buildWaterfrontAndPortLayer({ addTop, addLabel, rng }) {
+  let details = 0;
+  for (let i = 0; i < 18; i += 1) {
+    const z = 118 + i * 8.2;
+    const x = -198 + Math.sin(i * 0.7) * 8;
+    if (isWater(x - 12, z, 1.5)) {
+      addTop('limestone', x, z, 18, 0.56, 1.4, 0xd8cfb7, 0.08, topY(x, z) + 0.22);
+      addTop('gold', x + 7.8, z + 1.1, 0.25, 2.8, 0.25, 0xd8a334);
+      if (i % 3 === 0) addStaticPerson(addTop, x + 4, z + 2.4, 'crowd', 0.78);
+      details += 3;
+    }
+  }
+  for (let i = 0; i < 10; i += 1) {
+    const x = -246 + i * 7.4;
+    addTop('cloth', x, -88, 5.4, 0.6, 0.36, i % 2 ? 0x48d9ff : 0xf0dfb2, 0, topY(x, -88) + 2.8);
+    addTop('steel', x, -84.6, 4.8, 2.8, 3.2, i % 2 ? 0x66727a : 0xd94f45);
+    details += 2;
+  }
+  buildMarketStalls(addTop, -132, 238, 8, 0xd94f45, rng, 0.12);
+  addLabel('Manila Bay Sunset Promenade', -198, topY(-198, 188) + 9, 188);
+  return details + 24;
+}
+
+function buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng }) {
+  let details = 0;
+  for (const [x, z, label] of [
+    [116, -42, 'Kapitolyo Carinderias'],
+    [-116, -176, 'Barangay Side Streets'],
+    [-126, 248, 'Coastal Neighborhood Streets'],
+    [258, -84, 'Marikina Bike Paths'],
+    [-12, -176, 'La Loma Late Food']
+  ]) {
+    for (let i = 0; i < 5; i += 1) {
+      details += addSariSariCluster(addTop, reserveDetail, x - 18 + i * 9, z + (i % 2) * 7, rng, 0.04);
+      if (i % 2 === 0) details += addLaundryLines(addTop, reserveDetail, x - 16 + i * 9, z + 9, 7.4, 0.04);
+    }
+    addBasketballCourt({ addTop, x: x + 28, z: z + 18 });
+    addTop('limestone', x + 10, z - 16, 9.2, 5.2, 7.4, 0xd8cfb7);
+    addTop('gold', x + 10, z - 20, 6.4, 0.5, 0.32, 0xd8a334, 0, topY(x + 10, z - 16) + 3.7);
+    addLabel(label, x, topY(x, z) + 10, z);
+    details += 14;
+  }
+  return details;
+}
+
+function footprintTouchesRoad(x, z, width, depth, pad = 0) {
+  const samples = [
+    [x, z],
+    [x - width / 2, z - depth / 2],
+    [x + width / 2, z - depth / 2],
+    [x - width / 2, z + depth / 2],
+    [x + width / 2, z + depth / 2],
+    [x - width / 2, z],
+    [x + width / 2, z],
+    [x, z - depth / 2],
+    [x, z + depth / 2]
+  ];
+  return samples.some(([sx, sz]) => isRoadDeck(sx, sz, pad));
+}
+
 function buildUrbanBlocks({ planner, addTop, rng }) {
   let blocks = 0;
-  for (let i = 0; i < 980; i += 1) {
-    const x = -310 + rng() * 620;
-    const z = -300 + rng() * 620;
-    if (isWater(x, z, 5) || planner.hasPoint(x, z)) continue;
-    const width = 7 + rng() * 12;
-    const depth = 7 + rng() * 12;
-    if (footprintTouchesWater(x, z, width, depth, 4)) continue;
-    if (!planner.reserveRect(`manila-block-${i}`, x, z, width + 3, depth + 3, { type: 'building' })) continue;
-    const height = blockHeightAt(x, z, rng);
-    const material = height > 13 ? (rng() > 0.45 ? 'glass' : 'concrete') : rng() > 0.58 ? 'brick' : 'concrete';
-    addTop(material, x, z, width, height, depth, material === 'brick' ? 0x9f583d : material === 'glass' ? 0x9cc8c8 : 0x8b8d88);
-    addTop(height > 13 ? 'steel' : 'slate', x, z, width + 0.7, 0.5, depth + 0.7, height > 13 ? 0x66727a : 0x5c6268, 0, topY(x, z) + height);
-    if (rng() > 0.84) addTop('cloth', x, z - depth / 2 - 0.25, width * 0.65, 0.45, 0.25, rng() > 0.5 ? 0xd94f45 : 0x48d9ff, 0, topY(x, z) + Math.min(5.2, height * 0.7));
-    blocks += 1;
+  for (const zone of URBAN_FILL_ZONES) {
+    const attempts = Math.ceil(zone.attempts * 5);
+    for (let i = 0; i < attempts; i += 1) {
+      const x = zone.x + (rng() - 0.5) * zone.width;
+      const z = zone.z + (rng() - 0.5) * zone.depth;
+      if (isWater(x, z, 5) || planner.hasPoint(x, z)) continue;
+      const compact = zone.height[1] <= 13;
+      const width = compact ? 3.8 + rng() * 4.8 : 5.2 + rng() * 7.5;
+      const depth = compact ? 3.8 + rng() * 4.8 : 5.2 + rng() * 7.5;
+      if (footprintTouchesWater(x, z, width, depth, 4) || footprintTouchesRoad(x, z, width, depth, 2.8)) continue;
+      if (!planner.reserveRect(`manila-${zone.name}-${i}`, x, z, width + 1.4, depth + 1.4, { type: 'building' })) continue;
+      const height = zone.height[0] + rng() * (zone.height[1] - zone.height[0]) + blockHeightAt(x, z, rng) * 0.34;
+      const material = resolveUrbanMaterial(zone, height, rng);
+      addTop(material, x, z, width, height, depth, material === 'brick' ? 0x9f583d : material === 'glass' ? 0x9cc8c8 : material === 'steel' ? 0x66727a : 0x8b8d88);
+      addTop(height > 13 ? 'steel' : 'slate', x, z, width + 0.7, 0.5, depth + 0.7, height > 13 ? 0x66727a : 0x5c6268, 0, topY(x, z) + height);
+      if (rng() > 0.68) {
+        addTop(zone.accent, x, z - depth / 2 - 0.24, width * 0.68, 0.42, 0.24, accentColor(zone.accent, rng), 0, topY(x, z) + Math.min(5.4, height * 0.58));
+      }
+      if (height > 18 && rng() > 0.58) {
+        addTop('glass', x - width / 2 - 0.08, z, 0.24, height * 0.5, depth * 0.72, 0x9cc8c8, 0, topY(x, z) + height * 0.22);
+        addTop('glass', x + width / 2 + 0.08, z, 0.24, height * 0.44, depth * 0.62, 0x9cc8c8, 0, topY(x, z) + height * 0.25);
+      }
+      blocks += 1;
+    }
   }
   return blocks;
+}
+
+function resolveUrbanMaterial(zone, height, rng) {
+  if (height > 18) return rng() > 0.35 ? 'glass' : 'concrete';
+  if (zone.material === 'brick') return rng() > 0.22 ? 'brick' : 'concrete';
+  if (zone.material === 'steel') return rng() > 0.42 ? 'steel' : 'concrete';
+  if (zone.material === 'glass') return rng() > 0.34 ? 'glass' : 'concrete';
+  return rng() > 0.68 ? 'brick' : zone.material;
+}
+
+function accentColor(kind, rng) {
+  if (kind === 'neonPink') return 0xf25fa7;
+  if (kind === 'neonCyan') return 0x48d9ff;
+  if (kind === 'neon') return 0xd8a334;
+  if (kind === 'graffiti') return rng() > 0.5 ? 0xf25fa7 : 0x48d9ff;
+  if (kind === 'cloth') return rng() > 0.5 ? 0xd94f45 : 0xf0dfb2;
+  return 0xd8a334;
 }
 
 function footprintTouchesWater(x, z, width, depth, pad = 0) {
@@ -1227,6 +1527,28 @@ function buildPedestrians({ animated, rng }) {
   animated.push({ object: group, update(elapsed) { updatePeople(parts, people, elapsed); } });
   updatePeople(parts, people, 0);
   return people.length;
+}
+
+function buildCyclists({ animated, rng }) {
+  const routes = CYCLIST_ROUTES.map((route) => prepareRoute(route, 3.2, true));
+  const cyclists = [];
+  for (let i = 0; i < CYCLIST_COUNT; i += 1) {
+    const route = routes[i % routes.length];
+    cyclists.push({ route, distance: rng() * route.length, speed: 4.6 + rng() * 3.2, lane: (rng() - 0.5) * route.width, phase: rng() * Math.PI * 2 });
+  }
+  const group = new THREE.Group();
+  group.name = 'manila-cyclists-marikina-makati-qc';
+  const parts = {
+    frame: makeInstancedPart(cyclists.length, 'manila-cyclist-frame', 0x2e2924),
+    rider: makeInstancedPart(cyclists.length, 'manila-cyclist-rider', 0x48d9ff),
+    head: makeInstancedPart(cyclists.length, 'manila-cyclist-head', 0xb47a54),
+    wheelA: makeInstancedPart(cyclists.length, 'manila-cyclist-wheel-a', 0x202326),
+    wheelB: makeInstancedPart(cyclists.length, 'manila-cyclist-wheel-b', 0x202326)
+  };
+  Object.values(parts).forEach((mesh) => group.add(mesh));
+  animated.push({ object: group, update(elapsed) { updateCyclists(parts, cyclists, elapsed); } });
+  updateCyclists(parts, cyclists, 0);
+  return cyclists.length;
 }
 
 function buildJeepneys({ animated, rng }) {
@@ -1552,6 +1874,28 @@ function updatePeople(parts, people, elapsed) {
     setPart(parts.hair, index, x, y + bob, z, yaw, 0, 1.98, -0.02, 0.42 * scale, 0.14 * scale, 0.42 * scale);
     setPart(parts.leftLeg, index, x, y, z, yaw, -0.14, 0.38, stride, 0.15 * scale, 0.65 * scale, 0.15 * scale);
     setPart(parts.rightLeg, index, x, y, z, yaw, 0.14, 0.38, -stride, 0.15 * scale, 0.65 * scale, 0.15 * scale);
+  });
+  markPartsDirty(parts);
+}
+
+function updateCyclists(parts, cyclists, elapsed) {
+  cyclists.forEach((cyclist, index) => {
+    const sample = sampleRoute(cyclist.route, cyclist.distance + elapsed * cyclist.speed);
+    const resolved = resolveDryRoutePoint(sample, cyclist.lane, 0.9);
+    if (!resolved.valid) {
+      hideParts(parts, index);
+      return;
+    }
+    const x = resolved.x;
+    const z = resolved.z;
+    const y = topY(x, z) + 0.12;
+    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+    const pedal = Math.sin(elapsed * 8.5 + cyclist.phase) * 0.08;
+    setPart(parts.frame, index, x, y, z, yaw, 0, 0.62, 0, 0.62, 0.28, 1.55);
+    setPart(parts.rider, index, x, y + pedal, z, yaw, 0, 1.18, -0.08, 0.42, 0.78, 0.42);
+    setPart(parts.head, index, x, y + pedal, z, yaw, 0, 1.72, -0.16, 0.34, 0.32, 0.34);
+    setPart(parts.wheelA, index, x, y, z, yaw, -0.46, 0.34, 0.54, 0.14, 0.62, 0.62);
+    setPart(parts.wheelB, index, x, y, z, yaw, 0.46, 0.34, -0.54, 0.14, 0.62, 0.62);
   });
   markPartsDirty(parts);
 }
