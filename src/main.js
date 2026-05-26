@@ -362,7 +362,9 @@ const canvas = document.createElement('canvas');
 canvas.className = 'webgl';
 app.append(canvas);
 const initialRenderSize = getRenderSize();
-const MAX_RENDER_PIXEL_RATIO = 1.35;
+const MAX_RENDER_PIXEL_RATIO = 1.2;
+const MIN_RENDER_PIXEL_RATIO = 0.76;
+let renderPixelRatio = Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO);
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -370,7 +372,7 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: 'high-performance',
   alpha: false
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
+renderer.setPixelRatio(renderPixelRatio);
 renderer.setSize(initialRenderSize.width, initialRenderSize.height, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
@@ -399,7 +401,23 @@ function resizeRendererToCanvas() {
   const size = getRenderSize();
   camera.aspect = size.width / size.height;
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
+  renderPixelRatio = Math.min(renderPixelRatio, window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO);
+  renderer.setPixelRatio(renderPixelRatio);
+  renderer.setSize(size.width, size.height, false);
+}
+
+function adjustRenderPixelRatio(fps) {
+  const maxPixelRatio = Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO);
+  let nextPixelRatio = renderPixelRatio;
+  if (fps < 55 && renderPixelRatio > MIN_RENDER_PIXEL_RATIO) {
+    nextPixelRatio = Math.max(MIN_RENDER_PIXEL_RATIO, renderPixelRatio - 0.08);
+  } else if (fps > 63 && renderPixelRatio < maxPixelRatio) {
+    nextPixelRatio = Math.min(maxPixelRatio, renderPixelRatio + 0.04);
+  }
+  if (Math.abs(nextPixelRatio - renderPixelRatio) < 0.01) return;
+  renderPixelRatio = nextPixelRatio;
+  renderer.setPixelRatio(renderPixelRatio);
+  const size = getRenderSize();
   renderer.setSize(size.width, size.height, false);
 }
 
@@ -535,6 +553,7 @@ const flightCitySync = {
 const forward = new THREE.Vector3();
 const right = new THREE.Vector3();
 const moveVector = new THREE.Vector3();
+const labelProjection = new THREE.Vector3();
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const clock = new THREE.Clock();
 const liveLocalMotion = {
@@ -552,6 +571,9 @@ const fpsState = {
   frames: 0,
   last: performance.now(),
   fps: 60
+};
+const labelUpdateState = {
+  last: -Infinity
 };
 
 setupMobileFlightControls(hud);
@@ -1894,7 +1916,11 @@ function clampInputAxis(value) {
   return Math.max(-1, Math.min(1, value));
 }
 
-function updateLabels() {
+function updateLabels(now) {
+  const minInterval = flight.active ? 34 : 84;
+  if (now - labelUpdateState.last < minInterval) return;
+  labelUpdateState.last = now;
+
   const { width, height } = getRenderSize();
   const cameraPosition = camera.position;
   const hudRect = hud.root.getBoundingClientRect();
@@ -1912,7 +1938,7 @@ function updateLabels() {
   const occupiedLabelRects = [];
 
   for (const label of labels) {
-    const pos = label.position.clone().project(camera);
+    const pos = labelProjection.copy(label.position).project(camera);
     const screenX = (pos.x * 0.5 + 0.5) * width;
     const screenY = (-pos.y * 0.5 + 0.5) * height;
     const labelWidth = Math.min(190, Math.max(70, label.name.length * 7.2 + 22));
@@ -1963,6 +1989,7 @@ function updateMetrics(now) {
   fpsState.frames = 0;
   fpsState.last = now;
   hud.fps.textContent = String(fpsState.fps);
+  adjustRenderPixelRatio(fpsState.fps);
 
   window.__ROME_METRICS__.fps = fpsState.fps;
   window.__ROME_METRICS__.mode = flight.active ? 'flight' : 'orbit';
@@ -1974,6 +2001,7 @@ function updateMetrics(now) {
   };
   window.__ROME_METRICS__.drawCalls = renderer.info.render.calls;
   window.__ROME_METRICS__.triangles = renderer.info.render.triangles;
+  window.__ROME_METRICS__.renderScale = Math.round(renderPixelRatio * 100) / 100;
 }
 
 function animate(now) {
@@ -1998,7 +2026,7 @@ function animate(now) {
   world.update(elapsed);
   livePresence.update(now, delta);
   renderer.render(scene, camera);
-  updateLabels();
+  updateLabels(now);
   updateMetrics(now);
 }
 
