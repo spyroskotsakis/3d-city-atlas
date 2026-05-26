@@ -77,14 +77,69 @@ const PROTECTED_LANDMARK_ZONES = [
   ['Manila City Hall protected block', -54, 82, 52, 40]
 ];
 
+const ACTOR_SOLID_ZONES = [
+  ['Intramuros North Gate', -96, -50, 18, 8],
+  ['Intramuros West Gate', -134, -14, 18, 8],
+  ['Intramuros North Wall West', -120, -47, 30, 5],
+  ['Intramuros North Wall East', -66, -47, 18, 5],
+  ['Intramuros East Wall', -58, -14, 5, 70],
+  ['Intramuros West Wall', -134, -14, 5, 70],
+  ['Intramuros South Wall', -96, 19, 78, 5],
+  ['Manila Cathedral', -82, -18, 34, 23],
+  ['Fort Santiago', -122, -66, 34, 28],
+  ['San Agustin Church', -100, 16, 25, 17],
+  ['Casa Manila', -70, 16, 23, 17],
+  ['Baluarte de San Diego', -132, 24, 25, 20],
+  ['Rizal Monument', -112, 70, 9, 9],
+  ['National Museum', -118, 112, 44, 26],
+  ['Manila City Hall', -54, 82, 40, 24],
+  ['Quiapo Church', 0, -134, 23, 21],
+  ['Binondo Gate West', -90, -116, 8, 7],
+  ['Binondo Gate East', -74, -116, 8, 7],
+  ['Escolta Art Deco Block', -44, -70, 31, 19],
+  ['Greenbelt Glass Pavilion', 20, 108, 26, 14],
+  ['Greenbelt Limestone Pavilion', 48, 112, 30, 16],
+  ['BGC Retail Pavilion', 148, 118, 32, 10],
+  ['Ortigas Mall', 196, 30, 46, 22],
+  ['UP Diliman Main Hall', 96, -210, 36, 20],
+  ['Quezon City Campus Block', 150, -190, 50, 20],
+  ['Araneta City Block', 202, -156, 24, 24],
+  ['Bay Area Hotel', -146, 174, 22, 22],
+  ['Bay Area Tower', -182, 182, 20, 20],
+  ['Bay Convention Hall', -170, 210, 50, 26],
+  ['Paranaque Church', -144, 268, 26, 22],
+  ['Barangay Civic Anchor', -106, -192, 13, 11],
+  ['Coastal Civic Anchor', -116, 232, 13, 11],
+  ['Marikina Shoe Hall', 252, -104, 22, 14]
+];
+
+const FOOTBRIDGES = [
+  [96, -126, 24, 0.08, 'EDSA / Aurora Footbridge'],
+  [84, 74, 28, -0.1, 'Ayala Footbridge'],
+  [-36, 22, 22, 0.16, 'Intramuros Connector Footbridge'],
+  [148, 78, 26, 0.08, 'BGC High Street Footbridge'],
+  [104, -186, 24, -0.18, 'UP / Maginhawa Footbridge']
+];
+
+const PUBLIC_REALM_BLOCKERS = [
+  ...ACTOR_SOLID_ZONES,
+  ['Greenbelt Outdoor Pavilion Buffer', 20, 108, 30, 18],
+  ['Greenbelt Market Pavilion Buffer', 48, 112, 34, 20],
+  ['BGC Retail Pavilion Buffer', 148, 118, 36, 14],
+  ['Ortigas Mall Buffer', 196, 30, 48, 22],
+  ['Poblacion Venue Cluster', 18, 31, 60, 28],
+  ['Bay Area Hotel Cluster', -166, 188, 76, 82],
+  ['La Loma Grill Row', -32, -188, 58, 36]
+];
+
 const PEDESTRIAN_ROUTES = [
-  [[-128, -10], [-76, -10], [-66, 20], [-116, 26], [-128, -10]],
+  [[-126, -44], [-104, -44], [-76, -38], [-64, -26], [-64, 2], [-84, 28], [-116, 24], [-124, 4], [-126, -44]],
   [[-78, -100], [-58, -104], [-34, -110], [-54, -112], [-78, -100]],
   [[6, 12], [34, 18], [42, 42], [8, 48], [6, 12]],
   [[116, 82], [180, 82], [180, 108], [116, 108], [116, 82]],
-  [[88, -236], [158, -232], [166, -190], [96, -182], [88, -236]],
-  [[-190, 160], [-128, 158], [-122, 220], [-188, 224], [-190, 160]],
-  [[34, 116], [66, 120], [74, 98], [50, 90], [34, 116]],
+  [[76, -238], [126, -246], [170, -224], [166, -178], [118, -176], [74, -198], [76, -238]],
+  [[-212, 142], [-212, 232], [-206, 232], [-206, 142], [-212, 142]],
+  [[28, 128], [70, 130], [78, 96], [60, 88], [34, 96], [28, 128]],
   [[88, -224], [126, -212], [152, -236], [116, -248], [88, -224]],
   [[144, -142], [202, -156], [214, -124], [168, -104], [144, -142]],
   [[-156, -216], [-118, -202], [-86, -176], [-126, -160], [-156, -216]],
@@ -133,8 +188,8 @@ const BOAT_ROUTES = [
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const KALESA_ROUTES = [
-  [[-128, -24], [-96, -24], [-70, -16], [-70, 16], [-100, 26], [-128, 8], [-128, -24]],
-  [[-120, -16], [-84, -16], [-64, 2], [-84, 24], [-118, 18], [-120, -16]]
+  [[-126, -40], [-104, -40], [-66, -34], [-56, -10], [-56, 30], [-88, 32], [-116, 24], [-126, 4], [-126, -40]],
+  [[-120, -34], [-92, -34], [-62, -28], [-54, -6], [-54, 24], [-84, 32], [-116, 18], [-120, -34]]
 ].map((points) => points.map(([x, z]) => ({ x, z })));
 
 const CYCLIST_ROUTES = [
@@ -352,7 +407,8 @@ function manilaWaterY(x, z) {
 }
 
 function roadSurfaceY(x, z) {
-  if (isWater(x, z, 1.2) && isRoadDeck(x, z, 1.2)) return Math.max(topY(x, z) + 1.45, 1.85);
+  if (isWater(x, z, 1.2) && isRoadRouteSurface(x, z, 2.4)) return Math.max(topY(x, z) + 1.55, 1.95);
+  if (isWater(x, z, 1.2) && isRoadDeck(x, z, 2.2)) return Math.max(topY(x, z) + 1.45, 1.85);
   return topY(x, z);
 }
 
@@ -375,6 +431,16 @@ export const manilaTopologyProbe = {
       width: 8,
       a: { x, z: z - halfLength },
       b: { x, z: z + halfLength }
+    };
+  }),
+  footbridgeSegments: () => FOOTBRIDGES.map(([x, z, length, yaw, name]) => {
+    const dx = Math.sin(yaw) * length / 2;
+    const dz = Math.cos(yaw) * length / 2;
+    return {
+      name,
+      width: 5.4,
+      a: { x: x - dx, z: z - dz },
+      b: { x: x + dx, z: z + dz }
     };
   }),
   roadSegments: () => PAVED_ROADS.flatMap(([name, points, width]) => points.slice(1).map((point, index) => ({
@@ -481,6 +547,7 @@ export function createManilaScene(materials) {
   buildTerrain(batch);
   buildWaterways({ addTop, addTiledRect, addLabel });
   buildRoadsAndTransit({ planner, reserveRoadSegment, addTop, addTiledRect, addLabel });
+  const roadLegibilityDetails = buildRoadLegibilityLayer({ addTop, addLabel });
   const connectedFabric = buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng });
   buildIntramuros({ addTop, addTiledRect, addLabel, rng });
   buildCivicLandmarks({ addTop, addTiledRect, addLabel, rng });
@@ -490,8 +557,9 @@ export function createManilaScene(materials) {
   const cityLifeDetails = buildLayeredCityLife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng });
   const blocks = buildUrbanBlocks({ planner, addTop, rng });
   buildStreetLife({ planner, addTop, rng });
-  const pedestrians = buildPedestrians({ animated, rng });
-  const cyclists = buildCyclists({ animated, rng });
+  const publicRealmDetails = buildManilaPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng });
+  const pedestrians = buildPedestrians({ animated, planner, rng });
+  const cyclists = buildCyclists({ animated, planner, rng });
   const jeepneys = buildJeepneys({ animated, rng });
   const motorbikes = buildMotorbikes({ animated, rng });
   const tricycles = buildTricycles({ animated, rng });
@@ -499,7 +567,7 @@ export function createManilaScene(materials) {
   const buses = buildBuses({ animated, rng });
   const trains = buildTrains({ animated, rng });
   const boats = buildBoats({ animated, rng });
-  const kalesas = buildKalesas({ animated, rng });
+  const kalesas = buildKalesas({ animated, planner, rng });
 
   const { group, total } = batch.build();
   group.name = 'procedural-manila-metro-voxel-city';
@@ -568,7 +636,9 @@ export function createManilaScene(materials) {
       monuments: LANDMARK_ZONES.length,
       blocks,
       cityLifeDetails,
-      connectedFabric
+      connectedFabric,
+      roadLegibilityDetails,
+      publicRealmDetails
     },
     update(elapsed) {
       for (const item of animated) item.update(elapsed);
@@ -589,6 +659,7 @@ function reserveFixedManilaFootprints(planner) {
     ['escolta-side-buildings', -32, -60, 14, 10],
     ['binondo-gate-west', -90, -116, 6, 5],
     ['binondo-gate-east', -74, -116, 6, 5],
+    ['recto-clear-market-lane', -33, -150, 18, 14],
     ['up-diliman-main-hall', 96, -210, 36, 20],
     ['qc-campus-block', 150, -190, 50, 20],
     ['araneta-city-block', 202, -156, 22, 22],
@@ -607,6 +678,13 @@ function reserveFixedManilaFootprints(planner) {
     ['poblacion-neon-alleys', 18, 31, 58, 26],
     ['bgc-high-street-promenade', 148, 100, 88, 20],
     ['bgc-retail-pavilion', 148, 118, 34, 14],
+    ['greenbelt-weekend-market-clear', 66, 120, 26, 20],
+    ['kapitolyo-market-clear', 136, -48, 36, 24],
+    ['cubao-expo-street-life-clear', 174, -110, 46, 26],
+    ['binondo-market-clear', -74, -122, 52, 30],
+    ['old-manila-market-clear', -44, -86, 36, 22],
+    ['qc-food-cart-clear', 86, -180, 34, 22],
+    ['coastal-market-clear', -132, 248, 56, 36],
     ['baywalk-promenade', -212, 188, 16, 136],
     ['marikina-river-park-core', 268, -108, 74, 44],
     ['malabon-riverside-civic', -92, -202, 14, 12],
@@ -694,7 +772,7 @@ function buildPasigRiverfront(addTop, addLabel) {
       }
     }
   }
-  for (const [x, name] of [[-204, 'Pasig Ferry Stop'], [72, 'Guadalupe Ferry Stop'], [214, 'River Ferry Stop']]) {
+  for (const [x, name] of [[-182, 'Pasig Ferry Stop'], [92, 'Guadalupe Ferry Stop'], [214, 'River Ferry Stop']]) {
     const z = pasigWaterCenterZ(x);
     const dockZ = z + pasigWidthAt(x) / 2 + 4.0;
     addTop('wood', x, dockZ, 14, 0.44, 4.2, 0x7a4d30, 0, topY(x, dockZ) + 0.45);
@@ -733,7 +811,7 @@ function buildRoadsAndTransit({ planner, reserveRoadSegment, addTop, addTiledRec
       if (i % 2 === 0) addTransitStation(addTop, (a.x + b.x) / 2, (a.z + b.z) / 2, yaw);
     }
   }
-  buildFootbridgesAndUnderpasses(addTop);
+  buildFootbridgesAndUnderpasses(planner, addTop);
   addTiledRect('manilaGrass', -112, 70, 72, 34, { color: '#4f8750', height: 0.12, tile: 3.4 });
   addLabel('MRT / LRT Lines', 94, topY(94, -86) + 12, -86);
   addLabel('EDSA Traffic Corridor', 98, topY(98, -86) + 10, -86);
@@ -744,19 +822,121 @@ function addTransitStation(addTop, x, z, yaw) {
   addTop('steel', x, z, 17, 0.6, 6.4, 0x66727a, yaw, topY(x, z) + 8.6);
 }
 
-function buildFootbridgesAndUnderpasses(addTop) {
-  [
-    [96, -126, 24, 0.08],
-    [84, 74, 28, -0.1],
-    [-36, 22, 22, 0.16],
-    [148, 78, 26, 0.08],
-    [104, -186, 24, -0.18]
-  ].forEach(([x, z, length, yaw]) => {
+function buildFootbridgesAndUnderpasses(planner, addTop) {
+  FOOTBRIDGES.forEach(([x, z, length, yaw, name]) => {
+    const reserveWidth = Math.abs(Math.sin(yaw)) * length + Math.abs(Math.cos(yaw)) * 4.8 + 4;
+    const reserveDepth = Math.abs(Math.cos(yaw)) * length + Math.abs(Math.sin(yaw)) * 4.8 + 4;
+    planner.reserveRect(`footbridge-${name}`, x, z, reserveWidth, reserveDepth, { force: true, type: 'rail' });
+    planner.reserveRect(`footbridge-${name}-west-stair`, x - Math.cos(yaw) * length * 0.45, z + Math.sin(yaw) * length * 0.45, 5.2, 5.2, { force: true, type: 'rail' });
+    planner.reserveRect(`footbridge-${name}-east-stair`, x + Math.cos(yaw) * length * 0.45, z - Math.sin(yaw) * length * 0.45, 5.2, 5.2, { force: true, type: 'rail' });
     addTop('steel', x, z, length, 0.45, 3.1, 0x66727a, yaw, topY(x, z) + 5.4);
     addTop('concrete', x - Math.cos(yaw) * length * 0.45, z + Math.sin(yaw) * length * 0.45, 2.0, 5.2, 2.0, 0x8b8d88, yaw);
     addTop('concrete', x + Math.cos(yaw) * length * 0.45, z - Math.sin(yaw) * length * 0.45, 2.0, 5.2, 2.0, 0x8b8d88, yaw);
     addTop('shadow', x, z, length * 0.64, 0.25, 2.0, 0x2e2924, yaw, topY(x, z) + 0.25);
   });
+}
+
+function buildRoadLegibilityLayer({ addTop, addLabel }) {
+  let details = 0;
+  const markerRoutes = [
+    { name: 'Roxas Boulevard', points: [[-200, -222], [-200, 238]], width: 12, color: 0xf0dfb2 },
+    { name: 'EDSA', points: [[70, -238], [74, -126], [78, -26], [80, 74], [104, 158]], width: 12, color: 0xd8a334 },
+    { name: 'Ayala Avenue', points: [[-2, 76], [108, 72]], width: 8, color: 0xf0dfb2 },
+    { name: 'BGC High Street Grid', points: [[104, 52], [184, 52], [192, 132], [104, 132], [104, 52]], width: 7, color: 0x48d9ff },
+    { name: 'Old Manila Route', points: [[-142, -132], [-86, -148], [-40, -166], [24, -172], [74, -148], [112, -112], [188, -58], [242, -36]], width: 14, color: 0xf0dfb2 },
+    { name: 'C5 Corridor', points: [[234, -214], [230, -108], [232, 72], [212, 184]], width: 14, color: 0x48d9ff }
+  ];
+
+  for (const route of markerRoutes) {
+    for (let i = 1; i < route.points.length; i += 1) {
+      const [ax, az] = route.points[i - 1];
+      const [bx, bz] = route.points[i];
+      details += addRoadCenterMarkers(addTop, ax, az, bx, bz, route.width, route.color);
+    }
+  }
+
+  [
+    [-200, -118, 0, 12],
+    [-200, 70, 0, 12],
+    [78, -26, 0.05, 12],
+    [80, 74, 0.08, 12],
+    [58, 72, 1.53, 10],
+    [148, 52, 1.57, 9],
+    [148, 132, 1.57, 9],
+    [104, 100, 0, 9],
+    [192, 100, 0, 9],
+    [-18, -104, 0, 12],
+    [24, -172, 1.37, 13],
+    [232, -124, 0.12, 8],
+    [-126, 286, 1.1, 9]
+  ].forEach(([x, z, yaw, width]) => {
+    details += addCrosswalk(addTop, x, z, yaw, width);
+    details += addTrafficSignal(addTop, x - Math.cos(yaw) * width * 0.58, z + Math.sin(yaw) * width * 0.58);
+    details += addTrafficSignal(addTop, x + Math.cos(yaw) * width * 0.58, z - Math.sin(yaw) * width * 0.58);
+  });
+
+  [
+    [-204, -86, 0.06, 'Pasig Ferry / Jeepney Transfer'],
+    [-200, 154, 0, 'Roxas Baywalk Stop'],
+    [82, -92, 0.06, 'EDSA Bus Stop'],
+    [64, 72, 1.52, 'Ayala Commuter Stop'],
+    [172, 52, 1.57, 'BGC Bus Stop'],
+    [234, -120, 0.02, 'C5 Bike and Bus Stop']
+  ].forEach(([x, z, yaw, label]) => {
+    details += addTransitShelter(addTop, x, z, yaw);
+    addLabel(label, x, topY(x, z) + 7, z);
+  });
+
+  addLabel('Metro Manila Road Hierarchy', 70, topY(70, -26) + 16, -26);
+  return details;
+}
+
+function addRoadCenterMarkers(addTop, ax, az, bx, bz, roadWidth, color) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const length = Math.hypot(dx, dz);
+  if (length <= 0.01) return 0;
+  const yaw = Math.atan2(dx, dz);
+  let count = 0;
+  for (let d = 8; d < length - 4; d += 16) {
+    const t = d / length;
+    const x = ax + dx * t;
+    const z = az + dz * t;
+    if (!isRoadDeck(x, z, 0.4)) continue;
+    addTop('gold', x, z, 0.42, 0.08, Math.min(7.2, roadWidth * 0.68), color, yaw, roadSurfaceY(x, z) + 0.18);
+    count += 1;
+  }
+  return count;
+}
+
+function addCrosswalk(addTop, x, z, yaw, width) {
+  let count = 0;
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
+  for (let i = -2; i <= 2; i += 1) {
+    const px = x + i * 1.35 * sin;
+    const pz = z + i * 1.35 * cos;
+    if (!isRoadDeck(px, pz, 1.4)) continue;
+    addTop('gold', px, pz, width, 0.07, 0.42, 0xf0dfb2, yaw, roadSurfaceY(px, pz) + 0.19);
+    count += 1;
+  }
+  return count;
+}
+
+function addTrafficSignal(addTop, x, z) {
+  if (isWater(x, z, 1.0)) return 0;
+  addTop('steel', x, z, 0.28, 3.0, 0.28, 0x66727a);
+  addTop('neon', x, z, 0.8, 0.42, 0.8, 0xf0dfb2, 0, topY(x, z) + 2.8);
+  return 2;
+}
+
+function addTransitShelter(addTop, x, z, yaw = 0) {
+  if (!canPlaceDetailFootprint(x, z, 8.4, 4.6, { roadPad: 0.2, waterPad: 1.0 })) return 0;
+  addTop('wood', x, z, 7.2, 0.45, 2.0, 0x7a4d30, yaw);
+  addTop('steel', x - Math.sin(yaw) * 3.1, z - Math.cos(yaw) * 1.4, 0.26, 2.8, 0.26, 0x66727a, yaw);
+  addTop('steel', x + Math.sin(yaw) * 3.1, z + Math.cos(yaw) * 1.4, 0.26, 2.8, 0.26, 0x66727a, yaw);
+  addTop('cloth', x, z, 7.8, 0.34, 3.0, 0x48d9ff, yaw, topY(x, z) + 2.7);
+  return 4;
 }
 
 function buildCivicLandmarks({ addTop, addTiledRect, addLabel, rng }) {
@@ -833,7 +1013,7 @@ function buildIntramuros({ addTop, addTiledRect, addLabel, rng }) {
   for (let i = 0; i < 16; i += 1) {
     const x = -124 + rng() * 56;
     const z = -36 + rng() * 50;
-    addTop('crowd', x, z, 0.8, 1.6, 0.8, 0xc57b54);
+    addStaticPerson(addTop, x, z, i % 4 === 0 ? 'cloth' : 'crowd', 0.82);
   }
   addLabel('Intramuros', -96, topY(-96, -14) + 16, -14);
   addLabel('Manila Cathedral', -82, topY(-82, -18) + 25, -18);
@@ -957,7 +1137,7 @@ function buildOldManila({ planner, addTop, addTiledRect, addLabel, rng }) {
   buildShopRows({ planner, addTop, x: -58, z: -92, width: 58, rows: 4, material: 'brick', roof: 'gold', rng, lanterns: true, tag: 'binondo-shop-row' });
   buildArtDecoBlock(addTop, -44, -70);
   buildBinondoDetails({ addTop, rng });
-  buildEscoltaDetails({ addTop, rng });
+  buildEscoltaDetails({ planner, addTop, rng });
   addTiledRect('concrete', 12, -130, 44, 30, { color: '#777a76', height: 0.12, tile: 3.4 });
   buildShopRows({ planner, addTop, x: 12, z: -130, width: 42, rows: 3, material: 'concrete', roof: 'slate', rng, neon: true, tag: 'quiapo-shop-row' });
   addTop('limestone', 0, -134, 18, 12, 16, 0xd8cfb7);
@@ -987,14 +1167,14 @@ function buildBinondoDetails({ addTop, rng }) {
   }
 }
 
-function buildEscoltaDetails({ addTop, rng }) {
+function buildEscoltaDetails({ planner, addTop, rng }) {
   for (let i = 0; i < 4; i += 1) {
     const x = -64 + i * 10.5;
     addTop('limestone', x, -60, 10, 8 + (i % 2) * 2.2, 6, 0xd8cfb7);
     addTop('neonCyan', x, -63.4, 7.2, 0.8, 0.34, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, -60) + 4.8);
     addTop('glass', x, -63.7, 5.2, 2.1, 0.28, 0x9cc8c8, 0, topY(x, -60) + 2.2);
   }
-  buildMarketStalls(addTop, -28, -82, 5, 0xf0dfb2, rng, 0.1);
+  buildMarketStalls(addTop, -28, -82, 5, 0xf0dfb2, rng, 0.1, planner);
 }
 
 function buildQuiapoDetails({ addTop, rng }) {
@@ -1010,9 +1190,9 @@ function buildBusinessDistricts({ planner, addTop, addTiledRect, addLabel, rng }
   buildBusinessCore({ planner, addTop, addTiledRect, x: 58, z: 72, label: 'Makati CBD', towers: 12, rng });
   buildBusinessCore({ planner, addTop, addTiledRect, x: 148, z: 78, label: 'BGC High Street', towers: 14, rng, modern: true });
   buildBusinessCore({ planner, addTop, addTiledRect, x: 176, z: 30, label: 'Ortigas Center', towers: 10, rng });
-  buildGreenbeltAndMarkets({ addTop, addTiledRect, addLabel, rng });
+  buildGreenbeltAndMarkets({ planner, addTop, addTiledRect, addLabel, rng });
   buildBGCArtAndRooftops({ addTop, addTiledRect, addLabel, rng });
-  buildOrtigasMalls({ addTop, addTiledRect, addLabel, rng });
+  buildOrtigasMalls({ planner, addTop, addTiledRect, addLabel, rng });
   buildNightlifePocket({ planner, addTop, addTiledRect, addLabel, x: 18, z: 24, label: 'Poblacion Hidden Bars', rng });
   buildRainyReflections({ addTop, rng });
   addLabel('Makati CBD', 58, topY(58, 72) + 36, 72);
@@ -1085,17 +1265,17 @@ function buildNightlifePocket({ planner, addTop, addTiledRect, addLabel, x, z, l
       addStaticPerson(addTop, px + 1.8, pz + 1.6, 'cloth', 0.78);
     }
   }
-  buildMarketStalls(addTop, x + 2, z + 18, 5, 0xf25fa7, rng, 0.05);
+  buildMarketStalls(addTop, x + 2, z + 18, 5, 0xf25fa7, rng, 0.05, planner);
   addLabel(label, x, topY(x, z) + 12, z);
 }
 
-function buildGreenbeltAndMarkets({ addTop, addTiledRect, addLabel, rng }) {
+function buildGreenbeltAndMarkets({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTiledRect('manilaGrass', 32, 116, 48, 30, { color: '#4f8750', height: 0.12, tile: 3.4 });
   addTop('glass', 20, 108, 24, 6.8, 12, 0x9cc8c8);
   addTop('limestone', 48, 112, 28, 5.2, 14, 0xd8cfb7);
   addTop('neonCyan', 36, 100, 18, 0.8, 0.35, 0x48d9ff, 0, topY(36, 100) + 4.2);
-  buildMarketStalls(addTop, 66, 120, 7, 0xd8a334, rng);
-  buildMarketStalls(addTop, 28, 134, 5, 0xf25fa7, rng);
+  buildMarketStalls(addTop, 66, 120, 7, 0xd8a334, rng, 0, planner);
+  buildMarketStalls(addTop, 28, 134, 5, 0xf25fa7, rng, 0, planner);
   addLabel('Greenbelt / Legazpi Village', 32, topY(32, 116) + 14, 116);
   addLabel('Salcedo Weekend Market', 66, topY(66, 120) + 10, 120);
 }
@@ -1123,13 +1303,13 @@ function buildBGCArtAndRooftops({ addTop, addTiledRect, addLabel, rng }) {
   addLabel('BGC Public Art', 148, topY(148, 100) + 14, 100);
 }
 
-function buildOrtigasMalls({ addTop, addTiledRect, addLabel, rng }) {
+function buildOrtigasMalls({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTiledRect('concrete', 196, 30, 56, 32, { color: '#8b8d88', height: 0.12, tile: 3.4 });
   addTop('limestone', 196, 30, 42, 8.4, 18, 0xd8cfb7);
   addTop('glass', 176, 30, 10, 15, 10, 0x9cc8c8);
   addTop('gold', 196, 20, 34, 0.8, 0.4, 0xd8a334, 0, topY(196, 30) + 6.2);
   addTop('steel', 206, 48, 30, 0.6, 6, 0x66727a, 0.08, topY(206, 48) + 4.4);
-  buildMarketStalls(addTop, 136, -48, 5, 0xf0dfb2, rng);
+  buildMarketStalls(addTop, 136, -48, 5, 0xf0dfb2, rng, 0, planner);
   addLabel('Ortigas Malls', 196, topY(196, 30) + 14, 30);
   addLabel('Kapitolyo Food Streets', 136, topY(136, -48) + 12, -48);
 }
@@ -1154,13 +1334,13 @@ function buildRainyReflections({ addTop, rng }) {
 function buildNeighborhoods({ planner, addTop, addTiledRect, addLabel, rng }) {
   buildCampusAndFoodStreet({ planner, addTop, addTiledRect, addLabel, x: 116, z: -198, rng });
   buildNightlifePocket({ planner, addTop, addTiledRect, addLabel, x: 168, z: -128, label: 'Cubao Expo', rng });
-  buildBayArea({ addTop, addTiledRect, addLabel, rng });
+  buildBayArea({ planner, addTop, addTiledRect, addLabel, rng });
   buildLocalDistrict({ planner, addTop, addTiledRect, addLabel, x: 118, z: -66, label: 'Mandaluyong / San Juan Food Streets', rng });
   buildLocalDistrict({ planner, addTop, addTiledRect, addLabel, x: -126, z: -202, label: 'Navotas / Malabon Markets', rng, industrial: true });
   buildLocalDistrict({ planner, addTop, addTiledRect, addLabel, x: -138, z: 272, label: 'Paranaque / Las Pinas', rng });
-  buildPortAndFishMarket({ addTop, addTiledRect, addLabel, rng });
-  buildLaLomaGrillDistrict({ addTop, addTiledRect, addLabel, rng });
-  buildSouthernCoast({ addTop, addTiledRect, addLabel, rng });
+  buildPortAndFishMarket({ planner, addTop, addTiledRect, addLabel, rng });
+  buildLaLomaGrillDistrict({ planner, addTop, addTiledRect, addLabel, rng });
+  buildSouthernCoast({ planner, addTop, addTiledRect, addLabel, rng });
   buildMarikina({ planner, addTop, addTiledRect, addLabel, rng });
 }
 
@@ -1178,15 +1358,15 @@ function buildCampusAndFoodStreet({ planner, addTop, addTiledRect, addLabel, x, 
   addTop('limestone', x - 66, z + 16, 3.8, 13, 3.8, 0xd8cfb7);
   addTop('gold', x - 66, z + 16, 4.5, 0.8, 4.5, 0xd8a334, 0, topY(x - 66, z + 16) + 13);
   addTop('concrete', x + 86, z + 42, 18, 9, 18, 0x8b8d88);
-  buildMarketStalls(addTop, x - 72, z + 28, 7, 0xd94f45, rng);
-  buildMarketStalls(addTop, x - 26, z + 48, 6, 0xf0dfb2, rng);
+  buildMarketStalls(addTop, x - 72, z + 28, 7, 0xd94f45, rng, 0, planner);
+  buildMarketStalls(addTop, x - 44, z + 64, 6, 0xf0dfb2, rng, 0, planner);
   addLabel('UP Diliman', x + 10, topY(x + 10, z - 18) + 14, z - 18);
   addLabel('Maginhawa Food Street', x - 42, topY(x - 42, z + 40) + 12, z + 40);
   addLabel('Tomas Morato / Timog', x - 28, topY(x - 28, z + 50) + 12, z + 50);
   addLabel('Araneta City', x + 86, topY(x + 86, z + 42) + 16, z + 42);
 }
 
-function buildBayArea({ addTop, addTiledRect, addLabel, rng }) {
+function buildBayArea({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTiledRect('concrete', -168, 188, 88, 52, { color: '#8b8d88', height: 0.14, tile: 3.4 });
   addTop('glass', -146, 174, 16, 22, 16, 0x9cc8c8);
   addTop('glass', -182, 182, 14, 19, 14, 0x9cc8c8);
@@ -1214,12 +1394,17 @@ function buildBayArea({ addTop, addTiledRect, addLabel, rng }) {
     addTop('gold', x + 10.8, 130, 1.8, 1.8, 1.8, 0xd8a334, 0, topY(x, 142) + 12.8);
   }
   for (let i = 0; i < 5; i += 1) {
-    addTop('wood', -258 + i * 13, 118, 10, 0.42, 4.8, 0x7a4d30, 0.04, topY(-258 + i * 13, 118) + 0.5);
-    addTop('steel', -258 + i * 13, 118, 6, 1.1, 2.8, 0x66727a, 0.04, topY(-258 + i * 13, 118) + 1.0);
+    const dockX = -266 + i * 11;
+    addTop('wood', dockX, 118, 10, 0.42, 4.8, 0x7a4d30, 0.04, topY(dockX, 118) + 0.5);
+    addTop('steel', dockX, 118, 6, 1.1, 2.8, 0x66727a, 0.04, topY(dockX, 118) + 1.0);
   }
   addTop('limestone', -218, 226, 48, 0.7, 2.0, 0xd8cfb7, -0.12, topY(-218, 226) + 0.3);
   for (let i = 0; i < 18; i += 1) {
-    addStaticPerson(addTop, -210 + rng() * 84, 160 + rng() * 62, i % 3 === 0 ? 'cloth' : 'crowd', 0.82);
+    const personX = -210 + rng() * 84;
+    const personZ = 160 + rng() * 62;
+    if (plannerFootprintBlocked(planner, personX, personZ, 2.4, 2.4, 0.6)) continue;
+    const placed = addStaticPerson(addTop, personX, personZ, i % 3 === 0 ? 'cloth' : 'crowd', 0.82);
+    if (placed > 0) planner?.reserveRect(`bay-area-crowd-${i}`, personX, personZ, 2.8, 2.8, { force: true, type: 'detail' });
   }
   addLabel('Pasay / Bay Area', -168, topY(-168, 188) + 24, 188);
 }
@@ -1237,32 +1422,33 @@ function buildLocalDistrict({ planner, addTop, addTiledRect, addLabel, x, z, lab
     addTop(industrial && i % 3 === 0 ? 'steel' : 'concrete', bx, bz, 8.5, 4.4 + rng() * 4, 7.4, industrial ? 0x66727a : 0x8b8d88);
     if (i % 4 === 0) addTop('cloth', bx, bz - 4, 5.5, 0.6, 0.35, 0xd94f45, 0, topY(bx, bz) + 3.2);
   }
-  addBasketballCourt({ addTop, x: x + 20, z: z + 18 });
+  addBasketballCourt({ planner, addTop, x: x + 20, z: z + 18 });
   addLabel(label, x, topY(x, z) + 12, z);
 }
 
-function buildPortAndFishMarket({ addTop, addTiledRect, addLabel, rng }) {
+function buildPortAndFishMarket({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTiledRect('concrete', -218, -118, 62, 42, { color: '#777a76', height: 0.13, tile: 3.4 });
   for (let i = 0; i < 4; i += 1) {
-    addTop('wood', -246 + i * 14, -104, 9, 0.55, 30, 0x7a4d30, 0.02, topY(-246 + i * 14, -104) + 0.5);
-    addTop('steel', -244 + i * 14, -124, 2, 12, 2, 0x66727a);
-    addTop('steel', -238 + i * 14, -132, 12, 0.8, 1.2, 0x66727a, -0.35, topY(-238 + i * 14, -132) + 11.2);
+    const pierX = -252 + i * 13;
+    addTop('wood', pierX, -104, 9, 0.55, 30, 0x7a4d30, 0.02, topY(pierX, -104) + 0.5);
+    addTop('steel', pierX + 2, -124, 2, 12, 2, 0x66727a);
+    addTop('steel', pierX + 8, -132, 12, 0.8, 1.2, 0x66727a, -0.35, topY(pierX + 8, -132) + 11.2);
   }
   for (let i = 0; i < 14; i += 1) {
     const x = -210 + (i % 7) * 7;
     const z = -132 + Math.floor(i / 7) * 7;
-    if (isWater(x, z, 2.4)) continue;
+    if (isWater(x, z, 2.4) || footprintTouchesRoad(x, z, 5.4, 4.2, 1.2)) continue;
     addTop(i % 2 ? 'steel' : 'cloth', x, z, 5.4, 2.8, 4.2, i % 2 ? 0x66727a : 0xf0dfb2);
     if (i % 3 === 0) addStaticPerson(addTop, x - 2, z + 6, 'crowd', 0.8);
   }
   for (let i = 0; i < 9; i += 1) {
     addTop('steel', -236 + i * 7, -92, 4.8, 2.6, 3.6, i % 2 ? 0x66727a : 0xd94f45);
   }
-  buildMarketStalls(addTop, -194, -94, 7, 0x48d9ff, rng);
+  buildMarketStalls(addTop, -194, -94, 7, 0x48d9ff, rng, 0, planner);
   addLabel('Port and Fish Market', -218, topY(-218, -118) + 13, -118);
 }
 
-function buildLaLomaGrillDistrict({ addTop, addTiledRect, addLabel, rng }) {
+function buildLaLomaGrillDistrict({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTiledRect('concrete', -32, -188, 50, 30, { color: '#777a76', height: 0.13, tile: 3.4 });
   for (let i = 0; i < 10; i += 1) {
     const x = -52 + (i % 5) * 10;
@@ -1272,7 +1458,7 @@ function buildLaLomaGrillDistrict({ addTop, addTiledRect, addLabel, rng }) {
     addTop('shadow', x + 2.6, z + 4.1, 1.4, 3.8 + rng() * 2, 1.4, 0x2e2924);
     if (i % 2 === 0) addStaticPerson(addTop, x - 2, z + 4.2, 'crowd', 0.82);
   }
-  buildMarketStalls(addTop, -18, -178, 5, 0xf0dfb2, rng);
+  buildMarketStalls(addTop, -18, -178, 5, 0xf0dfb2, rng, 0, planner);
   addLaLomaStreetLife(addTop, rng);
   addLabel('La Loma Grill District', -32, topY(-32, -188) + 12, -188);
 }
@@ -1281,7 +1467,7 @@ function addLaLomaStreetLife(addTop, rng) {
   for (let i = 0; i < 9; i += 1) {
     const x = -54 + i * 7.4;
     const z = -173 + (i % 2) * 4.2;
-    if (isWater(x, z, 1.5)) continue;
+    if (isWater(x, z, 1.5) || isRoadDeck(x, z, 3.0) || footprintTouchesRoad(x, z, 4.6, 3.0, 4.0)) continue;
     addTop('gold', x, z, 0.24, 2.8, 0.24, 0xd8a334);
     addTop('neon', x, z, 0.82, 0.36, 0.82, 0xf0dfb2, 0, topY(x, z) + 2.55);
     addTop('wood', x + 2.4, z + 1.6, 2.8, 0.42, 1.1, 0x7a4d30, 0.08);
@@ -1289,10 +1475,10 @@ function addLaLomaStreetLife(addTop, rng) {
   }
 }
 
-function buildSouthernCoast({ addTop, addTiledRect, addLabel, rng }) {
+function buildSouthernCoast({ planner, addTop, addTiledRect, addLabel, rng }) {
   addTop('limestone', -144, 268, 20, 8, 16, 0xd8cfb7);
   addTop('gold', -144, 268, 22, 0.9, 18, 0xd8a334, 0, topY(-144, 268) + 8);
-  buildMarketStalls(addTop, -118, 248, 6, 0xd94f45, rng);
+  buildMarketStalls(addTop, -118, 248, 6, 0xd94f45, rng, 0, planner);
   addTop('wood', -100, 288, 0.6, 14, 0.6, 0x7a4d30);
   addTop('gold', -100, 288, 6.5, 0.8, 6.5, 0xd8a334, 0, topY(-100, 288) + 13.2);
   addLabel('Paranaque / Las Pinas', -138, topY(-138, 272) + 12, 272);
@@ -1357,13 +1543,20 @@ function buildPath(addTop, points, width, material = 'cobblestone') {
 }
 
 function addStaticPerson(addTop, x, z, body = 'crowd', scale = 1) {
-  if (isWater(x, z, 1.2)) return;
+  if (
+    isWater(x, z, 1.2) ||
+    isRoadRouteSurface(x, z, 0.75) ||
+    footprintTouchesRoad(x, z, 2.2 * scale, 2.2 * scale, 2.0) ||
+    actorSolidZoneContains(x, z, 0.45) ||
+    publicRealmFootprintBlocked(x, z, 2.0 * scale, 2.0 * scale, 0.3)
+  ) return 0;
   const base = topY(x, z) + 0.05;
   addTop(body, x, z, 0.52 * scale, 0.92 * scale, 0.38 * scale, body === 'cloth' ? 0xf0dfb2 : 0xc57b54, 0, base);
   addTop('skin', x, z, 0.36 * scale, 0.34 * scale, 0.36 * scale, 0xb47a54, 0, base + 0.88 * scale);
+  return 2;
 }
 
-function buildMarketStalls(addTop, x, z, count, color, rng, yaw = 0) {
+function buildMarketStalls(addTop, x, z, count, color, rng, yaw = 0, planner = null) {
   const cos = Math.cos(yaw);
   const sin = Math.sin(yaw);
   for (let i = 0; i < count; i += 1) {
@@ -1372,19 +1565,39 @@ function buildMarketStalls(addTop, x, z, count, color, rng, yaw = 0) {
     const sx = x + lx * cos + lz * sin;
     const sz = z - lx * sin + lz * cos;
     if (isWater(sx, sz, 1.5)) continue;
-    if (footprintTouchesRoad(sx, sz, 4.2, 3.2, 0.5)) continue;
+    if (
+      footprintTouchesRoad(sx, sz, 4.2, 3.2, 0.8) ||
+      publicRealmFootprintBlocked(sx, sz, 4.2, 3.2, 0.25) ||
+      plannerFootprintBlocked(planner, sx, sz, 4.2, 3.2, 0.35)
+    ) continue;
+    planner?.reserveRect(`market-stall-${sx.toFixed(1)}-${sz.toFixed(1)}`, sx, sz, 5.2, 4.4, { force: true, type: 'detail' });
     addTop('wood', sx, sz, 3.2, 1.05, 2.4, 0x7a4d30, yaw);
     addTop('cloth', sx, sz, 3.8, 0.32, 2.8, color, yaw, topY(sx, sz) + 1.0);
     if (i % 2 === 0) addStaticPerson(addTop, sx + (rng() - 0.5) * 2.8, sz + 3.4, i % 4 === 0 ? 'cloth' : 'crowd', 0.86);
   }
 }
 
-function addBasketballCourt({ addTop, x, z }) {
-  if (isWater(x, z, 4)) return;
-  addTop('concrete', x, z, 18, 0.14, 12, 0x777a76);
-  addTop('gold', x - 8, z, 0.4, 4, 0.4, 0xd8a334);
-  addTop('gold', x + 8, z, 0.4, 4, 0.4, 0xd8a334);
-  addTop('cloth', x, z, 14, 0.18, 0.35, 0xd94f45, 0, topY(x, z) + 0.24);
+function addBasketballCourt({ planner = null, addTop, x, z }) {
+  const candidates = [
+    [x, z],
+    [x + 12, z + 8],
+    [x - 12, z - 8],
+    [x + 14, z - 6],
+    [x - 14, z + 6]
+  ];
+  const placement = candidates.find(([cx, cz]) => (
+    !isWater(cx, cz, 4) &&
+    !footprintTouchesRoad(cx, cz, 18, 12, 2.4) &&
+    !plannerFootprintBlocked(planner, cx, cz, 18, 12, 0.5)
+  ));
+  if (!placement) return 0;
+  const [courtX, courtZ] = placement;
+  planner?.reserveRect(`basketball-court-${courtX.toFixed(1)}-${courtZ.toFixed(1)}`, courtX, courtZ, 20, 14, { force: true, type: 'detail' });
+  addTop('concrete', courtX, courtZ, 18, 0.14, 12, 0x777a76);
+  addTop('gold', courtX - 8, courtZ, 0.4, 4, 0.4, 0xd8a334);
+  addTop('gold', courtX + 8, courtZ, 0.4, 4, 0.4, 0xd8a334);
+  addTop('cloth', courtX, courtZ, 14, 0.18, 0.35, 0xd94f45, 0, topY(courtX, courtZ) + 0.24);
+  return 4;
 }
 
 function buildConnectedCityFabric({ planner, addTop, addTiledRect, addLabel, rng }) {
@@ -1623,7 +1836,7 @@ function buildReclaimedPortSystem({ planner, addTop, rng }) {
   }
   for (let i = 0; i < 9; i += 1) {
     const x = -232 - (i % 3) * 8.5;
-    const z = -146 + Math.floor(i / 3) * 20;
+    const z = -134 + Math.floor(i / 3) * 20;
     addTop('wood', x, z, 14, 0.44, 3.2, 0x7a4d30, 0.03, topY(x, z) + 0.42);
     addTop('steel', x - 4, z, 2.6, 1.2, 2.0, 0x66727a, 0.03, topY(x, z) + 0.92);
     count += 2;
@@ -1670,7 +1883,7 @@ function buildNavotasMalabonPortSpine({ planner, addTop, addLabel, rng }) {
     }
   }
 
-  addBasketballCourt({ addTop, x: -88, z: -184 });
+  addBasketballCourt({ planner, addTop, x: -88, z: -184 });
   addTop('limestone', -92, -202, 9.2, 4.8, 7.2, 0xd8cfb7);
   addTop('gold', -92, -205.8, 6.2, 0.45, 0.28, 0xd8a334, 0, topY(-92, -202) + 3.5);
   addLabel('Navotas Fish Market', -156, topY(-156, -216) + 9, -216);
@@ -1693,11 +1906,11 @@ function buildMetroConnectorStreets({ planner, addTop }) {
 function buildLayeredCityLife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng }) {
   let details = 0;
   details += buildOldManilaFineGrain({ planner, addTop, reserveDetail, rng });
-  details += buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDetail, rng });
-  details += buildCorporateAfterWorkLayer({ addTop, rng });
+  details += buildPoblacionAndNightlife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng });
+  details += buildCorporateAfterWorkLayer({ planner, addTop, rng });
   details += buildQuezonCreativeLayer({ planner, addTop, addLabel, reserveDetail, rng });
-  details += buildWaterfrontAndPortLayer({ addTop, addLabel, rng });
-  details += buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng });
+  details += buildWaterfrontAndPortLayer({ planner, addTop, addLabel, rng });
+  details += buildEverydayCommunityLayer({ planner, addTop, addLabel, reserveDetail, rng });
   return details;
 }
 
@@ -1705,6 +1918,73 @@ function canPlaceDetailFootprint(x, z, width = 4, depth = 4, options = {}) {
   if (footprintTouchesWater(x, z, width, depth, options.waterPad ?? 1.4)) return false;
   if (!options.allowRoad && footprintTouchesRoad(x, z, width, depth, options.roadPad ?? 1.4)) return false;
   return true;
+}
+
+function actorSolidZoneContains(x, z, pad = 0) {
+  return zoneContainsPoint(ACTOR_SOLID_ZONES, x, z, pad);
+}
+
+function publicRealmFootprintBlocked(x, z, width, depth, pad = 0) {
+  return zoneIntersectsFootprint(PUBLIC_REALM_BLOCKERS, x, z, width, depth, pad);
+}
+
+function zoneContainsPoint(zones, x, z, pad = 0) {
+  return zones.some(([, cx, cz, width, depth]) => (
+    x >= cx - width / 2 - pad &&
+    x <= cx + width / 2 + pad &&
+    z >= cz - depth / 2 - pad &&
+    z <= cz + depth / 2 + pad
+  ));
+}
+
+function zoneIntersectsFootprint(zones, x, z, width, depth, pad = 0) {
+  return zones.some(([, cx, cz, zoneWidth, zoneDepth]) => (
+    x - width / 2 - pad < cx + zoneWidth / 2 &&
+    x + width / 2 + pad > cx - zoneWidth / 2 &&
+    z - depth / 2 - pad < cz + zoneDepth / 2 &&
+    z + depth / 2 + pad > cz - zoneDepth / 2
+  ));
+}
+
+function actorRouteClear(planner, x, z, pad = 0.7, options = {}) {
+  if (isWater(x, z, pad)) return false;
+  if (!options.allowVehicleRoad && isRoadRouteSurface(x, z, 0.7)) return false;
+  if (actorSolidZoneContains(x, z, pad)) return false;
+  if (plannerPointBlocked(planner, x, z, pad)) return false;
+  return true;
+}
+
+function plannerPointBlocked(planner, x, z, pad = 0.7) {
+  if (!planner) return false;
+  const offsets = [
+    [0, 0],
+    [pad, 0],
+    [-pad, 0],
+    [0, pad],
+    [0, -pad],
+    [pad * 0.7, pad * 0.7],
+    [-pad * 0.7, pad * 0.7],
+    [pad * 0.7, -pad * 0.7],
+    [-pad * 0.7, -pad * 0.7]
+  ];
+  return offsets.some(([dx, dz]) => planner.hasPoint(x + dx, z + dz, 'building'));
+}
+
+function plannerFootprintBlocked(planner, x, z, width, depth, pad = 0, types = ['building', 'landmark']) {
+  if (!planner) return false;
+  const rect = {
+    x1: x - width / 2 - pad,
+    x2: x + width / 2 + pad,
+    z1: z - depth / 2 - pad,
+    z2: z + depth / 2 + pad
+  };
+  return planner.reservations.some((reserved) => (
+    types.includes(reserved.type) &&
+    rect.x1 < reserved.x2 &&
+    rect.x2 > reserved.x1 &&
+    rect.z1 < reserved.z2 &&
+    rect.z2 > reserved.z1
+  ));
 }
 
 function addDetailBuilding(addTop, reserveDetail, x, z, width, height, depth, material, color, yaw = 0, planner = null) {
@@ -1727,7 +2007,7 @@ function addShopfrontSign(addTop, x, z, width, color, y = 3.2, yaw = 0) {
 }
 
 function addLaundryLines(addTop, reserveDetail, x, z, width = 9, yaw = 0) {
-  if (!canPlaceDetailFootprint(x, z, width, 2.2, { roadPad: 0.8 })) return 0;
+  if (!canPlaceDetailFootprint(x, z, width, 2.2, { roadPad: 2.4 })) return 0;
   reserveDetail?.(x, z, width + 1.4, 3.4);
   addTop('wood', x - width / 2, z, 0.22, 3.1, 0.22, 0x7a4d30, yaw);
   addTop('wood', x + width / 2, z, 0.22, 3.1, 0.22, 0x7a4d30, yaw);
@@ -1738,8 +2018,9 @@ function addLaundryLines(addTop, reserveDetail, x, z, width = 9, yaw = 0) {
   return 8;
 }
 
-function addSariSariCluster(addTop, reserveDetail, x, z, rng, yaw = 0) {
+function addSariSariCluster(addTop, reserveDetail, x, z, rng, yaw = 0, planner = null) {
   if (!canPlaceDetailFootprint(x, z, 8, 7, { roadPad: 0.8 })) return 0;
+  if (plannerFootprintBlocked(planner, x, z, 8, 7, 0.35)) return 0;
   reserveDetail?.(x, z, 9.2, 8.2);
   addTop('wood', x, z, 6.2, 2.8, 4.2, 0x7a4d30, yaw);
   addTop('cloth', x, z - 2.3, 6.8, 0.55, 0.3, rng() > 0.5 ? 0xd94f45 : 0xf0dfb2, yaw, topY(x, z) + 2.35);
@@ -1761,8 +2042,8 @@ function buildOldManilaFineGrain({ planner, addTop, reserveDetail, rng }) {
     }
     if (i % 3 === 0) addStaticPerson(addTop, x + (rng() - 0.5) * 2, -100 + rng() * 8, 'crowd', 0.82);
   }
-  buildMarketStalls(addTop, -78, -122, 8, 0xd94f45, rng, 0.08);
-  buildMarketStalls(addTop, -34, -90, 7, 0xf0dfb2, rng, -0.12);
+  buildMarketStalls(addTop, -78, -122, 8, 0xd94f45, rng, 0.08, planner);
+  buildMarketStalls(addTop, -34, -90, 7, 0xf0dfb2, rng, -0.12, planner);
   details += 30;
 
   for (let i = 0; i < 7; i += 1) {
@@ -1771,14 +2052,14 @@ function buildOldManilaFineGrain({ planner, addTop, reserveDetail, rng }) {
     addTop('graffiti', x, -57.1, 6.8, 2.2, 0.32, i % 2 ? 0x48d9ff : 0xf25fa7, 0, topY(x, -54) + 2.2);
     details += 1;
   }
-  buildMarketStalls(addTop, 12, -150, 9, 0xd8a334, rng, 0.04);
+  buildMarketStalls(addTop, 12, -150, 9, 0xd8a334, rng, 0.04, planner);
   addTop('shadow', 2, -118, 42, 0.16, 8.2, 0x2e2924, 0, topY(2, -118) + 0.12);
   addTop('neon', -4, -116, 22, 0.42, 0.36, 0xf0dfb2, 0, topY(-4, -116) + 1.1);
   details += 38;
   return details;
 }
 
-function buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDetail, rng }) {
+function buildPoblacionAndNightlife({ planner, addTop, addTiledRect, addLabel, reserveDetail, rng }) {
   let details = 0;
   addTiledRect('concrete', 16, 30, 50, 16, { color: '#777a76', height: 0.1, tile: 3.2, baseOffset: 0.04 });
   for (let i = 0; i < 14; i += 1) {
@@ -1798,12 +2079,12 @@ function buildPoblacionAndNightlife({ addTop, addTiledRect, addLabel, reserveDet
     addTop('steel', x, 46.8, 1.2, 1.2, 1.2, 0x66727a, i * 0.4, topY(x, 45) + 5.2);
     details += 2;
   }
-  buildMarketStalls(addTop, 34, 42, 7, 0xf25fa7, rng, -0.06);
+  buildMarketStalls(addTop, 34, 42, 7, 0xf25fa7, rng, -0.06, planner);
   addLabel('Poblacion Neon Alleys', 18, topY(18, 34) + 12, 34);
   return details + 24;
 }
 
-function buildCorporateAfterWorkLayer({ addTop, rng }) {
+function buildCorporateAfterWorkLayer({ planner, addTop, rng }) {
   let details = 0;
   for (const [x, z, width, count, color] of [
     [58, 54, 72, 10, 0x48d9ff],
@@ -1813,7 +2094,8 @@ function buildCorporateAfterWorkLayer({ addTop, rng }) {
     for (let i = 0; i < count; i += 1) {
       const px = x - width / 2 + i * (width / Math.max(1, count - 1));
       const pz = z + (i % 2 ? 9 : -9);
-      if (isWater(px, pz, 1.5)) continue;
+      if (isWater(px, pz, 1.5) || footprintTouchesRoad(px, pz, 5.0, 4.2, 1.0) || plannerFootprintBlocked(planner, px, pz, 5.0, 4.2, 0.35)) continue;
+      planner?.reserveRect(`corporate-after-work-${px.toFixed(1)}-${pz.toFixed(1)}`, px, pz, 5.6, 4.8, { force: true, type: 'detail' });
       addTop('gold', px, pz, 0.26, 3.8, 0.26, 0xd8a334);
       addTop('neon', px, pz, 0.9, 0.42, 0.9, 0xf0dfb2, 0, topY(px, pz) + 3.45);
       if (i % 3 === 0) addStaticPerson(addTop, px + 1.8, pz + 1.2, 'cloth', 0.84);
@@ -1842,18 +2124,21 @@ function buildQuezonCreativeLayer({ planner, addTop, addLabel, reserveDetail, rn
     addTop('graffiti', x, -173 + (i % 3) * 8, 5.2, 2.4, 0.3, i % 2 ? 0xf25fa7 : 0x48d9ff, 0, topY(x, -170 + (i % 3) * 8) + 2.2);
     details += 1;
   }
-  addTop('wood', 176, -116, 10, 1.0, 6, 0x7a4d30);
-  addTop('neonPink', 176, -119.2, 8.2, 0.8, 0.32, 0xf25fa7, 0, topY(176, -116) + 2.1);
-  addTop('steel', 176, -112.2, 8.8, 0.42, 0.42, 0x66727a, 0, topY(176, -116) + 2.5);
+  if (!plannerFootprintBlocked(planner, 176, -116, 12, 8, 0.45) && !footprintTouchesRoad(176, -116, 12, 8, 1.0)) {
+    planner?.reserveRect('qc-indie-stage', 176, -116, 13, 9, { force: true, type: 'detail' });
+    addTop('wood', 176, -116, 10, 1.0, 6, 0x7a4d30);
+    addTop('neonPink', 176, -119.2, 8.2, 0.8, 0.32, 0xf25fa7, 0, topY(176, -116) + 2.1);
+    addTop('steel', 176, -112.2, 8.8, 0.42, 0.42, 0x66727a, 0, topY(176, -116) + 2.5);
+  }
   for (let i = 0; i < 12; i += 1) {
     addStaticPerson(addTop, 160 + rng() * 34, -126 + rng() * 18, i % 3 === 0 ? 'cloth' : 'crowd', 0.78);
   }
-  buildMarketStalls(addTop, 70, -186, 8, 0xf0dfb2, rng, -0.08);
+  buildMarketStalls(addTop, 70, -186, 8, 0xf0dfb2, rng, -0.08, planner);
   addLabel('QC Indie Music Rooms', 176, topY(176, -116) + 10, -116);
   return details + 36;
 }
 
-function buildWaterfrontAndPortLayer({ addTop, addLabel, rng }) {
+function buildWaterfrontAndPortLayer({ planner, addTop, addLabel, rng }) {
   let details = 0;
   for (let i = 0; i < 18; i += 1) {
     const z = 118 + i * 8.2;
@@ -1872,7 +2157,7 @@ function buildWaterfrontAndPortLayer({ addTop, addLabel, rng }) {
     addTop('steel', x, -84.6, 4.8, 2.8, 3.2, i % 2 ? 0x66727a : 0xd94f45);
     details += 2;
   }
-  buildMarketStalls(addTop, -132, 238, 8, 0xd94f45, rng, 0.12);
+  buildMarketStalls(addTop, -132, 238, 8, 0xd94f45, rng, 0.12, planner);
   addLabel('Manila Bay Sunset Promenade', -198, topY(-198, 188) + 9, 188);
   addLabel('Manila Baywalk', -214, topY(-214, 188) + 8, 188);
   return details + 24;
@@ -1894,7 +2179,7 @@ function addBaywalkSocialEdge(addTop, rng) {
   return details;
 }
 
-function buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng }) {
+function buildEverydayCommunityLayer({ planner, addTop, addLabel, reserveDetail, rng }) {
   let details = 0;
   for (const [x, z, label] of [
     [116, -42, 'Kapitolyo Carinderias'],
@@ -1904,10 +2189,10 @@ function buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng }) {
     [-12, -176, 'La Loma Late Food']
   ]) {
     for (let i = 0; i < 5; i += 1) {
-      details += addSariSariCluster(addTop, reserveDetail, x - 18 + i * 9, z + (i % 2) * 7, rng, 0.04);
+      details += addSariSariCluster(addTop, reserveDetail, x - 18 + i * 9, z + (i % 2) * 7, rng, 0.04, planner);
       if (i % 2 === 0) details += addLaundryLines(addTop, reserveDetail, x - 16 + i * 9, z + 9, 7.4, 0.04);
     }
-    addBasketballCourt({ addTop, x: x + 28, z: z + 18 });
+    addBasketballCourt({ planner, addTop, x: x + 28, z: z + 18 });
     addTop('limestone', x + 10, z - 16, 9.2, 5.2, 7.4, 0xd8cfb7);
     addTop('gold', x + 10, z - 20, 6.4, 0.5, 0.32, 0xd8a334, 0, topY(x + 10, z - 16) + 3.7);
     addLabel(label, x, topY(x, z) + 10, z);
@@ -1916,19 +2201,252 @@ function buildEverydayCommunityLayer({ addTop, addLabel, reserveDetail, rng }) {
   return details;
 }
 
+function buildManilaPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng }) {
+  let details = 0;
+  details += buildHistoricPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng });
+  details += buildOldManilaPublicRealmPolish({ planner, addTop, addLabel, rng });
+  details += buildModernPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng });
+  details += buildWaterfrontPublicRealmPolish({ planner, addTop, addLabel, rng });
+  details += buildOuterDistrictPublicRealmPolish({ planner, addTop, addLabel, rng });
+  return details;
+}
+
+function buildHistoricPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng }) {
+  let details = 0;
+  addTiledRect('cobblestone', -88, -4, 24, 16, { color: '#77766d', height: 0.12, tile: 3.4 });
+  addTiledRect('cobblestone', -118, -42, 28, 14, { color: '#77766d', height: 0.12, tile: 3.4 });
+  details += 24;
+
+  [
+    [-104, -8], [-96, -8], [-88, -8], [-80, -8],
+    [-124, -38], [-116, -38], [-108, -38], [-100, -38],
+    [-122, 14], [-112, 20], [-96, 26], [-82, 22]
+  ].forEach(([x, z], index) => {
+    details += addPublicLamp(planner, addTop, x, z, index % 2 ? 0xf0dfb2 : 0xd8a334);
+    if (index % 3 === 0) details += addSafeBench(planner, addTop, x + 2.4, z + 1.8, index * 0.17);
+  });
+
+  for (let i = 0; i < 9; i += 1) {
+    const x = -128 + i * 7.6;
+    details += addPublicRealmProp(planner, addTop, 'neon', x, -48, 1.0, 0.8, 0.28, i % 2 ? 0xf0dfb2 : 0xd8a334, 0, topY(x, -48) + 3.3, { width: 1.2, depth: 0.6 });
+    details += addPublicRealmProp(planner, addTop, 'gold', x, -48, 0.22, 2.6, 0.22, 0xd8a334, 0, null, { width: 0.6, depth: 0.6 });
+  }
+
+  [
+    [-128, -30], [-118, -30], [-108, -30], [-88, 4], [-78, 6], [-94, 18]
+  ].forEach(([x, z], index) => {
+    details += addSafeFoodCart(planner, addTop, x, z, index % 2 ? 0xd94f45 : 0xf0dfb2, index * 0.12);
+    details += addStaticPerson(addTop, x + 2.0 + rng(), z + 2.2, index % 2 ? 'cloth' : 'crowd', 0.78);
+  });
+
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (i / 8) * Math.PI * 2;
+    const x = -122 + Math.cos(angle) * 18;
+    const z = -66 + Math.sin(angle) * 13;
+    details += addPublicRealmProp(planner, addTop, 'limestone', x, z, 1.2, 1.1, 1.2, 0x8b8276, angle, topY(x, z) + 6.7, { width: 1.4, depth: 1.4, allowSolid: true });
+    details += addPublicRealmProp(planner, addTop, 'vegetation', x, z + 2.0, 1.4, 2.2, 1.4, 0x4f8750, 0, null, { width: 1.8, depth: 1.8 });
+  }
+
+  addTop('limestone', -111, -80, 18, 0.5, 1.0, 0xd8cfb7, 0, topY(-111, -80) + 0.3);
+  addTop('gold', -119, -80, 0.28, 3.0, 0.28, 0xd8a334);
+  addTop('gold', -103, -80, 0.28, 3.0, 0.28, 0xd8a334);
+  details += 3;
+
+  addLabel('Plaza Roma Courtyard Life', -88, topY(-88, -4) + 9, -4);
+  addLabel('Fort Santiago Gate Plaza', -118, topY(-118, -42) + 10, -42);
+  return details;
+}
+
+function buildOldManilaPublicRealmPolish({ planner, addTop, addLabel, rng }) {
+  let details = 0;
+  for (let i = 0; i < 12; i += 1) {
+    const x = -98 + i * 5.8;
+    details += addPublicRealmProp(planner, addTop, 'neonPink', x, -118, 0.9, 0.9, 0.28, 0xf25fa7, 0, topY(x, -118) + 3.4, { width: 1.2, depth: 0.8 });
+    if (i % 2 === 0) details += addSafeFoodCart(planner, addTop, x + 1.8, -108, i % 4 === 0 ? 0xd94f45 : 0xf0dfb2, 0.04);
+    if (i % 3 === 0) details += addStaticPerson(addTop, x + (rng() - 0.5) * 2, -104, 'crowd', 0.78);
+  }
+
+  for (let i = 0; i < 5; i += 1) {
+    const x = -64 + i * 10.5;
+    addTop('limestone', x, -60, 8.0 - i * 0.3, 0.55, 7.0 - i * 0.2, 0xd8cfb7, 0, topY(x, -60) + 8.8 + i * 0.72);
+    details += addPublicRealmProp(planner, addTop, i % 2 ? 'neonCyan' : 'neonPink', x, -64.2, 6.6, 0.55, 0.24, i % 2 ? 0x48d9ff : 0xf25fa7, 0, topY(x, -60) + 5.8, { width: 6.8, depth: 0.8, allowSolid: true });
+  }
+
+  [
+    [-54, -73, 0x48d9ff], [-42, -75, 0xf25fa7], [-30, -78, 0xd8a334],
+    [-2, -146, 0xd94f45], [10, -144, 0xf0dfb2], [24, -140, 0xd8a334], [38, -132, 0xf25fa7],
+    [-12, -164, 0xf0dfb2], [8, -166, 0x48d9ff], [30, -160, 0xd8a334]
+  ].forEach(([x, z, color], index) => {
+    details += addSafeFoodCart(planner, addTop, x, z, color, index * 0.08);
+    if (index % 2 === 0) details += addStaticPerson(addTop, x + 2.4, z + 2.2, index % 3 === 0 ? 'cloth' : 'crowd', 0.78);
+  });
+
+  addLabel('Escolta Creative Reuse Facades', -44, topY(-44, -64) + 13, -64);
+  addLabel('Quiapo Vendor Spillover', 20, topY(20, -142) + 10, -142);
+  return details + 5;
+}
+
+function buildModernPublicRealmPolish({ planner, addTop, addTiledRect, addLabel, rng }) {
+  let details = 0;
+  addTiledRect('manilaGrass', 54, 104, 34, 20, { color: '#4f8750', height: 0.11, tile: 3.4 });
+  details += 20;
+  [
+    [42, 96], [54, 98], [66, 102], [70, 116], [44, 118],
+    [116, 96], [136, 106], [164, 106], [180, 96], [148, 118],
+    [188, 16], [212, 16], [220, 38]
+  ].forEach(([x, z], index) => {
+    details += addSafePlanter(planner, addTop, x, z, index % 2 ? 0x4f8750 : 0x3f7f5f);
+    if (index % 2 === 0) details += addSafeBench(planner, addTop, x + 2.2, z + 1.4, index * 0.09);
+    if (index % 3 === 0) details += addStaticPerson(addTop, x - 1.4, z + 2.0, 'cloth', 0.82);
+  });
+
+  for (let i = 0; i < 9; i += 1) {
+    const x = 112 + i * 8.5;
+    details += addPublicRealmProp(planner, addTop, i % 2 ? 'neonPink' : 'neonCyan', x, 96, 3.2, 3.2 + (i % 3), 0.38, i % 2 ? 0xf25fa7 : 0x48d9ff, i * 0.2, topY(x, 96) + 0.5, { width: 3.6, depth: 1.0 });
+    details += addPublicLamp(planner, addTop, x + 2.4, 108, 0xf0dfb2);
+  }
+
+  [
+    [54, 124], [66, 124], [134, 56], [150, 56], [166, 56], [184, 26], [204, 26]
+  ].forEach(([x, z], index) => {
+    details += addSafeFoodCart(planner, addTop, x, z, index % 2 ? 0xf25fa7 : 0x48d9ff, 0.02);
+  });
+
+  addTop('steel', 206, 48, 38, 0.55, 5.2, 0x66727a, 0.08, topY(206, 48) + 7.2);
+  addTop('neonCyan', 206, 48, 30, 0.36, 0.32, 0x48d9ff, 0.08, topY(206, 48) + 7.8);
+  details += 2;
+
+  addLabel('Ayala Triangle Cafe Walks', 54, topY(54, 104) + 11, 104);
+  addLabel('BGC High Street Promenade', 148, topY(148, 104) + 13, 104);
+  addLabel('Ortigas Transit Plaza', 204, topY(204, 26) + 12, 26);
+  return details;
+}
+
+function buildWaterfrontPublicRealmPolish({ planner, addTop, addLabel, rng }) {
+  let details = 0;
+  addTop('gold', -204, 206, 8.5, 8.5, 8.5, 0xd8a334, 0, topY(-204, 206) + 4.2);
+  addTop('manilaBay', -204, 206, 6.0, 6.0, 6.0, 0x3f91aa, 0, topY(-204, 206) + 4.2);
+  details += 2;
+
+  for (let i = 0; i < 12; i += 1) {
+    const angle = (i / 12) * Math.PI * 2;
+    const x = -220 + Math.cos(angle) * 11;
+    const z = 232 + Math.sin(angle) * 11;
+    details += addPublicRealmProp(planner, addTop, 'steel', x, z, 0.5, 3.8, 0.5, 0x66727a, angle, null, { width: 0.8, depth: 0.8, waterPad: 0.5 });
+    if (i % 2 === 0) details += addPublicRealmProp(planner, addTop, 'neon', x, z, 1.2, 0.35, 1.2, 0xf0dfb2, 0, topY(x, z) + 3.7, { width: 1.2, depth: 1.2, waterPad: 0.5 });
+  }
+  addTop('steel', -220, 232, 23, 0.5, 0.6, 0x66727a, 0, topY(-220, 232) + 11.6);
+  addTop('steel', -220, 232, 0.6, 0.5, 23, 0x66727a, 0, topY(-220, 232) + 11.6);
+  details += 2;
+
+  for (let i = 0; i < 10; i += 1) {
+    const z = 142 + i * 9.4;
+    const x = -216 + Math.sin(i * 0.4) * 2.2;
+    details += addSafeBench(planner, addTop, x, z, 0.06);
+    details += addSafePlanter(planner, addTop, x + 3.2, z + 1.8, 0x4f8750);
+    if (i % 2 === 0) details += addStaticPerson(addTop, x - 2.0, z + 1.4, 'crowd', 0.78);
+  }
+
+  for (let i = 0; i < 7; i += 1) {
+    const x = -250 + i * 6.4;
+    details += addPublicRealmProp(planner, addTop, 'wood', x, -118, 6.6, 0.38, 2.2, 0x7a4d30, 0.04, topY(x, -118) + 0.42, { width: 6.8, depth: 2.6, waterPad: 0.3 });
+    details += addPublicRealmProp(planner, addTop, 'cloth', x, -116, 4.8, 0.38, 0.3, 0x48d9ff, 0.04, topY(x, -118) + 2.0, { width: 5.0, depth: 0.8, waterPad: 0.3 });
+  }
+
+  addLabel('Bay Area Globe Plaza', -204, topY(-204, 206) + 13, 206);
+  addLabel('Baywalk Family Promenade', -210, topY(-210, 188) + 9, 188);
+  return details;
+}
+
+function buildOuterDistrictPublicRealmPolish({ planner, addTop, addLabel, rng }) {
+  let details = 0;
+  [
+    [82, -128, 0xd94f45], [104, -156, 0xf0dfb2], [126, -154, 0x48d9ff],
+    [160, -116, 0xf25fa7], [184, -116, 0x48d9ff],
+    [246, -88, 0xd8a334], [278, -82, 0x48d9ff], [292, -78, 0xf0dfb2],
+    [-54, -181, 0xd94f45], [-44, -181, 0xf0dfb2], [-34, -181, 0xd8a334],
+    [-150, -228, 0x48d9ff], [-132, -220, 0xf0dfb2], [-112, -204, 0xd94f45],
+    [-150, 252, 0xf0dfb2], [-132, 258, 0x48d9ff]
+  ].forEach(([x, z, color], index) => {
+    details += addSafeFoodCart(planner, addTop, x, z, color, index * 0.05);
+    if (index % 2 === 0) details += addSafeBench(planner, addTop, x + 2.2, z + 2.6, index * 0.04);
+    if (index % 3 === 0) details += addStaticPerson(addTop, x - 1.8 + rng(), z + 2.4, index % 2 ? 'cloth' : 'crowd', 0.78);
+  });
+
+  for (let i = 0; i < 8; i += 1) {
+    const x = 238 + i * 8.2;
+    details += addPublicRealmProp(planner, addTop, 'steel', x, -90, 0.28, 1.5, 2.4, 0x66727a, Math.PI / 2, null, { width: 2.8, depth: 0.8 });
+    details += addPublicRealmProp(planner, addTop, 'gold', x, -90, 0.5, 0.5, 2.9, 0xd8a334, Math.PI / 2, topY(x, -90) + 1.4, { width: 3.0, depth: 0.8 });
+  }
+
+  addLabel('Tomas Morato Restaurant Strip', 104, topY(104, -142) + 10, -142);
+  addLabel('Cubao Expo Record Shops', 174, topY(174, -116) + 10, -116);
+  addLabel('Marikina Bike Racks and Shoe Market', 278, topY(278, -84) + 9, -84);
+  addLabel('Navotas Market Edge', -132, topY(-132, -220) + 9, -220);
+  return details;
+}
+
+function addPublicRealmProp(planner, addTop, kind, x, z, sx, sy, sz, color, yaw = 0, base = null, options = {}) {
+  const width = options.width ?? Math.max(0.8, sx);
+  const depth = options.depth ?? Math.max(0.8, sz);
+  if (!options.allowSolid && publicRealmFootprintBlocked(x, z, width, depth, 0.35)) return 0;
+  if (!options.allowSolid && plannerFootprintBlocked(planner, x, z, width, depth, 0.35)) return 0;
+  if (!canPlaceDetailFootprint(x, z, width, depth, {
+    roadPad: options.roadPad ?? 0.55,
+    waterPad: options.waterPad ?? 0.9,
+    allowRoad: options.allowRoad ?? false
+  })) return 0;
+  if (planner && options.blocksActors === true) {
+    const reservePad = options.reservePad ?? 0.5;
+    planner.reserveRect(
+      `public-realm-${kind}-${x.toFixed(1)}-${z.toFixed(1)}-${sx.toFixed(1)}-${sz.toFixed(1)}`,
+      x,
+      z,
+      width + reservePad,
+      depth + reservePad,
+      { force: true, type: 'detail' }
+    );
+  }
+  addTop(kind, x, z, sx, sy, sz, color, yaw, base ?? topY(x, z));
+  return 1;
+}
+
+function addPublicLamp(planner, addTop, x, z, color = 0xf0dfb2) {
+  let details = 0;
+  details += addPublicRealmProp(planner, addTop, 'gold', x, z, 0.24, 3.1, 0.24, 0xd8a334, 0, null, { width: 0.6, depth: 0.6 });
+  details += addPublicRealmProp(planner, addTop, 'neon', x, z, 0.82, 0.36, 0.82, color, 0, topY(x, z) + 2.9, { width: 1.0, depth: 1.0 });
+  return details;
+}
+
+function addSafeBench(planner, addTop, x, z, yaw = 0) {
+  return addPublicRealmProp(planner, addTop, 'wood', x, z, 3.2, 0.38, 1.0, 0x7a4d30, yaw, topY(x, z) + 0.22, { width: 3.6, depth: 1.4, roadPad: 0.8, blocksActors: true });
+}
+
+function addSafePlanter(planner, addTop, x, z, color = 0x4f8750) {
+  let details = 0;
+  details += addPublicRealmProp(planner, addTop, 'wood', x, z, 2.4, 0.48, 2.4, 0x7a4d30, 0, topY(x, z) + 0.18, { width: 2.8, depth: 2.8, roadPad: 0.7, blocksActors: true });
+  details += addPublicRealmProp(planner, addTop, 'vegetation', x, z, 1.8, 2.8, 1.8, color, 0, topY(x, z) + 0.52, { width: 2.4, depth: 2.4, roadPad: 0.7, blocksActors: true });
+  return details;
+}
+
+function addSafeFoodCart(planner, addTop, x, z, color = 0xf0dfb2, yaw = 0) {
+  let details = 0;
+  details += addPublicRealmProp(planner, addTop, 'wood', x, z, 3.0, 1.0, 2.0, 0x7a4d30, yaw, topY(x, z) + 0.12, { width: 3.5, depth: 2.5, roadPad: 0.8, blocksActors: true });
+  details += addPublicRealmProp(planner, addTop, 'cloth', x, z - Math.cos(yaw) * 1.2, 3.4, 0.34, 2.4, color, yaw, topY(x, z) + 1.05, { width: 3.8, depth: 2.8, roadPad: 0.8 });
+  return details;
+}
+
 function footprintTouchesRoad(x, z, width, depth, pad = 0) {
-  const samples = [
-    [x, z],
-    [x - width / 2, z - depth / 2],
-    [x + width / 2, z - depth / 2],
-    [x - width / 2, z + depth / 2],
-    [x + width / 2, z + depth / 2],
-    [x - width / 2, z],
-    [x + width / 2, z],
-    [x, z - depth / 2],
-    [x, z + depth / 2]
-  ];
-  return samples.some(([sx, sz]) => isRoadDeck(sx, sz, pad));
+  const xSteps = Math.max(2, Math.ceil(width / 2.4));
+  const zSteps = Math.max(2, Math.ceil(depth / 2.4));
+  for (let ix = 0; ix <= xSteps; ix += 1) {
+    const sx = x - width / 2 + (width * ix) / xSteps;
+    for (let iz = 0; iz <= zSteps; iz += 1) {
+      const sz = z - depth / 2 + (depth * iz) / zSteps;
+      if (isRoadDeck(sx, sz, pad)) return true;
+    }
+  }
+  return false;
 }
 
 function buildUrbanBlocks({ planner, addTop, rng }) {
@@ -2008,9 +2526,9 @@ function buildStreetLife({ planner, addTop, rng }) {
   for (let i = 0; i < 160; i += 1) {
     const route = routes[i % routes.length];
     const sample = sampleRoute(route, rng() * 900);
-    const x = sample.x - sample.tangentZ * (3 + rng() * 8);
-    const z = sample.z + sample.tangentX * (3 + rng() * 8);
-    if (isWater(x, z, 3) || planner.hasPoint(x, z, 'building') || footprintTouchesRoad(x, z, 4.6, 3.4, 0.4)) continue;
+    const x = sample.x - sample.tangentZ * (5 + rng() * 10);
+    const z = sample.z + sample.tangentX * (5 + rng() * 10);
+    if (isWater(x, z, 3) || planner.hasPoint(x, z, 'building') || actorSolidZoneContains(x, z, 2.0) || footprintTouchesRoad(x, z, 4.6, 3.4, 4.0)) continue;
     if (i % 4 === 0) {
       addTop('cloth', x, z, 4.8, 2.6, 3.2, i % 8 === 0 ? 0xd94f45 : 0xf0dfb2);
       addTop('gold', x, z - 1.8, 4.5, 0.35, 0.25, 0xd8a334, 0, topY(x, z) + 2.2);
@@ -2023,12 +2541,23 @@ function buildStreetLife({ planner, addTop, rng }) {
   }
 }
 
-function buildPedestrians({ animated, rng }) {
+function buildPedestrians({ animated, planner, rng }) {
   const routes = PEDESTRIAN_ROUTES.map((route) => prepareRoute(route, 5.6, true));
   const people = [];
   for (let i = 0; i < PEDESTRIAN_COUNT; i += 1) {
     const route = routes[i % routes.length];
-    people.push({ route, distance: rng() * route.length, speed: 2.4 + rng() * 3.2, lane: (rng() - 0.5) * route.width, phase: rng() * Math.PI * 2, scale: 0.94 + rng() * 0.18 });
+    const lane = (rng() - 0.5) * route.width;
+    people.push({
+      route,
+      distance: findValidWalkDistance(route, lane, rng, planner, 1.0),
+      speed: 2.4 + rng() * 3.2,
+      lane,
+      phase: rng() * Math.PI * 2,
+      scale: 0.94 + rng() * 0.18,
+      lastX: null,
+      lastZ: null,
+      lastYaw: 0
+    });
   }
   const group = new THREE.Group();
   group.name = 'manila-pedestrians-vendors-nightlife-crowds';
@@ -2041,17 +2570,27 @@ function buildPedestrians({ animated, rng }) {
     rightLeg: makeInstancedPart(people.length, 'manila-pedestrian-right-leg', 0x30333a)
   };
   Object.values(parts).forEach((mesh) => group.add(mesh));
-  animated.push({ object: group, update(elapsed) { updatePeople(parts, people, elapsed); } });
-  updatePeople(parts, people, 0);
+  animated.push({ object: group, update(elapsed) { updatePeople(parts, people, elapsed, planner); } });
+  updatePeople(parts, people, 0, planner);
   return people.length;
 }
 
-function buildCyclists({ animated, rng }) {
+function buildCyclists({ animated, planner, rng }) {
   const routes = CYCLIST_ROUTES.map((route) => prepareRoute(route, 3.2, true));
   const cyclists = [];
   for (let i = 0; i < CYCLIST_COUNT; i += 1) {
     const route = routes[i % routes.length];
-    cyclists.push({ route, distance: rng() * route.length, speed: 4.6 + rng() * 3.2, lane: (rng() - 0.5) * route.width, phase: rng() * Math.PI * 2 });
+    const lane = (rng() - 0.5) * route.width;
+    cyclists.push({
+      route,
+      distance: findValidWalkDistance(route, lane, rng, planner, 0.9),
+      speed: 4.6 + rng() * 3.2,
+      lane,
+      phase: rng() * Math.PI * 2,
+      lastX: null,
+      lastZ: null,
+      lastYaw: 0
+    });
   }
   const group = new THREE.Group();
   group.name = 'manila-cyclists-marikina-makati-qc';
@@ -2063,8 +2602,8 @@ function buildCyclists({ animated, rng }) {
     wheelB: makeInstancedPart(cyclists.length, 'manila-cyclist-wheel-b', 0x202326)
   };
   Object.values(parts).forEach((mesh) => group.add(mesh));
-  animated.push({ object: group, update(elapsed) { updateCyclists(parts, cyclists, elapsed); } });
-  updateCyclists(parts, cyclists, 0);
+  animated.push({ object: group, update(elapsed) { updateCyclists(parts, cyclists, elapsed, planner); } });
+  updateCyclists(parts, cyclists, 0, planner);
   return cyclists.length;
 }
 
@@ -2215,17 +2754,21 @@ function buildBoats({ animated, rng }) {
   return boats.length;
 }
 
-function buildKalesas({ animated, rng }) {
+function buildKalesas({ animated, planner, rng }) {
   const routes = KALESA_ROUTES.map((route) => prepareRoute(route, 2.8, true));
   const kalesas = [];
   for (let i = 0; i < KALESA_COUNT; i += 1) {
     const route = routes[i % routes.length];
+    const lane = (rng() - 0.5) * route.width;
     kalesas.push({
       route,
-      distance: rng() * route.length,
+      distance: findValidHistoricDistance(route, lane, rng, planner, 1.0),
       speed: 2.1 + rng() * 1.2,
-      lane: (rng() - 0.5) * route.width,
-      phase: rng() * Math.PI * 2
+      lane,
+      phase: rng() * Math.PI * 2,
+      lastX: null,
+      lastZ: null,
+      lastYaw: 0
     });
   }
   const group = new THREE.Group();
@@ -2240,8 +2783,8 @@ function buildKalesas({ animated, rng }) {
     driver: makeInstancedPart(kalesas.length, 'manila-kalesa-driver', 0xb47a54)
   };
   Object.values(parts).forEach((mesh) => group.add(mesh));
-  animated.push({ object: group, update(elapsed) { updateKalesas(parts, kalesas, elapsed); } });
-  updateKalesas(parts, kalesas, 0);
+  animated.push({ object: group, update(elapsed) { updateKalesas(parts, kalesas, elapsed, planner); } });
+  updateKalesas(parts, kalesas, 0, planner);
   return kalesas.length;
 }
 
@@ -2314,7 +2857,7 @@ function resolveRoutePoint(sample, lane, pad, validator) {
   resolvedRoutePoint.valid = true;
   if (validator(resolvedRoutePoint.x, resolvedRoutePoint.z, pad)) return resolvedRoutePoint;
 
-  const fallbacks = [0, lane * 0.5, -lane * 0.5, lane * 0.25, -lane * 0.25];
+  const fallbacks = [0, lane * 0.5, -lane * 0.5, lane * 0.25, -lane * 0.25, 1.4, -1.4, 2.8, -2.8];
   for (const fallbackLane of fallbacks) {
     const x = sample.x + sideX * fallbackLane;
     const z = sample.z + sideZ * fallbackLane;
@@ -2332,20 +2875,40 @@ function resolveRoutePoint(sample, lane, pad, validator) {
   return resolvedRoutePoint;
 }
 
-function resolveDryRoutePoint(sample, lane, pad = 1.2) {
-  return resolveRoutePoint(sample, lane, pad, isWalkRouteSurface);
+function resolveWalkActorRoutePoint(sample, lane, pad = 1.2, planner = null) {
+  return resolveRoutePoint(sample, lane, pad, (x, z, routePad) => isWalkRouteSurface(x, z, routePad) && actorRouteClear(planner, x, z, routePad));
 }
 
 function resolveRoadRoutePoint(sample, lane, pad = 1.2) {
   return resolveRoutePoint(sample, lane, pad, isRoadRouteSurface);
 }
 
-function resolveHistoricRoutePoint(sample, lane, pad = 1.0) {
-  return resolveRoutePoint(sample, lane, pad, isHistoricStreetSurface);
+function resolveHistoricRoutePoint(sample, lane, pad = 1.0, planner = null) {
+  return resolveRoutePoint(sample, lane, pad, (x, z, routePad) => isHistoricStreetSurface(x, z, routePad) && actorRouteClear(planner, x, z, routePad));
 }
 
 function resolveWaterRoutePoint(sample, lane, pad = 1.2) {
   return resolveRoutePoint(sample, lane, pad, isNavigableWater);
+}
+
+const routeSeedSample = { x: 0, z: 0, tangentX: 0, tangentZ: 1 };
+
+function findValidWalkDistance(route, lane, rng, planner, pad) {
+  return findValidActorDistance(route, lane, rng, pad, (sample) => resolveWalkActorRoutePoint(sample, lane, pad, planner));
+}
+
+function findValidHistoricDistance(route, lane, rng, planner, pad) {
+  return findValidActorDistance(route, lane, rng, pad, (sample) => resolveHistoricRoutePoint(sample, lane, pad, planner));
+}
+
+function findValidActorDistance(route, lane, rng, pad, resolve) {
+  for (let attempt = 0; attempt < 36; attempt += 1) {
+    const distance = rng() * route.length;
+    const sample = sampleRoute(route, distance, routeSeedSample);
+    const resolved = resolve(sample, lane, pad);
+    if (resolved.valid) return distance;
+  }
+  return rng() * route.length;
 }
 
 function hideParts(parts, index) {
@@ -2360,18 +2923,21 @@ function markPartsDirty(parts) {
   });
 }
 
-function updatePeople(parts, people, elapsed) {
+function updatePeople(parts, people, elapsed, planner) {
   people.forEach((person, index) => {
     const sample = sampleRoute(person.route, person.distance + elapsed * person.speed);
-    const resolved = resolveDryRoutePoint(sample, person.lane, 1.0);
-    if (!resolved.valid) {
+    const resolved = resolveWalkActorRoutePoint(sample, person.lane, 1.0, planner);
+    if (!resolved.valid && person.lastX == null) {
       hideParts(parts, index);
       return;
     }
-    const x = resolved.x;
-    const z = resolved.z;
+    const x = resolved.valid ? resolved.x : person.lastX;
+    const z = resolved.valid ? resolved.z : person.lastZ;
     const y = topY(x, z) + 0.08;
-    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+    const yaw = resolved.valid ? Math.atan2(sample.tangentX, sample.tangentZ) : person.lastYaw;
+    person.lastX = x;
+    person.lastZ = z;
+    person.lastYaw = yaw;
     const stride = Math.sin(elapsed * 7.2 + person.phase) * 0.14;
     const bob = Math.abs(Math.sin(elapsed * 5.4 + person.phase)) * 0.05;
     const scale = person.scale;
@@ -2385,18 +2951,21 @@ function updatePeople(parts, people, elapsed) {
   markPartsDirty(parts);
 }
 
-function updateCyclists(parts, cyclists, elapsed) {
+function updateCyclists(parts, cyclists, elapsed, planner) {
   cyclists.forEach((cyclist, index) => {
     const sample = sampleRoute(cyclist.route, cyclist.distance + elapsed * cyclist.speed);
-    const resolved = resolveDryRoutePoint(sample, cyclist.lane, 0.9);
-    if (!resolved.valid) {
+    const resolved = resolveWalkActorRoutePoint(sample, cyclist.lane, 0.9, planner);
+    if (!resolved.valid && cyclist.lastX == null) {
       hideParts(parts, index);
       return;
     }
-    const x = resolved.x;
-    const z = resolved.z;
+    const x = resolved.valid ? resolved.x : cyclist.lastX;
+    const z = resolved.valid ? resolved.z : cyclist.lastZ;
     const y = topY(x, z) + 0.12;
-    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+    const yaw = resolved.valid ? Math.atan2(sample.tangentX, sample.tangentZ) : cyclist.lastYaw;
+    cyclist.lastX = x;
+    cyclist.lastZ = z;
+    cyclist.lastYaw = yaw;
     const pedal = Math.sin(elapsed * 8.5 + cyclist.phase) * 0.08;
     setPart(parts.frame, index, x, y, z, yaw, 0, 0.62, 0, 0.62, 0.28, 1.55);
     setPart(parts.rider, index, x, y + pedal, z, yaw, 0, 1.18, -0.08, 0.42, 0.78, 0.42);
@@ -2543,18 +3112,21 @@ function updateBoats(parts, boats, elapsed) {
   markPartsDirty(parts);
 }
 
-function updateKalesas(parts, kalesas, elapsed) {
+function updateKalesas(parts, kalesas, elapsed, planner) {
   kalesas.forEach((kalesa, index) => {
     const sample = sampleRoute(kalesa.route, kalesa.distance + elapsed * kalesa.speed);
-    const resolved = resolveHistoricRoutePoint(sample, kalesa.lane, 1.0);
-    if (!resolved.valid) {
+    const resolved = resolveHistoricRoutePoint(sample, kalesa.lane, 1.0, planner);
+    if (!resolved.valid && kalesa.lastX == null) {
       hideParts(parts, index);
       return;
     }
-    const x = resolved.x;
-    const z = resolved.z;
+    const x = resolved.valid ? resolved.x : kalesa.lastX;
+    const z = resolved.valid ? resolved.z : kalesa.lastZ;
     const y = topY(x, z) + 0.12;
-    const yaw = Math.atan2(sample.tangentX, sample.tangentZ);
+    const yaw = resolved.valid ? Math.atan2(sample.tangentX, sample.tangentZ) : kalesa.lastYaw;
+    kalesa.lastX = x;
+    kalesa.lastZ = z;
+    kalesa.lastYaw = yaw;
     const trot = Math.sin(elapsed * 8 + kalesa.phase) * 0.08;
     setPart(parts.cart, index, x, y, z, yaw, 0, 0.62, 1.15, 1.45, 1.05, 2.2);
     setPart(parts.canopy, index, x, y, z, yaw, 0, 1.45, 1.0, 1.65, 0.38, 1.85);

@@ -109,12 +109,18 @@ if (animatedSum !== scene.metrics.animatedInstances) {
   failures.push(`Animated metric mismatch: expected ${animatedSum}, got ${scene.metrics.animatedInstances}`);
 }
 
-const rebuiltDensity = scene.metrics.blocks + Math.floor((scene.metrics.connectedFabric ?? 0) / 18);
-if (scene.metrics.blocks < 120) failures.push(`Manila urban block fallback regressed: ${scene.metrics.blocks}`);
+const rebuiltDensity =
+  scene.metrics.blocks +
+  Math.floor((scene.metrics.connectedFabric ?? 0) / 18) +
+  Math.floor((scene.metrics.publicRealmDetails ?? 0) / 120) +
+  Math.floor((scene.metrics.roadLegibilityDetails ?? 0) / 180);
+if (scene.metrics.blocks < 110) failures.push(`Manila urban block fallback regressed: ${scene.metrics.blocks}`);
 if ((scene.metrics.connectedFabric ?? 0) < 1800) failures.push(`Manila connected fabric regressed: ${scene.metrics.connectedFabric ?? 0}`);
-if (rebuiltDensity < 250) failures.push(`Manila rebuilt density regressed: ${rebuiltDensity}`);
-if (scene.metrics.cityLifeDetails < 650) failures.push(`Manila city-life details regressed: ${scene.metrics.cityLifeDetails}`);
-if (scene.labels.length < 50) failures.push(`Manila labels regressed: ${scene.labels.length}`);
+if (rebuiltDensity < 225) failures.push(`Manila rebuilt density regressed: ${rebuiltDensity}`);
+if (scene.metrics.cityLifeDetails < 600) failures.push(`Manila city-life details regressed: ${scene.metrics.cityLifeDetails}`);
+if ((scene.metrics.roadLegibilityDetails ?? 0) < 180) failures.push(`Manila road legibility details regressed: ${scene.metrics.roadLegibilityDetails ?? 0}`);
+if ((scene.metrics.publicRealmDetails ?? 0) < 120) failures.push(`Manila public realm details regressed: ${scene.metrics.publicRealmDetails ?? 0}`);
+if (scene.labels.length < 70) failures.push(`Manila labels regressed: ${scene.labels.length}`);
 for (const expectedLabel of ['Ongpin Food Alleys', 'Avenida / Recto Book Row', 'Quiapo Underpass Market']) {
   if (!scene.labels.some((label) => label.name === expectedLabel)) failures.push(`Missing rebuilt local label: ${expectedLabel}`);
 }
@@ -150,6 +156,8 @@ let hiddenKalesas = 0;
 let nonWaterBoats = 0;
 let lowBridgeVehicles = 0;
 let pedestriansOnVehicleRoad = 0;
+let staticPeopleOnVehicleRoad = 0;
+let staticPeopleInWater = 0;
 const roadLikePositions = [];
 const qualityPositions = [];
 const staticRoadOverlaps = [];
@@ -157,8 +165,14 @@ const solidBuildingFootprints = [];
 const localAsphaltRoadStrips = [];
 const localAsphaltRoadOverlaps = [];
 const railOverlaps = [];
+const footbridgeOverlaps = [];
 const bridgeStructureFootprints = [];
 const bridgeOverlaps = [];
+const roadLevelPropFootprints = [];
+const staticRoadLevelObstructions = [];
+const staticSoftPropBuildingOverlaps = [];
+const animatedActorPositions = [];
+const animatedInsideBuildings = [];
 const qualityKinds = new Set([
   'voxels:asphalt',
   'voxels:cobblestone',
@@ -186,6 +200,19 @@ const buildingOverlapKinds = new Set([
 const mainRoadSegments = manilaTopologyProbe.roadSegments();
 const trainSegments = manilaTopologyProbe.trainSegments();
 const bridgeSegments = manilaTopologyProbe.bridgeSegments();
+const footbridgeSegments = manilaTopologyProbe.footbridgeSegments();
+const actorCollisionNames = new Map([
+  ['manila-pedestrian-body', 'pedestrian'],
+  ['manila-cyclist-frame', 'cyclist'],
+  ['manila-kalesa-cart', 'kalesa']
+]);
+const roadLevelObstructionKinds = new Set([
+  'voxels:wood',
+  'voxels:cloth',
+  'voxels:crowd',
+  'voxels:skin',
+  'voxels:vegetation'
+]);
 
 for (const elapsed of [0, 0.5, 10, 60, 600]) {
   scene.update(elapsed);
@@ -202,16 +229,29 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
       if (object.name.includes('kalesa') && hidden) hiddenKalesas += 1;
       if (!hidden && ['manila-jeepney-body', 'manila-motorbike-frame', 'manila-tricycle-bike', 'manila-taxi-body', 'manila-bus-body'].includes(object.name)) {
         if (!manilaTopologyProbe.isRoadRouteSurface(matrixPosition.x, matrixPosition.z, 1.45)) offRoadVehicles += 1;
-        if (manilaTopologyProbe.isWater(matrixPosition.x, matrixPosition.z, 1.2) && matrixPosition.y < manilaTerrainHeightAt(matrixPosition.x, matrixPosition.z) + 1.3) {
+        const bridgeClearance = ['manila-motorbike-frame', 'manila-tricycle-bike'].includes(object.name) ? 0.55 : 1.15;
+        if (manilaTopologyProbe.isWater(matrixPosition.x, matrixPosition.z, 1.2) && matrixPosition.y < manilaTerrainHeightAt(matrixPosition.x, matrixPosition.z) + bridgeClearance) {
           lowBridgeVehicles += 1;
         }
       }
       if (!hidden && object.name === 'manila-pedestrian-body' && manilaTopologyProbe.isRoadRouteSurface(matrixPosition.x, matrixPosition.z, 0.65)) {
         pedestriansOnVehicleRoad += 1;
       }
+      if (!hidden && actorCollisionNames.has(object.name)) {
+        animatedActorPositions.push({
+          kind: actorCollisionNames.get(object.name),
+          x: Number(matrixPosition.x.toFixed(1)),
+          z: Number(matrixPosition.z.toFixed(1)),
+          elapsed
+        });
+      }
       if (!hidden && object.name === 'manila-boat-hull' && !manilaTopologyProbe.isNavigableWater(matrixPosition.x, matrixPosition.z, 1.4)) nonWaterBoats += 1;
       if (elapsed === 0 && (object.name === 'voxels:asphalt' || object.name === 'voxels:cobblestone')) {
         roadLikePositions.push([matrixPosition.x, matrixPosition.z]);
+      }
+      if (elapsed === 0 && matrixPosition.y > -9999 && object.name === 'voxels:skin') {
+        if (manilaTopologyProbe.isRoadRouteSurface(matrixPosition.x, matrixPosition.z, 0.65)) staticPeopleOnVehicleRoad += 1;
+        if (manilaTopologyProbe.isWater(matrixPosition.x, matrixPosition.z, 0.65)) staticPeopleInWater += 1;
       }
       if (elapsed === 0 && object.name === 'voxels:asphalt' && matrixPosition.y > -9999) {
         matrixScale.setFromMatrixScale(matrix);
@@ -243,6 +283,21 @@ for (const elapsed of [0, 0.5, 10, 60, 600]) {
               sz: Number(matrixScale.z.toFixed(1))
             });
           }
+        }
+      }
+      if (elapsed === 0 && matrixPosition.y > -9999 && roadLevelObstructionKinds.has(object.name)) {
+        matrixScale.setFromMatrixScale(matrix);
+        const bottomY = matrixPosition.y - matrixScale.y / 2;
+        if (bottomY <= manilaTerrainHeightAt(matrixPosition.x, matrixPosition.z) + 1.8 && matrixScale.y <= 4.2) {
+          roadLevelPropFootprints.push({
+            kind: object.name,
+            footprint: footprintFromMatrix(matrix, matrixPosition),
+            x: Number(matrixPosition.x.toFixed(1)),
+            z: Number(matrixPosition.z.toFixed(1)),
+            sx: Number(matrixScale.x.toFixed(1)),
+            sy: Number(matrixScale.y.toFixed(1)),
+            sz: Number(matrixScale.z.toFixed(1))
+          });
         }
       }
       if (elapsed === 0 && qualityKinds.has(object.name)) {
@@ -307,6 +362,17 @@ for (const building of solidBuildingFootprints) {
   if (railOverlaps.length >= 16) break;
 }
 
+for (const building of solidBuildingFootprints) {
+  if (building.topY < manilaTerrainHeightAt(building.x, building.z) + 4.8) continue;
+  const footbridgeOverlap = roadOverlapForFootprint(building.footprint, footbridgeSegments);
+  if (!footbridgeOverlap) continue;
+  footbridgeOverlaps.push({
+    footbridge: footbridgeOverlap,
+    building: { kind: building.kind, x: building.x, z: building.z, topY: building.topY, sx: building.sx, sy: building.sy, sz: building.sz }
+  });
+  if (footbridgeOverlaps.length >= 16) break;
+}
+
 for (const bridge of bridgeStructureFootprints) {
   for (const building of solidBuildingFootprints) {
     if (!localAsphaltRoadStripOverlapsBuilding(bridge.footprint, building.footprint)) continue;
@@ -319,11 +385,58 @@ for (const bridge of bridgeStructureFootprints) {
   if (bridgeOverlaps.length >= 16) break;
 }
 
+for (const prop of roadLevelPropFootprints) {
+  const roadOverlap = roadOverlapForFootprint(prop.footprint, mainRoadSegments);
+  if (!roadOverlap) continue;
+  staticRoadLevelObstructions.push({
+    kind: prop.kind,
+    road: roadOverlap,
+    x: prop.x,
+    z: prop.z,
+    sx: prop.sx,
+    sy: prop.sy,
+    sz: prop.sz
+  });
+  if (staticRoadLevelObstructions.length >= 16) break;
+}
+
+for (const prop of roadLevelPropFootprints) {
+  for (const building of solidBuildingFootprints) {
+    if (!localAsphaltRoadStripOverlapsBuilding(prop.footprint, building.footprint)) continue;
+    if (!pointInExpandedFootprint(prop.x, prop.z, building.footprint.center, building.footprint.halfX, building.footprint.halfZ, -0.05)) continue;
+    staticSoftPropBuildingOverlaps.push({
+      prop: { kind: prop.kind, x: prop.x, z: prop.z, sx: prop.sx, sy: prop.sy, sz: prop.sz },
+      building: { kind: building.kind, x: building.x, z: building.z, sx: building.sx, sy: building.sy, sz: building.sz }
+    });
+    if (staticSoftPropBuildingOverlaps.length >= 16) break;
+  }
+  if (staticSoftPropBuildingOverlaps.length >= 16) break;
+}
+
+for (const actor of animatedActorPositions) {
+  for (const building of solidBuildingFootprints) {
+    if (!footprintsIntersect(
+      { minX: actor.x, maxX: actor.x, minZ: actor.z, maxZ: actor.z },
+      building.footprint,
+      0.55
+    )) continue;
+    if (!pointInExpandedFootprint(actor.x, actor.z, building.footprint.center, building.footprint.halfX, building.footprint.halfZ, 0.55)) continue;
+    animatedInsideBuildings.push({
+      actor,
+      building: { kind: building.kind, x: building.x, z: building.z, sx: building.sx, sy: building.sy, sz: building.sz }
+    });
+    if (animatedInsideBuildings.length >= 16) break;
+  }
+  if (animatedInsideBuildings.length >= 16) break;
+}
+
 if (badMatrices > 0) failures.push(`Found ${badMatrices} non-finite instance matrices`);
 if (hiddenAnimated > 0) failures.push(`Found ${hiddenAnimated} hidden animated placements`);
 if (hiddenKalesas > 0) failures.push(`Found ${hiddenKalesas} hidden kalesa placements`);
 if (offRoadVehicles > 0) failures.push(`Found ${offRoadVehicles} road vehicle samples away from road decks`);
 if (pedestriansOnVehicleRoad > 0) failures.push(`Found ${pedestriansOnVehicleRoad} pedestrian samples on vehicle road decks`);
+if (staticPeopleOnVehicleRoad > 0) failures.push(`Found ${staticPeopleOnVehicleRoad} static people placed on vehicle road decks`);
+if (staticPeopleInWater > 0) failures.push(`Found ${staticPeopleInWater} static people placed in water`);
 if (lowBridgeVehicles > 0) failures.push(`Found ${lowBridgeVehicles} bridge vehicle samples below deck height`);
 if (nonWaterBoats > 0) failures.push(`Found ${nonWaterBoats} boat samples outside navigable water`);
 if (staticRoadOverlaps.length > 0) {
@@ -335,8 +448,20 @@ if (localAsphaltRoadOverlaps.length > 0) {
 if (railOverlaps.length > 0) {
   failures.push(`Found ${railOverlaps.length} elevated rail corridors crossing tall solid buildings: ${JSON.stringify(railOverlaps.slice(0, 8))}`);
 }
+if (footbridgeOverlaps.length > 0) {
+  failures.push(`Found ${footbridgeOverlaps.length} footbridges crossing tall solid buildings: ${JSON.stringify(footbridgeOverlaps.slice(0, 8))}`);
+}
 if (bridgeOverlaps.length > 0) {
   failures.push(`Found ${bridgeOverlaps.length} bridge structures crossing solid buildings: ${JSON.stringify(bridgeOverlaps.slice(0, 8))}`);
+}
+if (staticRoadLevelObstructions.length > 0) {
+  failures.push(`Found ${staticRoadLevelObstructions.length} road-level static props on vehicle road decks: ${JSON.stringify(staticRoadLevelObstructions.slice(0, 8))}`);
+}
+if (staticSoftPropBuildingOverlaps.length > 0) {
+  failures.push(`Found ${staticSoftPropBuildingOverlaps.length} road-level static props intersecting solid building footprints: ${JSON.stringify(staticSoftPropBuildingOverlaps.slice(0, 8))}`);
+}
+if (animatedInsideBuildings.length > 0) {
+  failures.push(`Found ${animatedInsideBuildings.length} animated actor samples inside solid building footprints: ${JSON.stringify(animatedInsideBuildings.slice(0, 8))}`);
 }
 
 function isLocalAsphaltRoadStrip(scale) {
@@ -488,12 +613,19 @@ const summary = {
   hiddenAnimated,
   offRoadVehicles,
   pedestriansOnVehicleRoad,
+  staticPeopleOnVehicleRoad,
+  staticPeopleInWater,
   nonWaterBoats,
   lowBridgeVehicles,
   staticRoadOverlaps: staticRoadOverlaps.length,
   localAsphaltRoadOverlaps: localAsphaltRoadOverlaps.length,
   railOverlaps: railOverlaps.length,
+  footbridgeOverlaps: footbridgeOverlaps.length,
   bridgeOverlaps: bridgeOverlaps.length,
+  roadLevelPropFootprints: roadLevelPropFootprints.length,
+  staticRoadLevelObstructions: staticRoadLevelObstructions.length,
+  staticSoftPropBuildingOverlaps: staticSoftPropBuildingOverlaps.length,
+  animatedInsideBuildings: animatedInsideBuildings.length,
   bridgeStructureFootprints: bridgeStructureFootprints.length,
   localAsphaltRoadStrips: localAsphaltRoadStrips.length,
   solidBuildingFootprints: solidBuildingFootprints.length,

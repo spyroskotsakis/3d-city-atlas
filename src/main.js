@@ -362,6 +362,7 @@ const canvas = document.createElement('canvas');
 canvas.className = 'webgl';
 app.append(canvas);
 const initialRenderSize = getRenderSize();
+const MAX_RENDER_PIXEL_RATIO = 1.35;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -369,7 +370,7 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: 'high-performance',
   alpha: false
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
 renderer.setSize(initialRenderSize.width, initialRenderSize.height, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
@@ -398,7 +399,7 @@ function resizeRendererToCanvas() {
   const size = getRenderSize();
   camera.aspect = size.width / size.height;
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
   renderer.setSize(size.width, size.height, false);
 }
 
