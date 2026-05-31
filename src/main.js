@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { inject as injectVercelAnalytics } from '@vercel/analytics';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createMaterialLibrary } from './atlas.js';
 import { createLivePresence } from './livePresence.js';
 import { createWorldScene } from './worldScene.js';
 import './styles.css';
 
-if (shouldInjectAnalytics()) injectVercelAnalytics();
+if (shouldInjectAnalytics()) {
+  injectVercelAnalytics();
+  injectSpeedInsights();
+}
 THREE.ColorManagement.enabled = false;
 
 const PANEL_AUTO_COLLAPSE_MS = 5000;

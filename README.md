@@ -157,7 +157,7 @@ src/
   styles.css        HUD, controls, labels, responsive layout
 ```
 
-Vercel Web Analytics is initialized once from `src/main.js` with the framework-agnostic `@vercel/analytics` client injection. It only adds page-view tracking for the deployed frontend and does not expose analytics data in the app.
+Vercel Web Analytics and Speed Insights are initialized once from `src/main.js` with the framework-agnostic `@vercel/analytics` and `@vercel/speed-insights` client injections. They add page-view and web-vitals tracking for the deployed frontend and do not expose analytics data in the app.
 
 ### Rendering
 
